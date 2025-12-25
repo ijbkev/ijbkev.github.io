@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Instagram, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Instagram } from "lucide-react";
 const Footer = () => {
   return <footer className="bg-muted border-t border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -58,9 +58,6 @@ const Footer = () => {
             <div className="flex space-x-4 mb-4">
               <a href="https://www.instagram.com/ijbk.ev" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
                 <Instagram size={20} />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors" aria-label="LinkedIn">
-                <Linkedin size={20} />
               </a>
             </div>
           </div>

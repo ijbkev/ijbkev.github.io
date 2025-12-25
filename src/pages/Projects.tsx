@@ -7,11 +7,29 @@ import Footer from "@/components/Footer";
 const Projects = () => {
   const projects = [
     {
+      id: "discover-eu",
+      title: "Fully Funded Travel Across Europe with DiscoverEU!",
+      category: "EU Travel Initiative",
+      status: "Upcoming",
+      statusColor: "bg-orange-100 text-orange-800",
+      date: "1 April 2026",
+      location: "Europe",
+      participants: "15",
+      description: "DiscoverEU is an EU initiative that gives young people the chance to discover Europe by train, experience new cultures, and connect with people across borders. We're forming 3 travel groups with 15 participants (aged 18–21) and 3 accompanying leaders each. All main train travel, accommodation, food, and local transport are covered with no participation fee.",
+      highlights: [
+        "FREE Interrail Pass",
+        "Daily Pocket Money",
+        "Cultural Exchange",
+        "No Participation Fee"
+      ],
+      applicationLink: "https://forms.gle/PLDCB35wsTjaHPoP7"
+    },
+    {
       id: "ai-social-impact",
       title: "AI 4 SOCIAL IMPACT",
       category: "Erasmus+ Youth Exchange",
-      status: "Upcoming",
-      statusColor: "bg-orange-100 text-orange-800",
+      status: "Completed",
+      statusColor: "bg-green-100 text-green-800",
       date: "5 – 12 December 2025",
       location: "Tallinn, Estonia",
       participants: "Estonia, Lithuania, Germany & Poland",
@@ -21,8 +39,7 @@ const Projects = () => {
         "Ethical AI Development", 
         "Cross-Country Collaboration",
         "Innovation Workshop"
-      ],
-      applicationLink: "https://drive.google.com/file/d/1wskal-kM31jy9FLMg_lcPl08ez4A3Ol8/view?usp=sharing"
+      ]
     },
     {
       id: "ka152",
@@ -62,8 +79,8 @@ const Projects = () => {
       id: "ai-culinary",
       title: "AI & Culinary Journey in Türkiye",
       category: "Cultural Exchange",
-      status: "Ongoing",
-      statusColor: "bg-blue-100 text-blue-800",
+      status: "Completed",
+      statusColor: "bg-green-100 text-green-800",
       date: "2025",
       location: "Türkiye",
       participants: "20 Participants",
@@ -101,7 +118,7 @@ const Projects = () => {
       
       {/* Header */}
       <section className="py-16 bg-gradient-hero">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="container mx-auto px-2 sm:px-4 lg:px-6 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Our Projects & Achievements
           </h1>
@@ -114,12 +131,12 @@ const Projects = () => {
 
       {/* Main Projects */}
       <section className="py-16 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-0">
           <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Featured Projects</h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {projects.map((project, index) => (
-              <Card key={project.id} className="shadow-soft hover:shadow-medium transition-all duration-300">
+              <Card key={project.id} className={`shadow-soft hover:shadow-medium transition-all duration-300 ${project.id === 'discover-eu' ? 'border-2 border-yellow-400' : ''}`}>
                 <CardHeader>
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                     <div>
@@ -190,7 +207,7 @@ const Projects = () => {
       {/* Project Statistics */}
       <section className="py-16 bg-gradient-subtle relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-hero opacity-5"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="container mx-auto px-2 sm:px-4 lg:px-6 relative z-10">
           <h2 className="text-3xl font-bold text-foreground mb-12 text-center">Our Impact</h2>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

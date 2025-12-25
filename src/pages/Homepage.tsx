@@ -222,15 +222,29 @@ const Homepage = () => {
                 <CardContent className="p-0 text-white">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <Calendar className="w-6 h-6 text-white" />
+                      <Globe className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold mb-3">AI 4 SOCIAL IMPACT</h3>
-                      <p className="text-white/90 text-sm mb-2">📍 Tallinn, Estonia</p>
-                      <p className="text-white/90 text-sm mb-3">📅 5 – 12 December 2025</p>
-                      <p className="text-white/90 leading-relaxed mb-4">Youth Exchange exploring how AI can be used for social good with participants from Estonia, Lithuania, Germany & Poland.</p>
+                      <h3 className="text-xl font-bold mb-3">Fully Funded Travel Across Europe with DiscoverEU! ✨🌍</h3>
+                      <p className="text-white/90 text-sm mb-3">Travel. Explore. Make memories — with your DiscoverEU Interrail Pass included.</p>
+                      <p className="text-white/90 leading-relaxed mb-4">
+                        <strong>What is DiscoverEU?</strong><br/>
+                        DiscoverEU is an EU initiative that gives young people the chance to discover Europe by train, experience new cultures, and connect with people across borders — learning through real travel.<br/><br/>
+                        <strong>1️⃣ Who can join?</strong><br/>
+                        We're forming 3 travel groups with:<br/>
+                        • 15 participants (aged 18–21)<br/>
+                        • 3 accompanying leaders (18+) to support coordination and safety<br/><br/>
+                        <strong>2️⃣ What's covered?</strong><br/>
+                        ✅ FREE DiscoverEU / Interrail Pass (main train travel across Europe)<br/>
+                        ✅ Daily pocket money (individual support) for:<br/>
+                        🛏️ Hostel / accommodation<br/>
+                        🍽️ Food<br/>
+                        🚇 Local transport (bus/metro)<br/><br/>
+                        <strong>3️⃣ No participation fee</strong><br/><br/>
+                        📅 Start: 1 April 2026 (tentative)
+                      </p>
                       <a 
-                        href="https://drive.google.com/file/d/1wskal-kM31jy9FLMg_lcPl08ez4A3Ol8/view?usp=sharing" 
+                        href="https://forms.gle/PLDCB35wsTjaHPoP7" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-white text-primary hover:bg-white/90 h-9 px-3 py-1"

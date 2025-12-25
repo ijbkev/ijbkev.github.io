@@ -1,6 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import viditImage from "@/assets/vidit.jpg";
+import omImage from "@/assets/om.png";
+import lenochkaImage from "@/assets/lenochka.png";
+import babaImage from "@/assets/baba.png";
+import prateekImage from "@/assets/prateek.png";
+import alexImage from "@/assets/alex.png";
 
 const Team = () => {
   const teamMembers = [
@@ -8,6 +14,7 @@ const Team = () => {
       name: "Vidit Goyal",
       role: "Legal Representative & Chairman",
       expertise: "Artificial Intelligence & Youth Development",
+      country: "India",
       bio: "MSc in Artificial Intelligence (RPTU). Experienced youth worker with extensive Erasmus+ participation. AI research specialization in time series forecasting and pose estimation. NGO volunteering and English teaching experience in India with project planning and development leadership. Diploma in Nutrition and Conflict Management.",
       skills: ["AI Research", "Time Series Forecasting", "Pose Estimation", "Youth Work", "Project Planning", "English Teaching"]
     },
@@ -15,13 +22,23 @@ const Team = () => {
       name: "Rohit Singh Negi", 
       role: "Deputy Chairman",
       expertise: "Software Engineering & Project Management",
+      country: "India",
       bio: "Expert in software engineering with strong focus on project planning and coordination. Provides implementation supervision working closely with the legal representative and manages reimbursement processes for organizational operations.",
       skills: ["Software Engineering", "Project Planning", "Implementation Supervision", "Reimbursement Management"]
+    },
+    {
+      name: "Om Tiwari",
+      role: "Founding Member",
+      expertise: "Data Science & Social Advocacy",
+      country: "India",
+      bio: "Data Science expert with active participation in student organizations. Passionate advocate for sustainability and social justice initiatives while managing social media and PR responsibilities for various projects and organizations.",
+      skills: ["Data Science", "Student Organizations", "Sustainability Advocacy", "Social Justice", "Social Media", "PR Management"]
     },
     {
       name: "Alex C.",
       role: "Team Member",
       expertise: "Participant Selection",
+      country: "Germany",
       bio: "Specialized in participant selection processes for international projects. Expert in evaluating applications, coordinating with partner organizations, and ensuring diverse and qualified participant cohorts for successful program outcomes.",
       skills: ["Participant Selection", "Application Review", "Partner Coordination", "Program Management"]
     },
@@ -29,6 +46,7 @@ const Team = () => {
       name: "Marta Rudzate",
       role: "Founding Member",
       expertise: "Mathematics & Statistics",
+      country: "Latvia",
       bio: "Mathematics & Statistics student at University of Latvia with exchange experience at RPTU. ESN volunteer specializing in music sessions and meditation practices. Holds multiple Youthpass certifications and actively engages in climate and peace movement initiatives.",
       skills: ["Mathematics", "Statistics", "ESN Volunteering", "Music Sessions", "Meditation", "Climate Activism"]
     },
@@ -36,6 +54,7 @@ const Team = () => {
       name: "Tamara Suniarová",
       role: "Founding Member",
       expertise: "Psychology & Youth Work",
+      country: "Slovakia",
       bio: "Psychology student and experienced youth worker specializing in Erasmus+ project co-creation. Provides refugee support and English teaching services. Expert in sports, mindfulness, acro yoga, and partner acrobatics with extensive experience in multiple Erasmus+ projects focused on well-being and sustainability.",
       skills: ["Psychology", "Youth Work", "Refugee Support", "Sports", "Mindfulness", "Acro Yoga", "Sustainability"]
     },
@@ -43,20 +62,15 @@ const Team = () => {
       name: "Prateek Kumar Sharma",
       role: "Founding Member",
       expertise: "Computer Science & AI Research",
+      country: "India",
       bio: "Master's student in Computer Science at RPTU Germany with experience as Research Assistant at DFKI and Software Engineer specializing in Data Science. Expert in AI, ML, NLP, and Computer Vision with active engagement in Erasmus+ projects, youth work, and tech blogging.",
       skills: ["AI", "Machine Learning", "NLP", "Computer Vision", "Data Science", "Research", "Tech Blogging"]
-    },
-    {
-      name: "Om Tiwari",
-      role: "Founding Member",
-      expertise: "Data Science & Social Advocacy",
-      bio: "Data Science expert with active participation in student organizations. Passionate advocate for sustainability and social justice initiatives while managing social media and PR responsibilities for various projects and organizations.",
-      skills: ["Data Science", "Student Organizations", "Sustainability Advocacy", "Social Justice", "Social Media", "PR Management"]
     },
     {
       name: "Yeliena Bemeshchuk",
       role: "Founding Member",
       expertise: "Logistics Management",
+      country: "Ukraine",
       bio: "Founding member specializing in logistics management and coordination. Brings essential organizational skills to ensure smooth operations and effective resource management across all IJBK initiatives and projects.",
       skills: ["Logistics Management", "Coordination", "Resource Management", "Operations"]
     }
@@ -86,12 +100,80 @@ const Team = () => {
             {teamMembers.map((member, index) => (
               <Card key={index} className="shadow-soft hover:shadow-medium transition-all duration-300">
                 <CardContent className="p-6">
-                  {/* Profile Photo Placeholder */}
-                  <div className="w-20 h-20 bg-gradient-hero rounded-full flex items-center justify-center mx-auto mb-6 shadow-medium">
-                    <span className="text-white font-bold text-xl">
-                      {member.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
+                  {/* Profile Photo */}
+                  {member.name === "Vidit Goyal" ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-medium">
+                      <img 
+                        src={viditImage} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </div>
+                  ) : member.name === "Om Tiwari" ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-medium">
+                      <img 
+                        src={omImage} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </div>
+                  ) : member.name === "Yeliena Bemeshchuk" ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-medium">
+                      <img 
+                        src={lenochkaImage} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </div>
+                  ) : member.name === "Rohit Singh Negi" ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-medium">
+                      <img 
+                        src={babaImage} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </div>
+                  ) : member.name === "Prateek Kumar Sharma" ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-medium">
+                      <img 
+                        src={prateekImage} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </div>
+                  ) : member.name === "Alex C." ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-6 shadow-medium">
+                      <img 
+                        src={alexImage} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 bg-gradient-hero rounded-full flex items-center justify-center mx-auto mb-6 shadow-medium">
+                      <span className="text-white font-bold text-xl">
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="text-center mb-4">
                     <h3 className="text-xl font-bold text-foreground mb-2">
@@ -100,8 +182,11 @@ const Team = () => {
                     <p className="text-primary font-semibold mb-2">
                       {member.role}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-1">
                       {member.expertise}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {member.country}
                     </p>
                   </div>
                   
