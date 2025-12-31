@@ -19,6 +19,18 @@ import heroImage from "@/assets/hero-background.jpg";
 import euFundingLogo from "@/assets/eu-funding-logo.png";
 
 const Homepage = () => {
+  const [heroScroll, setHeroScroll] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const progress = Math.min(window.scrollY / 320, 1);
+      setHeroScroll(progress);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const missionAreas = [
     {
       icon: <Lightbulb className="w-7 h-7" />,
@@ -84,7 +96,14 @@ const Homepage = () => {
 
           <div className="page-shell relative pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
-              <div className="text-white space-y-8">
+              <div
+                className="text-white space-y-8"
+                style={{
+                  transform: `translateY(${heroScroll * 10}px) scale(${1 - heroScroll * 0.02})`,
+                  opacity: 1 - heroScroll * 0.12,
+                  transition: "transform 0.2s ease-out, opacity 0.2s ease-out",
+                }}
+              >
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-sm font-semibold">
                   Erasmus+ powered NGO <ShieldCheck className="w-4 h-4" />
                 </div>
@@ -105,7 +124,12 @@ const Homepage = () => {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="border-white/60 text-white bg-transparent hover:bg-white/10"
+                  >
                     <Link to="/projects">See projects</Link>
                   </Button>
                   <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10">
