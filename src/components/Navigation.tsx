@@ -11,10 +11,8 @@ const Navigation = () => {
     { name: "Home", path: "/" },
     { name: "About Us", path: "/about" },
     { name: "Blog", path: "/blog" },
-    { name: "Projects", path: "/projects" },
     { name: "Team", path: "/team" },
     { name: "Partnership", path: "/join" },
-    { name: "Contact", path: "/contact" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -100,7 +98,7 @@ const Navigation = () => {
                   <Link to="/projects" onClick={() => setIsOpen(false)}>Projects</Link>
                 </Button>
                 <Button asChild className="w-full">
-                  <Link to="/contact" onClick={() => setIsOpen(false)}>Contact</Link>
+                  <Link to="/contact" onClick={() => setIsOpen(false)}>Let’s talk</Link>
                 </Button>
               </div>
             </div>

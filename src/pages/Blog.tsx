@@ -38,7 +38,8 @@ const Blog = () => {
     {
       id: "act-it-out",
       title: "Act it Out!",
-      subtitle: "Theatre Techniques for Social Change",
+      subtitle:
+        "We took part in an Erasmus+ Training Course in Debrecen, Hungary, from 28th September to 7th October 2025. Over these 10 inspiring days, youth workers explored the creative methods of Image Theatre, Forum Theatre, and Newspaper Theatre, discovering how to use them as powerful tools for driving social change in their communities.",
       category: "Training Course",
       categoryColor: "bg-green-100 text-green-800",
       date: "October 2025",
