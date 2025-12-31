@@ -25,7 +25,12 @@ const Join = () => {
                 Contact us
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white/60 text-white bg-transparent hover:bg-white/10"
+            >
               <Link to="/projects">See open programs</Link>
             </Button>
           </div>

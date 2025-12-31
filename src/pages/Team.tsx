@@ -14,6 +14,7 @@ const Team = () => {
   const teamMembers = [
     {
       name: "Vidit Goyal",
+      email: "vidit@ijbk-de.org",
       role: "Legal Representative & Chairman",
       expertise: "Artificial Intelligence & Youth Development",
       country: "India",
@@ -22,11 +23,21 @@ const Team = () => {
     },
     {
       name: "Rohit Singh Negi",
+      email: "rohit@ijbk-de.org",
       role: "Deputy Chairman",
       expertise: "Software Engineering & Project Management",
       country: "India",
       bio: "Software engineer focused on implementation supervision, reimbursements, and precise project planning.",
       skills: ["Software Engineering", "Project Planning", "Implementation", "Finance Tracking"],
+    },
+    {
+      name: "Shivendra Singh",
+      email: "shivendra@ijbk-de.org",
+      role: "Program Manager",
+      expertise: "Erasmus+ Coordination & Safeguarding",
+      country: "India",
+      bio: "Coordinates mobility logistics, keeps safeguarding standards high, and mentors youth participants before departures.",
+      skills: ["Program Coordination", "Safeguarding", "Travel Logistics", "Mentoring"],
     },
     {
       name: "Om Tiwari",
@@ -37,7 +48,8 @@ const Team = () => {
       skills: ["Data Science", "Sustainability", "Social Justice", "Communications"],
     },
     {
-      name: "Alex C.",
+      name: "Alex Conrad",
+      email: "alex.conrad@ijbk-de.org",
       role: "Team Member",
       expertise: "Participant Selection",
       country: "Germany",
@@ -46,6 +58,7 @@ const Team = () => {
     },
     {
       name: "Marta Rudzate",
+      email: "marta@ijbk-de.org",
       role: "Founding Member",
       expertise: "Mathematics & Statistics",
       country: "Latvia",
@@ -54,6 +67,7 @@ const Team = () => {
     },
     {
       name: "Tamara Suniarová",
+      email: "tamara@ijbk-de.org",
       role: "Founding Member",
       expertise: "Psychology & Youth Work",
       country: "Slovakia",
@@ -62,6 +76,7 @@ const Team = () => {
     },
     {
       name: "Prateek Kumar Sharma",
+      email: "prateek@ijbk-de.org",
       role: "Founding Member",
       expertise: "Computer Science & AI Research",
       country: "India",
@@ -70,6 +85,7 @@ const Team = () => {
     },
     {
       name: "Yeliena Bemeshchuk",
+      email: "yeliena@ijbk-de.org",
       role: "Founding Member",
       expertise: "Logistics Management",
       country: "Ukraine",
@@ -90,7 +106,7 @@ const Team = () => {
     if (name === "Yeliena Bemeshchuk") return <img src={lenochkaImage} alt={name} {...commonProps} />;
     if (name === "Rohit Singh Negi") return <img src={babaImage} alt={name} {...commonProps} />;
     if (name === "Prateek Kumar Sharma") return <img src={prateekImage} alt={name} {...commonProps} />;
-    if (name === "Alex C.") return <img src={alexImage} alt={name} {...commonProps} />;
+    if (name === "Alex C." || name === "Alex Conrad") return <img src={alexImage} alt={name} {...commonProps} />;
     return (
       <div className="w-full h-full bg-gradient-hero text-white grid place-items-center text-xl font-semibold">
         {name
@@ -132,6 +148,14 @@ const Team = () => {
                     </div>
                     <p className="text-primary font-semibold">{member.role}</p>
                     <p className="text-sm text-muted-foreground">{member.expertise}</p>
+                    {member.email && (
+                      <a
+                        href={`mailto:${member.email}`}
+                        className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+                      >
+                        {member.email}
+                      </a>
+                    )}
                   </div>
                 </div>
                 <p className="text-muted-foreground text-sm">{member.bio}</p>
