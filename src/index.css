@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -9,63 +9,52 @@
 @layer base {
   :root {
     /* EU Brand Colors */
-    --eu-blue: 220 100% 24%;
-    --eu-yellow: 49 100% 54%;
-    --eu-blue-light: 220 60% 45%;
-    --eu-blue-dark: 220 100% 15%;
-    
-    /* Base Colors */
+    --eu-blue: 221 83% 53%;
+    --eu-blue-deep: 222 71% 31%;
+    --eu-sky: 214 95% 91%;
+    --eu-yellow: 48 96% 58%;
+
     --background: 0 0% 100%;
-    --foreground: 220 15% 15%;
+    --foreground: 230 14% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 15%;
+    --card-foreground: 230 14% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 15%;
+    --popover-foreground: 230 14% 12%;
 
-    /* Primary - EU Blue */
-    --primary: 220 100% 24%;
+    --primary: var(--eu-blue);
     --primary-foreground: 0 0% 100%;
-    --primary-light: 220 60% 45%;
-    --primary-dark: 220 100% 15%;
 
-    /* Secondary - EU Yellow */
-    --secondary: 49 100% 54%;
-    --secondary-foreground: 220 15% 15%;
-    --secondary-light: 49 100% 70%;
-    --secondary-dark: 45 100% 45%;
+    --secondary: var(--eu-yellow);
+    --secondary-foreground: 230 14% 12%;
 
-    /* Neutral Colors */
-    --muted: 220 15% 96%;
-    --muted-foreground: 220 15% 45%;
+    --muted: 220 16% 96%;
+    --muted-foreground: 224 13% 44%;
 
-    --accent: 220 15% 95%;
-    --accent-foreground: 220 15% 15%;
+    --accent: 220 16% 96%;
+    --accent-foreground: 230 14% 12%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 15% 90%;
     --input: 220 15% 90%;
-    --ring: 220 100% 24%;
+    --ring: var(--eu-blue);
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Enhanced Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(var(--eu-blue)), hsl(var(--eu-blue-light)));
-    --gradient-accent: linear-gradient(135deg, hsl(var(--eu-yellow)), hsl(var(--secondary-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--eu-blue)), hsl(var(--eu-blue-deep)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--eu-yellow)), hsl(var(--eu-sky)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
-    --gradient-radial: radial-gradient(circle at center, hsl(var(--primary) / 0.1), transparent);
+    --gradient-radial: radial-gradient(circle at 20% 20%, rgba(96, 165, 255, 0.18), transparent 40%), radial-gradient(circle at 80% 0%, rgba(234, 179, 8, 0.16), transparent 35%);
 
-    /* Enhanced Shadows */
-    --shadow-soft: 0 4px 12px -2px hsl(var(--eu-blue) / 0.1);
-    --shadow-medium: 0 8px 25px -5px hsl(var(--eu-blue) / 0.15);
-    --shadow-strong: 0 12px 40px -8px hsl(var(--eu-blue) / 0.2);
-    --shadow-glow: 0 0 30px hsl(var(--eu-blue) / 0.3);
+    --shadow-soft: 0 10px 35px -10px hsl(var(--eu-blue) / 0.18);
+    --shadow-medium: 0 25px 60px -25px hsl(var(--eu-blue) / 0.25);
+    --shadow-strong: 0 30px 80px -30px hsl(var(--eu-blue) / 0.35);
+    --shadow-glow: 0 0 45px hsl(var(--eu-blue) / 0.35);
 
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.25s ease;
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     --transition-spring: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
@@ -116,7 +105,11 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Inter", "Space Grotesk", system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(96, 165, 255, 0.08), transparent 25%),
+      radial-gradient(circle at 80% 0%, rgba(234, 179, 8, 0.08), transparent 30%),
+      linear-gradient(180deg, #f8fbff 0%, #f9fafb 25%, #ffffff 100%);
   }
 
   /* Enhanced Visual Elements */
@@ -161,17 +154,37 @@
 
   /* Glassmorphism effect */
   .glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
   }
 
   /* Gradient text */
   .gradient-text {
-    background: var(--gradient-hero);
+    background: linear-gradient(120deg, hsl(var(--eu-blue)), hsl(var(--eu-yellow)));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+
+  .page-shell {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-shell {
+    @apply max-w-6xl mx-auto;
+  }
+
+  .panel {
+    @apply bg-white border border-border rounded-2xl shadow-soft;
+  }
+
+  .panel-strong {
+    @apply bg-gradient-to-br from-white via-white to-slate-50 border border-border rounded-2xl shadow-strong;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-primary/10 text-primary;
   }
 }
 

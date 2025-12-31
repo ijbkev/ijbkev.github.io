@@ -20,70 +20,94 @@ const Navigation = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-hero rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">IJ</span>
+    <header className="sticky top-0 z-50 relative">
+      <div className="absolute inset-0 h-full bg-white/80 backdrop-blur-xl border-b border-border pointer-events-none z-0" />
+      <div className="absolute inset-0 h-full bg-gradient-to-r from-primary/5 via-transparent to-secondary/10 pointer-events-none z-0" />
+      <div className="page-shell relative z-10">
+        <nav className="flex items-center justify-between py-4">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-hero text-white font-bold text-lg grid place-items-center shadow-medium group-hover:shadow-strong transition-shadow">
+              IJ
             </div>
-            <div className="hidden sm:block">
-              <span className="text-xl font-bold text-foreground">IJBK e.V.</span>
+            <div className="hidden sm:flex flex-col leading-tight">
+              <span className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
+                Jugend & Bildung
+              </span>
+              <span className="text-xl font-semibold text-foreground">IJBK e.V.</span>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center gap-8">
             {navItems.map((item) => (
               <Link
                 key={item.name}
                 to={item.path}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive(item.path)
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground"
+                className={`relative text-sm font-semibold transition-colors ${
+                  isActive(item.path) ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {item.name}
+                <span>{item.name}</span>
+                {isActive(item.path) && (
+                  <span className="absolute inset-x-0 -bottom-2 h-0.5 bg-primary rounded-full" />
+                )}
               </Link>
             ))}
           </div>
 
-          {/* Mobile menu button */}
+          <div className="hidden md:flex items-center gap-3">
+            <Button asChild variant="ghost" className="font-semibold">
+              <Link to="/projects">Projects</Link>
+            </Button>
+            <Button asChild className="shadow-soft hover:shadow-strong">
+              <Link to="/contact">Let’s talk</Link>
+            </Button>
+          </div>
+
           <div className="md:hidden">
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
+              size="icon"
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2"
+              className="rounded-xl border-border"
+              aria-label="Toggle navigation"
             >
               {isOpen ? <X size={20} /> : <Menu size={20} />}
             </Button>
           </div>
-        </div>
+        </nav>
 
-        {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden py-4 space-y-2 border-t border-border">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                  isActive(item.path)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-primary hover:bg-muted"
-                }`}
-              >
-                {item.name}
-              </Link>
-            ))}
+          <div className="md:hidden pb-6 animate-slide-up">
+            <div className="glass rounded-2xl p-4 shadow-medium border border-border/70">
+              <div className="space-y-2">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setIsOpen(false)}
+                    className={`block px-3 py-2 rounded-xl text-base font-semibold transition-colors ${
+                      isActive(item.path)
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/projects" onClick={() => setIsOpen(false)}>Projects</Link>
+                </Button>
+                <Button asChild className="w-full">
+                  <Link to="/contact" onClick={() => setIsOpen(false)}>Contact</Link>
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>
-    </nav>
+    </header>
   );
 };
 
