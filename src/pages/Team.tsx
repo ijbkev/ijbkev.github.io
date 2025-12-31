@@ -31,16 +31,8 @@ const Team = () => {
       skills: ["Software Engineering", "Project Planning", "Implementation", "Finance Tracking"],
     },
     {
-      name: "Shivendra Singh",
-      email: "shivendra@ijbk-de.org",
-      role: "Program Manager",
-      expertise: "Erasmus+ Coordination & Safeguarding",
-      country: "India",
-      bio: "Coordinates mobility logistics, keeps safeguarding standards high, and mentors youth participants before departures.",
-      skills: ["Program Coordination", "Safeguarding", "Travel Logistics", "Mentoring"],
-    },
-    {
       name: "Om Tiwari",
+      email: "shivendra@ijbk-de.org",
       role: "Founding Member",
       expertise: "Data Science & Social Advocacy",
       country: "India",

@@ -166,7 +166,7 @@ const Homepage = () => {
                       <Calendar className="w-5 h-5 text-primary mt-1" />
                       <div>
                         <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Right now</p>
-                        <h3 className="text-xl font-semibold text-foreground">Recruiting DiscoverEU cohorts</h3>
+                        <h3 className="text-xl font-semibold text-foreground">Recruiting participants for DiscoverEU </h3>
                         <p className="text-muted-foreground">3 guided Interrail routes starting April 2026 with full travel, food, and stay support.</p>
                       </div>
                     </div>
@@ -177,10 +177,6 @@ const Homepage = () => {
                         <p className="text-muted-foreground">Program design aligned with Erasmus+ standards, inclusive selection, and intercultural safety practices.</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <img src="/lovable-uploads/1c6cd6cd-95e8-4227-84d0-246ca492d9a8.png" alt="Erasmus+ Programme" className="h-14 w-full object-contain" />
-                    <img src={euFundingLogo} alt="EU funding" className="h-14 w-full object-contain" />
                   </div>
                 </CardContent>
               </div>
