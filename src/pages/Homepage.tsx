@@ -72,57 +72,19 @@ const Homepage = () => {
     { title: "Digitalization Matters", location: "Germany", image: "/lovable-uploads/94060860-f177-45f6-8e5f-4455f97eb693.png" },
   ];
 
-  const [scrollY, setScrollY] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const heroOffset = Math.min(scrollY, 320);
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
 
       <main className="overflow-hidden">
         <section className="relative isolate">
-          <div
-            className="absolute inset-0 opacity-60"
-            style={{
-              backgroundImage: `url(${heroImage})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              transform: `translateY(${heroOffset * 0.06}px)`,
-            }}
-          />
+          <div className="absolute inset-0 opacity-60" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: "cover", backgroundPosition: "center" }} />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-950/70 to-slate-950" />
-          <div
-            className="absolute inset-0 mix-blend-overlay"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)",
-              transform: `translateY(${heroOffset * -0.04}px)`,
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: "radial-gradient(circle at 50% -10%, rgba(255,255,255,0.12), transparent 35%)",
-              opacity: 1 - heroOffset / 500,
-            }}
-          />
+          <div className="absolute inset-0 mix-blend-overlay" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)" }} />
 
           <div className="page-shell relative pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
-              <div
-                className="text-white space-y-8 transition-transform"
-                style={{
-                  transform: `translateY(${heroOffset * -0.05}px) scale(${1 + heroOffset * 0.0002})`,
-                  opacity: 1 - heroOffset / 900,
-                }}
-              >
+              <div className="text-white space-y-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-sm font-semibold">
                   Erasmus+ powered NGO <ShieldCheck className="w-4 h-4" />
                 </div>
@@ -143,11 +105,7 @@ const Homepage = () => {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
+                  <Button asChild size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
                     <Link to="/projects">See projects</Link>
                   </Button>
                   <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10">
@@ -284,10 +242,7 @@ const Homepage = () => {
                       Apply now
                       <ArrowUpRight className="w-4 h-4" />
                     </a>
-                    <Link
-                      to="/join"
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                    >
+                    <Link to="/join" className="inline-flex items-center gap-2 text-white/90 hover:text-white transition-colors">
                       Partner with us
                       <ArrowRight className="w-4 h-4" />
                     </Link>
@@ -309,13 +264,13 @@ const Homepage = () => {
                           href={item.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-primary font-semibold hover:text-primary/80"
+                          className="inline-flex items-center gap-2 text-primary font-semibold"
                         >
                           {item.cta}
                           <ArrowUpRight className="w-4 h-4" />
                         </a>
                       ) : (
-                        <Link to={item.link!} className="inline-flex items-center gap-2 text-primary font-semibold hover:text-primary/80">
+                        <Link to={item.link!} className="inline-flex items-center gap-2 text-primary font-semibold">
                           {item.cta}
                           <ArrowRight className="w-4 h-4" />
                         </Link>
