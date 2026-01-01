@@ -116,7 +116,7 @@ const Projects = () => {
             {[
               { label: "Completed", value: "4" },
               { label: "In motion", value: "2" },
-              { label: "Countries engaged", value: "15+" },
+              { label: "Countries engaged", value: "20+" },
               { label: "Youth reached", value: "4000+" },
             ].map((stat) => (
               <div key={stat.label} className="glass rounded-2xl border-white/15 p-4">
@@ -215,7 +215,7 @@ const Projects = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { title: "EU compliant", value: "100%", detail: "Safeguarding, reporting, and finance aligned to EU rules." },
-              { title: "Countries reached", value: "15+", detail: "Trusted partner network across Europe." },
+              { title: "Countries reached", value: "20+", detail: "Trusted partner network across Europe." },
               { title: "Youth impacted", value: "4000+", detail: "Participants empowered through travel and training." },
               { title: "Projects completed", value: "4", detail: "Delivered with measurable learning outcomes." },
             ].map((item) => (
