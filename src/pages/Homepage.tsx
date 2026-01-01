@@ -16,6 +16,8 @@ import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import heroImage from "@/assets/hero-background.jpg";
+import logo from "@/assets/logo.png";
+
 
 type StatConfig = {
   label: string;
