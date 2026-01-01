@@ -64,6 +64,26 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/fce62516-199c-4d84-9ad5-496bb72bedc7) and click on Share -> Publish.
 
+### Deploying to Apache for `ijbk-ev.hsg.rptu.de`
+
+If you deploy the built assets to your own Apache host:
+
+1. Build the static site so the SPA entry (`index.html`) sits at the bundle root:
+   ```sh
+   npm run build
+   ```
+   The `.htaccess` file in `dist/` enables `mod_rewrite` so unknown routes resolve to `index.html`.
+2. Copy everything inside `dist/` into your Apache document root for `ijbk-ev.hsg.rptu.de`.
+3. Ensure `mod_rewrite` is enabled and overrides are allowed for the vhost, for example:
+   ```apache
+   a2enmod rewrite
+   # In the vhost, allow overrides where you place the build:
+   <Directory /var/www/ijbk-ev>
+     AllowOverride All
+   </Directory>
+   ```
+4. If you host the app from a subdirectory, adjust both the `RewriteBase` in the deployed `.htaccess` and set `VITE_BASE_PATH` (e.g. `/subdir/`) before running `npm run build` so asset URLs match the mount path.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!

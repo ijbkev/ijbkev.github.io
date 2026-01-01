@@ -1,9 +1,0 @@
-RewriteEngine On
-
-# If the requested thing is a real file or folder, serve it
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# Otherwise, route everything to the SPA entry point
-RewriteRule ^ index.html [L]
