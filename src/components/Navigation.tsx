@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,8 +25,12 @@ const Navigation = () => {
       <div className="page-shell relative z-10">
         <nav className="flex items-center justify-between py-4">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-hero text-white font-bold text-lg grid place-items-center shadow-medium group-hover:shadow-strong transition-shadow">
-              IJ
+            <div className="w-11 h-11 grid place-items-center">
+              <img
+                src={logo}
+                alt="IJBK logo"
+                className="w-11 h-11 object-contain"
+              />
             </div>
             <div className="hidden sm:flex flex-col leading-tight">
               <span className="text-sm uppercase tracking-[0.18em] text-muted-foreground">

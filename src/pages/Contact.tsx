@@ -27,7 +27,7 @@ const Contact = () => {
           {[
             {
               icon: <MapPin className="w-6 h-6 text-white" />,
-              title: "Visit us",
+              title: "Where to find us",
               hint: "Office address",
               body: (
                 <p className="text-muted-foreground">

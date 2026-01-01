@@ -230,7 +230,7 @@ const Homepage = () => {
   const stats: StatConfig[] = useMemo(
     () => [
       { label: "Mission areas", value: 4 },
-      { label: "Countries reached", value: 15, suffix: "+" },
+      { label: "Countries reached", value: 20, suffix: "+" },
       { label: "Non-profit", value: 100, suffix: "%" },
     ],
     []
@@ -436,119 +436,84 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* PROGRAMS */}
-        <section className="py-16 md:py-20">
-          <div className="page-shell space-y-10">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
-                  Live & upcoming
-                </p>
-                <h2 className="text-3xl md:text-4xl font-semibold leading-tight">
-                  Programs with seats, stories, and results
-                </h2>
-              </div>
-              <Button asChild>
-                <Link to="/projects">
-                  View all projects
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+{/* PROGRAMS */}
+<section className="py-12 md:py-14">
+  <div className="page-shell space-y-8">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+          Live & upcoming
+        </p>
+      </div>
+
+      <Button asChild variant="outline">
+        <Link to="/projects" className="inline-flex items-center">
+          View all projects
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Link>
+      </Button>
+    </div>
+
+    <Card className="relative overflow-hidden bg-gradient-hero text-white shadow-strong border-none">
+      <CardContent className="p-6 md:p-7">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Left */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="chip bg-white/15 text-white">DiscoverEU</span>
+              <span className="text-sm text-white/80">
+                Fully funded Interrail routes
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
-              <Card className="bg-gradient-hero text-white shadow-strong border-none">
-                <CardContent className="p-8 space-y-6">
-                  <div className="flex items-center gap-3">
-                    <span className="chip bg-white/15 text-white">
-                      DiscoverEU
-                    </span>
-                    <span className="text-sm text-white/80">
-                      Travel across Europe, train-first
-                    </span>
-                  </div>
+            <h3 className="text-xl md:text-2xl font-semibold leading-tight">
+              Travel Europe with leaders + daily support
+            </h3>
 
-                  <h3 className="text-2xl font-semibold">
-                    Fully funded routes across Europe with daily support
-                  </h3>
-                  <p className="text-white/85 leading-relaxed">
-                    Three travel groups, each with leaders, Interrail passes,
-                    hostel nights, food stipends, and local transport covered.
-                    No participation fee — just curiosity and commitment.
-                  </p>
+            <p className="text-white/85 leading-relaxed max-w-2xl text-sm md:text-base">
+            DiscoverEU is an action of the Erasmus+ programme that lets young people explore
+            Europe’s diversity and cultural heritage. Selected participants receive a travel pass and travel mainly by rail, connecting
+            with people across the continent.
+            <br />
+            It’s a learning journey designed to build confidence, independence, and a sense
+            of belonging in Europe.
+          </p>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="glass rounded-xl border-white/20 p-4">
-                      <p className="text-3xl font-semibold text-white">15</p>
-                      <p className="text-sm text-white/70">
-                        Young travelers per route
-                      </p>
-                    </div>
-                    <div className="glass rounded-xl border-white/20 p-4">
-                      <p className="text-3xl font-semibold text-white">
-                        Start: Apr 2026
-                      </p>
-                      <p className="text-sm text-white/70">
-                        Rolling acceptance
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-3">
-                    <a
-                      href="https://forms.gle/PLDCB35wsTjaHPoP7"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2 font-semibold hover:-translate-y-0.5 transition-transform"
-                    >
-                      Apply now
-                      <ArrowUpRight className="w-4 h-4" />
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-4">
-                {initiatives.map((item) => (
-                  <Card
-                    key={item.title}
-                    className="panel hover:-translate-y-1 transition-transform duration-300"
-                  >
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <h4 className="text-lg font-semibold text-foreground">
-                          {item.title}
-                        </h4>
-                        <span className="w-2 h-2 rounded-full bg-primary" />
-                      </div>
-                      <p className="text-muted-foreground">{item.summary}</p>
-
-                      {"href" in item && (item as any).href ? (
-                        <a
-                          href={(item as any).href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-primary font-semibold"
-                        >
-                          {(item as any).cta}
-                          <ArrowUpRight className="w-4 h-4" />
-                        </a>
-                      ) : (
-                        <Link
-                          to={(item as any).link}
-                          className="inline-flex items-center gap-2 text-primary font-semibold"
-                        >
-                          {(item as any).cta}
-                          <ArrowRight className="w-4 h-4" />
-                        </Link>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href="https://forms.gle/PLDCB35wsTjaHPoP7"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2 font-semibold hover:-translate-y-0.5 transition-transform"
+              >
+                Apply now
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
             </div>
           </div>
-        </section>
+
+          {/* Right: compact info chips */}
+          <div className="flex flex-wrap lg:flex-col gap-3 lg:items-end">
+            <div className="glass rounded-full border-white/20 px-4 py-2">
+              <p className="text-sm font-semibold text-white">3 Routes</p>
+            </div>
+            <div className="glass rounded-full border-white/20 px-4 py-2">
+              <p className="text-sm font-semibold text-white">
+                15 + 3 Leaders
+              </p>
+            </div>
+            <div className="glass rounded-full border-white/20 px-4 py-2">
+              <p className="text-sm font-semibold text-white">Apr 2026</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+</section>
+
+
 
         {/* GALLERY */}
         <section className="py-16 md:py-20 bg-muted">
@@ -590,50 +555,35 @@ const Homepage = () => {
         </section>
 
         {/* TRUST */}
-        <section className="py-16 md:py-20 bg-background">
-          <div className="page-shell space-y-10">
-            <div className="text-center space-y-3">
-              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
-                Trust & recognition
-              </p>
-              <h2 className="text-3xl md:text-4xl font-semibold">
-                Co-funded by the European Union
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Every initiative follows Erasmus+ quality standards, with
-                inclusive selection, intercultural facilitation, and safety at
-                the core.
-              </p>
-            </div>
+       
+        <section className="py-4 bg-background">
+          <div className="page-shell py-0">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-5 
+              rounded-xl border bg-muted/40 px-5 py-4">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              <Card className="panel text-center">
-                <CardContent className="p-8 space-y-4">
-                  <img
-                    src="/lovable-uploads/1c6cd6cd-95e8-4227-84d0-246ca492d9a8.png"
-                    alt="Erasmus+ Programme"
-                    className="h-16 w-auto object-contain mx-auto"
-                  />
-                  <p className="text-muted-foreground">
-                    Proud participants in Erasmus+ programmes empowering European youth.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="panel text-center">
-                <CardContent className="p-8 space-y-4">
-                  <img
-                    src="/lovable-uploads/10b5b39b-baa5-4822-aa8c-25a360e74a7a.png"
-                    alt="Co-funded by the European Union"
-                    className="h-16 w-auto object-contain mx-auto"
-                  />
-                  <p className="text-muted-foreground">
-                    Projects supported through EU funding programmes with transparent impact tracking.
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Logos */}
+              <div className="flex items-center gap-5 shrink-0">
+                <img
+                  src="/lovable-uploads/1c6cd6cd-95e8-4227-84d0-246ca492d9a8.png"
+                  alt="Erasmus+ Programme"
+                  className="h-9 w-auto object-contain"
+                />
+                <img
+                  src="/lovable-uploads/10b5b39b-baa5-4822-aa8c-25a360e74a7a.png"
+                  alt="Co-funded by the European Union"
+                  className="h-9 w-auto object-contain"
+                />
+              </div>
+
+              {/* Text */}
+              <p className="text-sm text-muted-foreground text-center md:text-left max-w-2xl leading-snug">
+                Our initiatives follow Erasmus+ quality standards with inclusive selection, intercultural facilitation, and participant safety at the core.
+              </p>
             </div>
           </div>
         </section>
+
+
       </main>
 
       <Footer />

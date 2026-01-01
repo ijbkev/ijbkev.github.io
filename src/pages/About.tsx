@@ -97,24 +97,6 @@ const About = () => {
             </CardContent>
           </Card>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[{ Icon: Calendar, title: "Founded", value: "8 July 2025" },
-            { Icon: MapPin, title: "Location", value: "Kaiserslautern, Germany" },
-            { Icon: Users, title: "Legal Status", value: "eingetragener Verein (e.V.)" },
-            { Icon: Target, title: "Focus", value: "Youth empowerment & intercultural learning" }]
-            .map((item) => (
-              <Card key={item.title} className="panel">
-                <CardContent className="p-5 flex items-start gap-4">
-                  <item.Icon className="w-10 h-10 text-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold">{item.title}</h3>
-                    <p className="text-muted-foreground">{item.value}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-        </div>
       </section>
 
       <section className="py-16 md:py-20 bg-muted">

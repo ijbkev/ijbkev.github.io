@@ -6,6 +6,8 @@ import { Calendar, Clock, User, MapPin, ArrowRight } from "lucide-react";
 import actItOutImage from "@/assets/act-it-out.jpg";
 import aiSocialImpactImage from "@/assets/ye-social-estonia.jpeg";
 import { Link } from "react-router-dom";
+import aiSocialImpactVideo from "@/assets/ye-social-estonia.mp4";
+
 
 const Blog = () => {
   const blogPosts = [
@@ -17,9 +19,11 @@ const Blog = () => {
       categoryColor: "bg-blue-100 text-blue-800",
       date: "December 2025",
       location: "Tallinn, Estonia",
-      readingTime: "3 min read",
+      readingTime: "2 min read",
       author: "IJBK Team",
-      image: aiSocialImpactImage,
+      mediaType: "video",
+      mediaSrc: aiSocialImpactVideo,
+      poster: aiSocialImpactImage, // optional fallback preview
       featured: true,
       content: [
         "We took part in the Erasmus+ Youth Exchange AI 4 Social Impact in Tallinn, Estonia, from 5th to 12th December 2025. During this inspiring week, young people explored how Artificial Intelligence can be used ethically and responsibly to create positive social change.",
@@ -44,7 +48,7 @@ const Blog = () => {
       categoryColor: "bg-green-100 text-green-800",
       date: "October 2025",
       location: "Debrecen, Hungary",
-      readingTime: "2 min read",
+      readingTime: "1 min read",
       author: "IJBK Team",
       image: actItOutImage,
       featured: false,
@@ -80,7 +84,28 @@ const Blog = () => {
           <section className="grid lg:grid-cols-[1.1fr_0.9fr] gap-8">
             <article className="relative overflow-hidden rounded-3xl shadow-strong border border-border">
               <div className="absolute inset-0">
-                <img src={featuredPost.image} alt={featuredPost.title} className="w-full h-full object-cover" />
+              <div className="absolute inset-0">
+              {featuredPost.mediaType === "video" ? (
+                <video
+                  className="w-full h-full object-cover"
+                  src={featuredPost.mediaSrc}
+                  poster={featuredPost.poster}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                <img
+                  src={featuredPost.mediaSrc}
+                  alt={featuredPost.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
+
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-black/20" />
+            </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-black/20" />
               </div>
               <div className="relative p-6 sm:p-10 text-white space-y-4 flex flex-col justify-end min-h-[420px]">
