@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,7 +16,119 @@ import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import heroImage from "@/assets/hero-background.jpg";
-import euFundingLogo from "@/assets/eu-funding-logo.png";
+
+type StatConfig = {
+  label: string;
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+};
+
+function useInView<T extends HTMLElement>(options?: IntersectionObserverInit) {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setInView(true);
+    }, options);
+
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [options]);
+
+  return { ref, inView };
+}
+
+function useCountUp({
+  target,
+  durationMs = 850,
+  startWhen = true,
+  decimals = 0,
+}: {
+  target: number;
+  durationMs?: number;
+  startWhen?: boolean;
+  decimals?: number;
+}) {
+  const [value, setValue] = useState(0);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!startWhen) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    const start = performance.now();
+    const from = 0;
+    const to = target;
+
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const current = from + (to - from) * eased;
+
+      setValue(current);
+
+      if (t < 1) requestAnimationFrame(tick);
+      else setValue(to);
+    };
+
+    requestAnimationFrame(tick);
+  }, [startWhen, target, durationMs]);
+
+  const factor = Math.pow(10, decimals);
+  const rounded = Math.round(value * factor) / factor;
+
+  return rounded.toFixed(decimals);
+}
+
+const StatTile = ({ stat, start }: { stat: StatConfig; start: boolean }) => {
+  const formatted = useCountUp({
+    target: stat.value,
+    durationMs: 800,
+    startWhen: start,
+    decimals: stat.decimals ?? 0,
+  });
+
+  return (
+    <div className="glass rounded-2xl border-white/15 px-4 py-3 text-center">
+      <p className="text-2xl font-semibold text-white tabular-nums">
+        {stat.prefix ?? ""}
+        {formatted}
+        {stat.suffix ?? ""}
+      </p>
+      <p className="text-xs text-white/70">{stat.label}</p>
+    </div>
+  );
+};
+
+const StaticStatTile = ({
+  label,
+  value,
+  prefix,
+  suffix,
+}: {
+  label: string;
+  value: string | number;
+  prefix?: string;
+  suffix?: string;
+}) => {
+  return (
+    <div className="glass rounded-2xl border-white/15 px-4 py-3 text-center">
+      <p className="text-2xl font-semibold text-white tabular-nums">
+        {prefix ?? ""}
+        {value}
+        {suffix ?? ""}
+      </p>
+      <p className="text-xs text-white/70">{label}</p>
+    </div>
+  );
+};
 
 const Homepage = () => {
   const [heroScroll, setHeroScroll] = useState(0);
@@ -31,75 +143,135 @@ const Homepage = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const missionAreas = [
-    {
-      icon: <Lightbulb className="w-7 h-7" />,
-      title: "Digital Skills & AI",
-      description: "Immersive training, ethical AI literacy, and hands-on tech for future-ready youth.",
-    },
-    {
-      icon: <Users className="w-7 h-7" />,
-      title: "Social Entrepreneurship",
-      description: "Building ventures that tackle real community challenges with measurable impact.",
-    },
-    {
-      icon: <Globe className="w-7 h-7" />,
-      title: "Intercultural Learning",
-      description: "Erasmus+ exchanges that spark cultural fluency, co-creation, and lifelong networks.",
-    },
-    {
-      icon: <Leaf className="w-7 h-7" />,
-      title: "Sustainability",
-      description: "Outdoor learning, climate literacy, and daily habits that protect our planet.",
-    },
-  ];
+  const missionAreas = useMemo(
+    () => [
+      {
+        icon: <Lightbulb className="w-7 h-7" />,
+        title: "Digital Skills & AI",
+        description:
+          "Immersive training, ethical AI literacy, and hands-on tech for future-ready youth.",
+      },
+      {
+        icon: <Users className="w-7 h-7" />,
+        title: "Social Entrepreneurship",
+        description:
+          "Building ventures that tackle real community challenges with measurable impact.",
+      },
+      {
+        icon: <Globe className="w-7 h-7" />,
+        title: "Intercultural Learning",
+        description:
+          "Erasmus+ exchanges that spark cultural fluency, co-creation, and lifelong networks.",
+      },
+      {
+        icon: <Leaf className="w-7 h-7" />,
+        title: "Sustainability",
+        description:
+          "Outdoor learning, climate literacy, and daily habits that protect our planet.",
+      },
+    ],
+    []
+  );
 
-  const initiatives = [
-    {
-      title: "DiscoverEU: 3 group routes",
-      summary:
-        "Fully funded Interrail journeys with daily support, curated learning stops, and leaders on every route.",
-      cta: "Join the travel cohort",
-      href: "https://forms.gle/PLDCB35wsTjaHPoP7",
-    },
-    {
-      title: "AI 4 Social Impact",
-      summary:
-        "Tallinn, Estonia — co-designing ethical AI concepts with peers from Lithuania, Germany, and Poland.",
-      cta: "See the story",
-      link: "/blog",
-    },
-    {
-      title: "Act it Out!",
-      summary: "Forum theatre in Debrecen, Hungary — using performance to unlock dialogue and inclusion.",
-      cta: "Explore the program",
-      link: "/projects",
-    },
-  ];
+  const initiatives = useMemo(
+    () => [
+      {
+        title: "DiscoverEU: 3 group routes",
+        summary:
+          "Fully funded Interrail journeys with daily support, curated learning stops, and leaders on every route.",
+        cta: "Join the travel cohort",
+        href: "https://forms.gle/PLDCB35wsTjaHPoP7",
+      },
+      {
+        title: "AI 4 Social Impact",
+        summary:
+          "Tallinn, Estonia — co-designing ethical AI concepts with peers from Lithuania, Germany, and Poland.",
+        cta: "See the story",
+        link: "/blog",
+      },
+      {
+        title: "Act it Out!",
+        summary:
+          "Forum theatre in Debrecen, Hungary — using performance to unlock dialogue and inclusion.",
+        cta: "See the story",
+        link: "/blog#act-it-out",
+      },
+    ],
+    []
+  );
 
-  const gallery = [
-    { title: "Be a Leader", location: "Targoviste, Romania", image: "/lovable-uploads/49b61ef9-3596-4028-bfde-d476a7bea249.png" },
-    { title: "Act it Out!", location: "Debrecen, Hungary", image: "/lovable-uploads/c4c1f046-ccc5-4e93-852a-0da78fda170b.png" },
-    { title: "AI Tools 4 Youth Work", location: "North Macedonia", image: "/lovable-uploads/14025e70-2537-4558-9ecb-3bde034b333f.png" },
-    { title: "Digitalization Matters", location: "Germany", image: "/lovable-uploads/94060860-f177-45f6-8e5f-4455f97eb693.png" },
-  ];
+  const gallery = useMemo(
+    () => [
+      {
+        title: "Be a Leader",
+        location: "Targoviste, Romania",
+        image: "/lovable-uploads/49b61ef9-3596-4028-bfde-d476a7bea249.png",
+      },
+      {
+        title: "Act it Out!",
+        location: "Debrecen, Hungary",
+        image: "/lovable-uploads/c4c1f046-ccc5-4e93-852a-0da78fda170b.png",
+      },
+      {
+        title: "AI Tools 4 Youth Work",
+        location: "North Macedonia",
+        image: "/lovable-uploads/14025e70-2537-4558-9ecb-3bde034b333f.png",
+      },
+      {
+        title: "Digitalization Matters",
+        location: "Germany",
+        image: "/lovable-uploads/94060860-f177-45f6-8e5f-4455f97eb693.png",
+      },
+    ],
+    []
+  );
+
+  // These animate
+  const stats: StatConfig[] = useMemo(
+    () => [
+      { label: "Mission areas", value: 4 },
+      { label: "Countries reached", value: 15, suffix: "+" },
+      { label: "Non-profit", value: 100, suffix: "%" },
+    ],
+    []
+  );
+
+  const { ref: statsRef, inView: statsInView } = useInView<HTMLDivElement>({
+    threshold: 0.25,
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
 
       <main className="overflow-hidden">
+        {/* HERO */}
         <section className="relative isolate">
-          <div className="absolute inset-0 opacity-60" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div
+            className="absolute inset-0 opacity-60"
+            style={{
+              backgroundImage: `url(${heroImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-950/70 to-slate-950" />
-          <div className="absolute inset-0 mix-blend-overlay" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)" }} />
+          <div
+            className="absolute inset-0 mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)",
+            }}
+          />
 
           <div className="page-shell relative pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
               <div
                 className="text-white space-y-8"
                 style={{
-                  transform: `translateY(${heroScroll * 10}px) scale(${1 - heroScroll * 0.02})`,
+                  transform: `translateY(${heroScroll * 10}px) scale(${
+                    1 - heroScroll * 0.02
+                  })`,
                   opacity: 1 - heroScroll * 0.12,
                   transition: "transform 0.2s ease-out, opacity 0.2s ease-out",
                 }}
@@ -107,18 +279,27 @@ const Homepage = () => {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-sm font-semibold">
                   Erasmus+ powered NGO <ShieldCheck className="w-4 h-4" />
                 </div>
+
                 <div>
-                  <p className="text-sm uppercase tracking-[0.25em] text-white/70 mb-3">Kaiserslautern • Europe</p>
+                  <p className="text-sm uppercase tracking-[0.25em] text-white/70 mb-3">
+                    Kaiserslautern • Europe
+                  </p>
                   <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight max-w-3xl">
                     Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.
                   </h1>
                   <p className="text-lg md:text-xl text-white/80 mt-4 max-w-2xl">
-                    We design high-energy learning journeys where youth, technology, and sustainability meet — co-funded by the European Union.
+                    We design high-energy learning journeys where youth,
+                    technology, and sustainability meet — co-funded by the
+                    European Union.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <Button asChild size="lg" className="bg-white text-slate-900 hover:-translate-y-0.5 transition-transform">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-white text-slate-900 hover:-translate-y-0.5 transition-transform"
+                  >
                     <Link to="/about">
                       Learn about IJBK
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -132,7 +313,12 @@ const Homepage = () => {
                   >
                     <Link to="/projects">See projects</Link>
                   </Button>
-                  <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10">
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="ghost"
+                    className="text-white hover:bg-white/10"
+                  >
                     <Link to="/join">
                       Partner with us
                       <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -140,17 +326,17 @@ const Homepage = () => {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { label: "Founded", value: "2025" },
-                    { label: "Mission areas", value: "4" },
-                    { label: "Countries reached", value: "15+" },
-                    { label: "Non-profit", value: "100%" },
-                  ].map((stat) => (
-                    <div key={stat.label} className="glass rounded-2xl border-white/15 px-4 py-3 text-center">
-                      <p className="text-2xl font-semibold text-white">{stat.value}</p>
-                      <p className="text-xs text-white/70">{stat.label}</p>
-                    </div>
+                {/* STATS */}
+                <div
+                  ref={statsRef}
+                  className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+                >
+                  {/* Static but visually identical */}
+                  <StaticStatTile label="Founded" value={2025} />
+
+                  {/* Animated tiles */}
+                  {stats.map((stat) => (
+                    <StatTile key={stat.label} stat={stat} start={statsInView} />
                   ))}
                 </div>
               </div>
@@ -158,23 +344,42 @@ const Homepage = () => {
               <div className="panel bg-white/90 backdrop-blur-lg border-white/40 shadow-strong">
                 <CardContent className="p-6 sm:p-8 space-y-6">
                   <div className="flex items-center gap-3">
-                    <span className="chip bg-primary/10 text-primary">What we do</span>
-                    <span className="text-sm text-muted-foreground">Impact-first, youth-led</span>
+                    <span className="chip bg-primary/10 text-primary">
+                      What we do
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Impact-first, youth-led
+                    </span>
                   </div>
+
                   <div className="space-y-4">
                     <div className="flex items-start gap-4">
                       <Calendar className="w-5 h-5 text-primary mt-1" />
                       <div>
-                        <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Right now</p>
-                        <h3 className="text-xl font-semibold text-foreground">Recruiting participants for DiscoverEU </h3>
-                        <p className="text-muted-foreground">3 guided Interrail routes starting April 2026 with full travel, food, and stay support.</p>
+                        <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
+                          Right now
+                        </p>
+                        <h3 className="text-xl font-semibold text-foreground">
+                          Recruiting participants for DiscoverEU
+                        </h3>
+                        <p className="text-muted-foreground">
+                          3 guided Interrail routes starting April 2026 with full
+                          travel, food, and stay support.
+                        </p>
                       </div>
                     </div>
+
                     <div className="flex items-start gap-4">
                       <Sparkles className="w-5 h-5 text-primary mt-1" />
                       <div>
-                        <h4 className="font-semibold text-foreground">EU-backed quality</h4>
-                        <p className="text-muted-foreground">Program design aligned with Erasmus+ standards, inclusive selection, and intercultural safety practices.</p>
+                        <h4 className="font-semibold text-foreground">
+                          EU-backed quality
+                        </h4>
+                        <p className="text-muted-foreground">
+                          Program design aligned with Erasmus+ standards,
+                          inclusive selection, and intercultural safety
+                          practices.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -184,15 +389,26 @@ const Homepage = () => {
           </div>
         </section>
 
+        {/* MISSION AREAS */}
         <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "var(--gradient-radial)" }} />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ backgroundImage: "var(--gradient-radial)" }}
+          />
           <div className="page-shell relative space-y-10">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
               <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">What matters to us</p>
-                <h2 className="text-3xl md:text-4xl font-semibold leading-tight mt-2">Four mission areas, one bold youth agenda</h2>
+                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                  What matters to us
+                </p>
+                <h2 className="text-3xl md:text-4xl font-semibold leading-tight mt-2">
+                  Four mission areas, one bold youth agenda
+                </h2>
               </div>
-              <Link to="/about" className="inline-flex items-center gap-2 text-primary font-semibold hover:translate-x-1 transition-transform">
+              <Link
+                to="/about"
+                className="inline-flex items-center gap-2 text-primary font-semibold hover:translate-x-1 transition-transform"
+              >
                 Explore our story <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -205,8 +421,12 @@ const Homepage = () => {
                       {area.icon}
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-lg font-semibold text-foreground">{area.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed">{area.description}</p>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {area.title}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {area.description}
+                      </p>
                     </div>
                     <div className="h-1 rounded-full bg-gradient-hero opacity-0 group-hover:opacity-100 transition-opacity" />
                   </CardContent>
@@ -216,12 +436,17 @@ const Homepage = () => {
           </div>
         </section>
 
+        {/* PROGRAMS */}
         <section className="py-16 md:py-20">
           <div className="page-shell space-y-10">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Live & upcoming</p>
-                <h2 className="text-3xl md:text-4xl font-semibold leading-tight">Programs with seats, stories, and results</h2>
+                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                  Live & upcoming
+                </p>
+                <h2 className="text-3xl md:text-4xl font-semibold leading-tight">
+                  Programs with seats, stories, and results
+                </h2>
               </div>
               <Button asChild>
                 <Link to="/projects">
@@ -235,23 +460,40 @@ const Homepage = () => {
               <Card className="bg-gradient-hero text-white shadow-strong border-none">
                 <CardContent className="p-8 space-y-6">
                   <div className="flex items-center gap-3">
-                    <span className="chip bg-white/15 text-white">DiscoverEU</span>
-                    <span className="text-sm text-white/80">Travel across Europe, train-first</span>
+                    <span className="chip bg-white/15 text-white">
+                      DiscoverEU
+                    </span>
+                    <span className="text-sm text-white/80">
+                      Travel across Europe, train-first
+                    </span>
                   </div>
-                  <h3 className="text-2xl font-semibold">Fully funded routes across Europe with daily support</h3>
+
+                  <h3 className="text-2xl font-semibold">
+                    Fully funded routes across Europe with daily support
+                  </h3>
                   <p className="text-white/85 leading-relaxed">
-                    Three travel groups, each with leaders, Interrail passes, hostel nights, food stipends, and local transport covered. No participation fee — just curiosity and commitment.
+                    Three travel groups, each with leaders, Interrail passes,
+                    hostel nights, food stipends, and local transport covered.
+                    No participation fee — just curiosity and commitment.
                   </p>
+
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="glass rounded-xl border-white/20 p-4">
                       <p className="text-3xl font-semibold text-white">15</p>
-                      <p className="text-sm text-white/70">Young travelers per route</p>
+                      <p className="text-sm text-white/70">
+                        Young travelers per route
+                      </p>
                     </div>
                     <div className="glass rounded-xl border-white/20 p-4">
-                      <p className="text-3xl font-semibold text-white">Start: Apr 2026</p>
-                      <p className="text-sm text-white/70">Rolling acceptance</p>
+                      <p className="text-3xl font-semibold text-white">
+                        Start: Apr 2026
+                      </p>
+                      <p className="text-sm text-white/70">
+                        Rolling acceptance
+                      </p>
                     </div>
                   </div>
+
                   <div className="flex flex-wrap gap-3">
                     <a
                       href="https://forms.gle/PLDCB35wsTjaHPoP7"
@@ -262,36 +504,41 @@ const Homepage = () => {
                       Apply now
                       <ArrowUpRight className="w-4 h-4" />
                     </a>
-                    <Link to="/join" className="inline-flex items-center gap-2 text-white/90 hover:text-white transition-colors">
-                      Partner with us
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
                   </div>
                 </CardContent>
               </Card>
 
               <div className="grid gap-4">
                 {initiatives.map((item) => (
-                  <Card key={item.title} className="panel hover:-translate-y-1 transition-transform duration-300">
+                  <Card
+                    key={item.title}
+                    className="panel hover:-translate-y-1 transition-transform duration-300"
+                  >
                     <CardContent className="p-5 space-y-3">
                       <div className="flex items-center justify-between gap-3">
-                        <h4 className="text-lg font-semibold text-foreground">{item.title}</h4>
+                        <h4 className="text-lg font-semibold text-foreground">
+                          {item.title}
+                        </h4>
                         <span className="w-2 h-2 rounded-full bg-primary" />
                       </div>
                       <p className="text-muted-foreground">{item.summary}</p>
-                      {item.href ? (
+
+                      {"href" in item && (item as any).href ? (
                         <a
-                          href={item.href}
+                          href={(item as any).href}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-primary font-semibold"
                         >
-                          {item.cta}
+                          {(item as any).cta}
                           <ArrowUpRight className="w-4 h-4" />
                         </a>
                       ) : (
-                        <Link to={item.link!} className="inline-flex items-center gap-2 text-primary font-semibold">
-                          {item.cta}
+                        <Link
+                          to={(item as any).link}
+                          className="inline-flex items-center gap-2 text-primary font-semibold"
+                        >
+                          {(item as any).cta}
                           <ArrowRight className="w-4 h-4" />
                         </Link>
                       )}
@@ -303,19 +550,28 @@ const Homepage = () => {
           </div>
         </section>
 
+        {/* GALLERY */}
         <section className="py-16 md:py-20 bg-muted">
           <div className="page-shell space-y-10">
             <div className="text-center space-y-3">
-              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Field moments</p>
-              <h2 className="text-3xl md:text-4xl font-semibold">Snapshots from our journeys</h2>
+              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                Field moments
+              </p>
+              <h2 className="text-3xl md:text-4xl font-semibold">
+                Snapshots from our journeys
+              </h2>
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Youth exchanges, training courses, and cultural immersions across Europe — captured in motion.
+                Youth exchanges, training courses, and cultural immersions across
+                Europe — captured in motion.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {gallery.map((item) => (
-                <Card key={item.title} className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300">
+                <Card
+                  key={item.title}
+                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300"
+                >
                   <div className="aspect-square overflow-hidden">
                     <img
                       src={item.image}
@@ -333,13 +589,20 @@ const Homepage = () => {
           </div>
         </section>
 
+        {/* TRUST */}
         <section className="py-16 md:py-20 bg-background">
           <div className="page-shell space-y-10">
             <div className="text-center space-y-3">
-              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Trust & recognition</p>
-              <h2 className="text-3xl md:text-4xl font-semibold">Co-funded by the European Union</h2>
+              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                Trust & recognition
+              </p>
+              <h2 className="text-3xl md:text-4xl font-semibold">
+                Co-funded by the European Union
+              </h2>
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Every initiative follows Erasmus+ quality standards, with inclusive selection, intercultural facilitation, and safety at the core.
+                Every initiative follows Erasmus+ quality standards, with
+                inclusive selection, intercultural facilitation, and safety at
+                the core.
               </p>
             </div>
 
@@ -351,7 +614,9 @@ const Homepage = () => {
                     alt="Erasmus+ Programme"
                     className="h-16 w-auto object-contain mx-auto"
                   />
-                  <p className="text-muted-foreground">Proud participants in Erasmus+ programmes empowering European youth.</p>
+                  <p className="text-muted-foreground">
+                    Proud participants in Erasmus+ programmes empowering European youth.
+                  </p>
                 </CardContent>
               </Card>
               <Card className="panel text-center">
@@ -361,7 +626,9 @@ const Homepage = () => {
                     alt="Co-funded by the European Union"
                     className="h-16 w-auto object-contain mx-auto"
                   />
-                  <p className="text-muted-foreground">Projects supported through EU funding programmes with transparent impact tracking.</p>
+                  <p className="text-muted-foreground">
+                    Projects supported through EU funding programmes with transparent impact tracking.
+                  </p>
                 </CardContent>
               </Card>
             </div>
