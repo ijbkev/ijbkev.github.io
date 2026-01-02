@@ -229,11 +229,6 @@ const Homepage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
-      <div className="cosmic-veil" aria-hidden />
-      <div className="fixed inset-0 pointer-events-none" aria-hidden>
-        <div className="holo-grid" />
-      </div>
-
       <Navigation />
 
       <main className="overflow-hidden relative z-10">

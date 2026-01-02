@@ -35,11 +35,11 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.25),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.25),transparent_30%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.18),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-6">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">Registered Non-Profit e.V.</Badge>
           <h1 className="text-4xl md:text-5xl font-semibold">Who we are</h1>
@@ -79,7 +79,7 @@ const About = () => {
               <Badge variant="outline" className="text-primary border-primary">Inclusive selection</Badge>
             </div>
           </div>
-          <Card className="panel-strong">
+          <Card className="panel-strong holo-card hover-lift">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <Sparkles className="text-primary" />
@@ -99,7 +99,7 @@ const About = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 bg-muted">
+      <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
         <div className="page-shell space-y-10">
           <div className="text-center space-y-3">
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Mission areas</p>
@@ -111,7 +111,7 @@ const About = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {missionAreas.map((area) => (
-              <Card key={area.title} className="panel-strong hover:-translate-y-1 transition-transform">
+              <Card key={area.title} className="panel-strong holo-card hover-lift transition-transform">
                 <CardContent className="p-6 space-y-3">
                   <h3 className="text-xl font-semibold text-foreground">{area.title}</h3>
                   <p className="text-muted-foreground">{area.description}</p>
@@ -122,7 +122,7 @@ const About = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20">
+      <section className="py-16 md:py-20 scroll-fade section-chrome">
         <div className="page-shell space-y-10">
           <div className="grid lg:grid-cols-2 gap-10">
             <div className="space-y-4">
@@ -133,7 +133,7 @@ const About = () => {
                 intercultural fluency to create sustainable change.
               </p>
             </div>
-            <Card className="panel-strong">
+            <Card className="panel-strong holo-card hover-lift">
               <CardContent className="p-6 space-y-4">
                 <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">How we behave</p>
                 <div className="space-y-4">
