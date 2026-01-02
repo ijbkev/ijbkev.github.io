@@ -229,6 +229,11 @@ const Homepage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
+      <div className="cosmic-veil" aria-hidden />
+      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+        <div className="holo-grid" />
+      </div>
+
       <Navigation />
 
       <main className="overflow-hidden relative z-10">
@@ -413,7 +418,7 @@ const Homepage = () => {
         </section>
 
         {/* MISSION AREAS */}
-        <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden scroll-fade section-chrome">
+        <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden scroll-fade">
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ backgroundImage: "var(--gradient-radial)" }}
@@ -463,7 +468,7 @@ const Homepage = () => {
         </section>
 
         {/* PROGRAMS */}
-        <section className="py-12 md:py-14 relative scroll-fade section-chrome">
+        <section className="py-12 md:py-14 relative scroll-fade">
           <div className="absolute inset-x-0 -top-16 h-24 bg-gradient-to-b from-primary/5 via-primary/0 to-transparent pointer-events-none" />
           <div className="page-shell space-y-8 relative">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -543,7 +548,7 @@ const Homepage = () => {
 
 
         {/* GALLERY */}
-        <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
+        <section className="py-16 md:py-20 bg-muted scroll-fade">
           <div className="page-shell space-y-10">
             <div className="text-center space-y-3">
               <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -562,7 +567,7 @@ const Homepage = () => {
               {gallery.map((item) => (
                 <Card
                   key={item.title}
-                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300 holo-card hover-lift relative"
+                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300 holo-card hover-lift"
                 >
                   <div className="aspect-square overflow-hidden">
                     <img
