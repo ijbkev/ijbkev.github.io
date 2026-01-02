@@ -95,11 +95,11 @@ const Projects = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.25),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.25),transparent_35%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
         <div className="page-shell relative py-16 md:py-20 space-y-6">
           <div className="flex items-center gap-3">
             <Sparkles className="text-amber-200" />
@@ -128,7 +128,7 @@ const Projects = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 page-shell space-y-8">
+      <section className="py-16 md:py-20 page-shell space-y-8 scroll-fade section-chrome">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Erasmus+ portfolio</p>
@@ -141,7 +141,7 @@ const Projects = () => {
           {projects.map((project) => (
             <Card
               key={project.id}
-              className={`panel-strong h-full ${project.id === "discover-eu" ? "ring-2 ring-amber-300" : ""}`}
+              className={`panel-strong h-full holo-card hover-lift ${project.id === "discover-eu" ? "ring-2 ring-amber-300" : ""}`}
             >
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start justify-between gap-3">
@@ -203,7 +203,7 @@ const Projects = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 bg-muted">
+      <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
         <div className="page-shell space-y-10">
           <div className="text-center space-y-3">
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Confidence markers</p>
@@ -219,7 +219,7 @@ const Projects = () => {
               { title: "Youth impacted", value: "4000+", detail: "Participants empowered through travel and training." },
               { title: "Projects completed", value: "4", detail: "Delivered with measurable learning outcomes." },
             ].map((item) => (
-              <Card key={item.title} className="panel text-center">
+              <Card key={item.title} className="panel text-center holo-card hover-lift">
                 <CardContent className="p-6 space-y-3">
                   <p className="text-3xl font-semibold text-primary">{item.value}</p>
                   <h3 className="text-lg font-semibold">{item.title}</h3>
