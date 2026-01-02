@@ -110,11 +110,11 @@ const Team = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.25),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.25),transparent_35%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-5">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">The humans behind IJBK</Badge>
           <h1 className="text-4xl md:text-5xl font-semibold">Meet the team</h1>
@@ -124,10 +124,10 @@ const Team = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 page-shell space-y-10">
+      <section className="py-16 md:py-20 page-shell space-y-10 scroll-fade section-chrome">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teamMembers.map((member) => (
-            <Card key={member.name} className="panel-strong hover:-translate-y-1 transition-transform duration-300">
+            <Card key={member.name} className="panel-strong holo-card hover-lift transition-transform duration-300">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-medium flex-shrink-0">
@@ -167,7 +167,7 @@ const Team = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 bg-muted">
+      <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
         <div className="page-shell space-y-8">
           <div className="text-center space-y-3">
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">How we collaborate</p>
@@ -183,7 +183,7 @@ const Team = () => {
               { emoji: "🤝", title: "Collaborative spirit", text: "Partners-first planning and co-facilitation." },
               { emoji: "💡", title: "Continuous learning", text: "Iterating on feedback to serve youth better." },
             ].map((item) => (
-              <Card key={item.title} className="panel text-center">
+              <Card key={item.title} className="panel text-center holo-card hover-lift">
                 <CardContent className="p-6 space-y-3">
                   <div className="w-14 h-14 bg-gradient-hero rounded-xl grid place-items-center mx-auto text-2xl text-white shadow-soft">
                     {item.emoji}

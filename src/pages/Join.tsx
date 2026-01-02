@@ -25,11 +25,11 @@ const Join = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.25),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.25),transparent_35%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
 
         <div className="page-shell relative py-16 md:py-20 text-center space-y-6">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">
@@ -52,10 +52,10 @@ const Join = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 page-shell space-y-12">
+      <section className="py-16 md:py-20 page-shell space-y-12 scroll-fade section-chrome">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {opportunities.map((item) => (
-            <Card key={item.title} className="panel-strong text-center">
+            <Card key={item.title} className="panel-strong text-center holo-card hover-lift">
               <CardContent className="p-6 space-y-3">
                 <div className="w-14 h-14 rounded-xl bg-primary/10 text-primary grid place-items-center mx-auto">
                   {item.icon}
@@ -67,7 +67,7 @@ const Join = () => {
           ))}
         </div>
 
-        <Card className="panel-strong max-w-4xl mx-auto">
+        <Card className="panel-strong max-w-4xl mx-auto holo-card hover-lift">
           <CardContent className="p-8 space-y-4 text-center">
             <div className="flex items-center justify-center gap-2 text-primary">
               <Sparkles className="w-5 h-5" />
