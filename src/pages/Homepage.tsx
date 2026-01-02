@@ -294,7 +294,7 @@ const Homepage = () => {
           <div className="page-shell relative pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
               <div
-                className="text-white space-y-8"
+                className="text-white space-y-8 relative"
                 style={{
                   transform: `translateY(${heroScroll * 10}px) scale(${
                     1 - heroScroll * 0.02
@@ -303,6 +303,7 @@ const Homepage = () => {
                   transition: "transform 0.2s ease-out, opacity 0.2s ease-out",
                 }}
               >
+                <span className="accent-bar" aria-hidden />
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-sm font-semibold">
                   Erasmus+ powered NGO <ShieldCheck className="w-4 h-4" />
                 </div>
@@ -579,6 +580,10 @@ const Homepage = () => {
                     <h3 className="font-semibold text-foreground">{item.title}</h3>
                     <p className="text-sm text-muted-foreground">{item.location}</p>
                   </CardContent>
+                  <div className="absolute top-4 right-4 flex gap-2" aria-hidden>
+                    <span className="pulse-dot" />
+                    <span className="pulse-dot secondary" />
+                  </div>
                 </Card>
               ))}
             </div>

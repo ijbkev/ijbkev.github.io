@@ -5,11 +5,11 @@ import Footer from "@/components/Footer";
 import { Link } from "react-router-dom";
 const Contact = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.25),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.25),transparent_35%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-6">
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-sm font-semibold">
             <Sparkles className="w-4 h-4" />
@@ -22,7 +22,7 @@ const Contact = () => {
         </div>
       </section>
 
-      <section className="py-16 md:py-20 page-shell">
+      <section className="py-16 md:py-20 page-shell scroll-fade section-chrome">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             {
@@ -75,7 +75,7 @@ const Contact = () => {
               ),
             },
           ].map((item) => (
-            <Card key={item.title} className="panel-strong hover:-translate-y-1 transition-transform duration-300">
+            <Card key={item.title} className="panel-strong holo-card hover-lift transition-transform duration-300">
               <CardContent className="p-6 space-y-3">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-hero grid place-items-center shadow-soft">
