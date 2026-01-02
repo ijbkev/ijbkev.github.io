@@ -16,7 +16,6 @@ import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import heroImage from "@/assets/hero-background.jpg";
-import logo from "@/assets/logo.png";
 
 
 type StatConfig = {
@@ -134,6 +133,7 @@ const StaticStatTile = ({
 
 const Homepage = () => {
   const [heroScroll, setHeroScroll] = useState(0);
+  const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -143,6 +143,18 @@ const Homepage = () => {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const { innerWidth, innerHeight } = window;
+      const x = ((event.clientX - innerWidth / 2) / innerWidth) * 40;
+      const y = ((event.clientY - innerHeight / 2) / innerHeight) * 40;
+      setParallax({ x, y });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
   }, []);
 
   const missionAreas = useMemo(
@@ -170,33 +182,6 @@ const Homepage = () => {
         title: "Sustainability",
         description:
           "Outdoor learning, climate literacy, and daily habits that protect our planet.",
-      },
-    ],
-    []
-  );
-
-  const initiatives = useMemo(
-    () => [
-      {
-        title: "DiscoverEU: 3 group routes",
-        summary:
-          "Fully funded Interrail journeys with daily support, curated learning stops, and leaders on every route.",
-        cta: "Join the travel cohort",
-        href: "https://forms.gle/PLDCB35wsTjaHPoP7",
-      },
-      {
-        title: "AI 4 Social Impact",
-        summary:
-          "Tallinn, Estonia — co-designing ethical AI concepts with peers from Lithuania, Germany, and Poland.",
-        cta: "See the story",
-        link: "/blog",
-      },
-      {
-        title: "Act it Out!",
-        summary:
-          "Forum theatre in Debrecen, Hungary — using performance to unlock dialogue and inclusion.",
-        cta: "See the story",
-        link: "/blog#act-it-out",
       },
     ],
     []
@@ -243,12 +228,17 @@ const Homepage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground relative">
+      <div className="cosmic-veil" aria-hidden />
+      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+        <div className="holo-grid" />
+      </div>
+
       <Navigation />
 
-      <main className="overflow-hidden">
+      <main className="overflow-hidden relative z-10">
         {/* HERO */}
-        <section className="relative isolate">
+        <section className="relative isolate scroll-fade">
           <div
             className="absolute inset-0 opacity-60"
             style={{
@@ -266,10 +256,45 @@ const Homepage = () => {
             }}
           />
 
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className="orb primary"
+              style={{
+                width: 360,
+                height: 360,
+                top: "-8%",
+                left: "8%",
+                transform: `translate3d(${parallax.x * 0.3}px, ${parallax.y * 0.25}px, 0)`,
+              }}
+            />
+            <div
+              className="orb accent"
+              style={{
+                width: 320,
+                height: 320,
+                bottom: "-10%",
+                right: "6%",
+                transform: `translate3d(${parallax.x * -0.25}px, ${parallax.y * -0.2}px, 0)`,
+              }}
+            />
+            <div
+              className="beam"
+              style={{
+                transform: `rotate(-6deg) translate3d(${parallax.x * 0.1}px, ${heroScroll * -12}px, 0)`,
+              }}
+            />
+            <div
+              className="beam"
+              style={{
+                transform: `rotate(9deg) translate3d(${parallax.x * -0.1}px, ${heroScroll * 12}px, 0)`,
+              }}
+            />
+          </div>
+
           <div className="page-shell relative pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
               <div
-                className="text-white space-y-8"
+                className="text-white space-y-8 relative"
                 style={{
                   transform: `translateY(${heroScroll * 10}px) scale(${
                     1 - heroScroll * 0.02
@@ -278,6 +303,7 @@ const Homepage = () => {
                   transition: "transform 0.2s ease-out, opacity 0.2s ease-out",
                 }}
               >
+                <span className="accent-bar" aria-hidden />
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-sm font-semibold">
                   Erasmus+ powered NGO <ShieldCheck className="w-4 h-4" />
                 </div>
@@ -343,7 +369,7 @@ const Homepage = () => {
                 </div>
               </div>
 
-              <div className="panel bg-white/90 backdrop-blur-lg border-white/40 shadow-strong">
+              <div className="panel bg-white/90 backdrop-blur-lg border-white/40 shadow-strong holo-card hover-lift">
                 <CardContent className="p-6 sm:p-8 space-y-6">
                   <div className="flex items-center gap-3">
                     <span className="chip bg-primary/10 text-primary">
@@ -392,7 +418,7 @@ const Homepage = () => {
         </section>
 
         {/* MISSION AREAS */}
-        <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden scroll-fade section-chrome">
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ backgroundImage: "var(--gradient-radial)" }}
@@ -417,7 +443,10 @@ const Homepage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {missionAreas.map((area) => (
-                <Card key={area.title} className="panel-strong group h-full">
+                <Card
+                  key={area.title}
+                  className="panel-strong group h-full holo-card hover-lift"
+                >
                   <CardContent className="p-6 space-y-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary grid place-items-center group-hover:scale-105 transition-transform">
                       {area.icon}
@@ -438,87 +467,88 @@ const Homepage = () => {
           </div>
         </section>
 
-{/* PROGRAMS */}
-<section className="py-12 md:py-14">
-  <div className="page-shell space-y-8">
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
-          Live & upcoming
-        </p>
-      </div>
+        {/* PROGRAMS */}
+        <section className="py-12 md:py-14 relative scroll-fade section-chrome">
+          <div className="absolute inset-x-0 -top-16 h-24 bg-gradient-to-b from-primary/5 via-primary/0 to-transparent pointer-events-none" />
+          <div className="page-shell space-y-8 relative">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+                  Live & upcoming
+                </p>
+              </div>
 
-      <Button asChild variant="outline">
-        <Link to="/projects" className="inline-flex items-center">
-          View all projects
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Link>
-      </Button>
-    </div>
-
-    <Card className="relative overflow-hidden bg-gradient-hero text-white shadow-strong border-none">
-      <CardContent className="p-6 md:p-7">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          {/* Left */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="chip bg-white/15 text-white">DiscoverEU</span>
-              <span className="text-sm text-white/80">
-                Fully funded Interrail routes
-              </span>
+              <Button asChild variant="outline" className="hover-lift">
+                <Link to="/projects" className="inline-flex items-center">
+                  View all projects
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
 
-            <h3 className="text-xl md:text-2xl font-semibold leading-tight">
-              Travel Europe with leaders + daily support
-            </h3>
+            <Card className="relative overflow-hidden bg-gradient-hero text-white shadow-strong border-none holo-card hover-lift">
+              <span className="shine" aria-hidden />
+              <CardContent className="p-6 md:p-7 relative z-10">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                  {/* Left */}
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="chip bg-white/15 text-white">DiscoverEU</span>
+                      <span className="text-sm text-white/80">
+                        Fully funded Interrail routes
+                      </span>
+                    </div>
 
-            <p className="text-white/85 leading-relaxed max-w-2xl text-sm md:text-base">
-            DiscoverEU is an action of the Erasmus+ programme that lets young people explore
-            Europe’s diversity and cultural heritage. Selected participants receive a travel pass and travel mainly by rail, connecting
-            with people across the continent.
-            <br />
-            It’s a learning journey designed to build confidence, independence, and a sense
-            of belonging in Europe.
-          </p>
+                    <h3 className="text-xl md:text-2xl font-semibold leading-tight">
+                      Travel Europe with leaders + daily support
+                    </h3>
 
+                    <p className="text-white/85 leading-relaxed max-w-2xl text-sm md:text-base">
+                      DiscoverEU is an action of the Erasmus+ programme that lets young people explore
+                      Europe’s diversity and cultural heritage. Selected participants receive a travel pass and travel mainly by rail, connecting
+                      with people across the continent.
+                      <br />
+                      It’s a learning journey designed to build confidence, independence, and a sense
+                      of belonging in Europe.
+                    </p>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <a
-                href="https://forms.gle/PLDCB35wsTjaHPoP7"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2 font-semibold hover:-translate-y-0.5 transition-transform"
-              >
-                Apply now
-                <ArrowUpRight className="w-4 h-4" />
-              </a>
-            </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <a
+                        href="https://forms.gle/PLDCB35wsTjaHPoP7"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2 font-semibold hover:-translate-y-0.5 transition-transform"
+                      >
+                        Apply now
+                        <ArrowUpRight className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Right: compact info chips */}
+                  <div className="flex flex-wrap lg:flex-col gap-3 lg:items-end">
+                    <div className="glass rounded-full border-white/20 px-4 py-2">
+                      <p className="text-sm font-semibold text-white">3 Routes</p>
+                    </div>
+                    <div className="glass rounded-full border-white/20 px-4 py-2">
+                      <p className="text-sm font-semibold text-white">
+                        15 + 3 Leaders
+                      </p>
+                    </div>
+                    <div className="glass rounded-full border-white/20 px-4 py-2">
+                      <p className="text-sm font-semibold text-white">Apr 2026</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-
-          {/* Right: compact info chips */}
-          <div className="flex flex-wrap lg:flex-col gap-3 lg:items-end">
-            <div className="glass rounded-full border-white/20 px-4 py-2">
-              <p className="text-sm font-semibold text-white">3 Routes</p>
-            </div>
-            <div className="glass rounded-full border-white/20 px-4 py-2">
-              <p className="text-sm font-semibold text-white">
-                15 + 3 Leaders
-              </p>
-            </div>
-            <div className="glass rounded-full border-white/20 px-4 py-2">
-              <p className="text-sm font-semibold text-white">Apr 2026</p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-</section>
+        </section>
 
 
 
         {/* GALLERY */}
-        <section className="py-16 md:py-20 bg-muted">
+        <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
           <div className="page-shell space-y-10">
             <div className="text-center space-y-3">
               <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -537,7 +567,7 @@ const Homepage = () => {
               {gallery.map((item) => (
                 <Card
                   key={item.title}
-                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300"
+                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300 holo-card hover-lift relative"
                 >
                   <div className="aspect-square overflow-hidden">
                     <img
@@ -550,6 +580,10 @@ const Homepage = () => {
                     <h3 className="font-semibold text-foreground">{item.title}</h3>
                     <p className="text-sm text-muted-foreground">{item.location}</p>
                   </CardContent>
+                  <div className="absolute top-4 right-4 flex gap-2" aria-hidden>
+                    <span className="pulse-dot" />
+                    <span className="pulse-dot secondary" />
+                  </div>
                 </Card>
               ))}
             </div>
@@ -558,10 +592,10 @@ const Homepage = () => {
 
         {/* TRUST */}
        
-        <section className="py-4 bg-background">
+        <section className="py-4 bg-background scroll-fade">
           <div className="page-shell py-0">
             <div className="flex flex-col md:flex-row items-center justify-center gap-5 
-              rounded-xl border bg-muted/40 px-5 py-4">
+              rounded-xl border bg-muted/40 px-5 py-4 holo-card hover-lift shadow-soft">
 
               {/* Logos */}
               <div className="flex items-center gap-5 shrink-0">
