@@ -142,22 +142,40 @@
     animation: pan 36s linear infinite;
   }
 
-  .beam {
+  .aurora-ribbon {
     position: absolute;
-    inset: auto 12%;
-    height: 140%;
-    width: 3px;
-    background: linear-gradient(180deg, transparent, hsla(var(--eu-blue) / 0.6), transparent);
-    filter: blur(1px);
-    opacity: 0.8;
-    transform-origin: center;
-    animation: tilt 10s ease-in-out infinite alternate;
+    background: radial-gradient(
+        circle at 20% 20%,
+        hsla(var(--eu-blue) / 0.22),
+        transparent 38%
+      ),
+      linear-gradient(135deg, hsla(var(--eu-blue) / 0.18), hsla(var(--eu-yellow) / 0.12));
+    filter: blur(18px);
+    border-radius: 9999px;
+    opacity: 0.45;
+    mix-blend-mode: screen;
+    animation: aurora-wave 18s ease-in-out infinite alternate;
   }
 
-  .beam:nth-child(2) {
-    inset: auto 78%;
-    animation-duration: 12s;
-    animation-delay: 1.2s;
+  .aurora-ribbon::after {
+    content: "";
+    position: absolute;
+    inset: 14%;
+    background: linear-gradient(120deg, hsla(var(--eu-yellow) / 0.12), transparent 60%);
+    filter: blur(22px);
+    border-radius: inherit;
+    opacity: 0.55;
+  }
+
+  .aurora-ribbon.secondary {
+    background: radial-gradient(
+        circle at 70% 40%,
+        hsla(var(--eu-yellow) / 0.22),
+        transparent 42%
+      ),
+      linear-gradient(120deg, hsla(var(--eu-blue-deep) / 0.18), hsla(var(--eu-blue) / 0.14));
+    animation-duration: 22s;
+    animation-delay: 2s;
   }
 
   .orb {
