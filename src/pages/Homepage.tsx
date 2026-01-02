@@ -133,6 +133,7 @@ const StaticStatTile = ({
 
 const Homepage = () => {
   const [heroScroll, setHeroScroll] = useState(0);
+  const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -142,6 +143,18 @@ const Homepage = () => {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const { innerWidth, innerHeight } = window;
+      const x = ((event.clientX - innerWidth / 2) / innerWidth) * 40;
+      const y = ((event.clientY - innerHeight / 2) / innerHeight) * 40;
+      setParallax({ x, y });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
   }, []);
 
   const missionAreas = useMemo(
@@ -216,6 +229,11 @@ const Homepage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
+      <div className="cosmic-veil" aria-hidden />
+      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+        <div className="holo-grid" />
+      </div>
+
       <Navigation />
 
       <main className="overflow-hidden relative z-10">
@@ -237,6 +255,49 @@ const Homepage = () => {
                 "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)",
             }}
           />
+
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className="orb primary"
+              style={{
+                width: 360,
+                height: 360,
+                top: "-8%",
+                left: "8%",
+                transform: `translate3d(${parallax.x * 0.3}px, ${parallax.y * 0.25}px, 0)`,
+              }}
+            />
+            <div
+              className="orb accent"
+              style={{
+                width: 320,
+                height: 320,
+                bottom: "-10%",
+                right: "6%",
+                transform: `translate3d(${parallax.x * -0.25}px, ${parallax.y * -0.2}px, 0)`,
+              }}
+            />
+            <div
+              className="aurora-ribbon"
+              style={{
+                width: "150%",
+                height: "62%",
+                top: "-12%",
+                left: "-18%",
+                transform: `translate3d(${parallax.x * 0.08}px, ${parallax.y * 0.06}px, 0)`,
+              }}
+            />
+            <div
+              className="aurora-ribbon secondary"
+              style={{
+                width: "140%",
+                height: "58%",
+                bottom: "-18%",
+                right: "-12%",
+                transform: `translate3d(${parallax.x * -0.06}px, ${parallax.y * -0.05}px, 0)`,
+              }}
+            />
+          </div>
 
           <div className="page-shell relative pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
@@ -365,7 +426,7 @@ const Homepage = () => {
         </section>
 
         {/* MISSION AREAS */}
-        <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden scroll-fade section-chrome">
+        <section className="py-16 md:py-20 bg-gradient-subtle relative overflow-hidden scroll-fade">
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ backgroundImage: "var(--gradient-radial)" }}
@@ -415,7 +476,7 @@ const Homepage = () => {
         </section>
 
         {/* PROGRAMS */}
-        <section className="py-12 md:py-14 relative scroll-fade section-chrome">
+        <section className="py-12 md:py-14 relative scroll-fade">
           <div className="absolute inset-x-0 -top-16 h-24 bg-gradient-to-b from-primary/5 via-primary/0 to-transparent pointer-events-none" />
           <div className="page-shell space-y-8 relative">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -495,7 +556,7 @@ const Homepage = () => {
 
 
         {/* GALLERY */}
-        <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
+        <section className="py-16 md:py-20 bg-muted scroll-fade">
           <div className="page-shell space-y-10">
             <div className="text-center space-y-3">
               <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -514,7 +575,7 @@ const Homepage = () => {
               {gallery.map((item) => (
                 <Card
                   key={item.title}
-                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300 holo-card hover-lift relative"
+                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300 holo-card hover-lift"
                 >
                   <div className="aspect-square overflow-hidden">
                     <img
