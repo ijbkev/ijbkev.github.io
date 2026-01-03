@@ -42,8 +42,8 @@ const Contact = () => {
               title: "Email",
               hint: "Send us a message",
               body: (
-                <a href="mailto:ijbk.connect@gmail.com" className="text-primary font-semibold hover:text-primary/80">
-                  ijbk.connect@gmail.com
+                <a href="mailto:office@ijbk-de.org" className="text-primary font-semibold hover:text-primary/80">
+                  office@ijbk-de.org
                 </a>
               ),
             },
