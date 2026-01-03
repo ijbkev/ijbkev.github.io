@@ -278,15 +278,23 @@ const Homepage = () => {
               }}
             />
             <div
-              className="beam"
+              className="aurora-ribbon"
               style={{
-                transform: `rotate(-6deg) translate3d(${parallax.x * 0.1}px, ${heroScroll * -12}px, 0)`,
+                width: "150%",
+                height: "62%",
+                top: "-12%",
+                left: "-18%",
+                transform: `translate3d(${parallax.x * 0.08}px, ${parallax.y * 0.06}px, 0)`,
               }}
             />
             <div
-              className="beam"
+              className="aurora-ribbon secondary"
               style={{
-                transform: `rotate(9deg) translate3d(${parallax.x * -0.1}px, ${heroScroll * 12}px, 0)`,
+                width: "140%",
+                height: "58%",
+                bottom: "-18%",
+                right: "-12%",
+                transform: `translate3d(${parallax.x * -0.06}px, ${parallax.y * -0.05}px, 0)`,
               }}
             />
           </div>
