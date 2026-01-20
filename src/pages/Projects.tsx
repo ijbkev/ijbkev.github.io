@@ -129,13 +129,28 @@ const Projects = () => {
       </section>
 
       <section className="py-16 md:py-20 page-shell space-y-8 scroll-fade section-chrome">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Erasmus+ portfolio</p>
-            <h2 className="text-3xl md:text-4xl font-semibold">Featured projects</h2>
-          </div>
-          <Badge variant="outline" className="text-primary border-primary">Quality labelled</Badge>
+        <div>
+          <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Erasmus+ portfolio</p>
+          <h2 className="text-3xl md:text-4xl font-semibold">Featured projects</h2>
         </div>
+
+        <Card className="border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-foreground">Before you apply</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  These are structured educational programmes with learning objectives, daily schedules, and active participation requirements. To understand what an Erasmus+ project truly involves and ensure it aligns with your expectations, please visit our{" "}
+                  <Link to="/erasmus-plus" className="text-primary hover:underline font-semibold">
+                    What is E+
+                  </Link>
+                  {" "}section first.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {projects.map((project) => (

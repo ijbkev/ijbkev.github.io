@@ -11,6 +11,7 @@ import Projects from "./pages/Projects";
 import Team from "./pages/Team";
 import Join from "./pages/Join";
 import Contact from "./pages/Contact";
+import ErasmusPlus from "./pages/ErasmusPlus";
 import NotFound from "./pages/NotFound";
 import WhatsAppWidget from "./components/WhatsAppWidget";
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/team" element={<Team />} />
               <Route path="/join" element={<Join />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/erasmus-plus" element={<ErasmusPlus />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <WhatsAppWidget />

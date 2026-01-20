@@ -11,6 +11,7 @@ const Navigation = () => {
   const navItems = [
     { name: "Home", path: "/" },
     { name: "About Us", path: "/about" },
+    { name: "What is E+", path: "/erasmus-plus" },
     { name: "Blog", path: "/blog" },
     { name: "Team", path: "/team" },
     { name: "Partnership", path: "/join" },
