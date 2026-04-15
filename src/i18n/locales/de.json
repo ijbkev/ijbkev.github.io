@@ -1,0 +1,102 @@
+{
+  "common": {
+    "home": "Startseite",
+    "about": "Über uns",
+    "whatIsErasmus": "Was ist E+",
+    "blog": "Blog",
+    "team": "Team",
+    "partnership": "Partnerschaft",
+    "projects": "Projekte",
+    "contact": "Lass uns reden",
+    "learnMore": "Mehr erfahren",
+    "getStarted": "Jetzt starten"
+  },
+  "header": {
+    "orgName": "IJBK e.V.",
+    "tagline": "Jugend & Bildung"
+  },
+  "homepage": {
+    "hero": {
+      "title": "Von Jugendlichen geführte Innovation für digitale, interkulturelle und nachhaltige Zukunftsaussichten",
+      "subtitle": "Erasmus+, KI-Labore, Soziales Unternehmertum und Austauschprogramme — alles von und für junge Menschen konzipiert.",
+      "cta": "Tritt unserem nächsten Kurs bei"
+    },
+    "focusAreas": {
+      "title": "Was wir tun",
+      "subtitle": "Vier miteinander verknüpfte Wege zu transformativem Lernen:"
+    }
+  },
+  "about": {
+    "badge": "Eingetragener gemeinnütziger Verein e.V.",
+    "pageTitle": "Wer wir sind",
+    "pageSubtitle": "Internationaler Jugend- und Bildungsverein Kaiserslautern e.V. ist eine von Jugendlichen geführte NGO, die digitale, interkulturelle und nachhaltige Zukunftsaussichten durch Erasmus+-Kooperationen gestaltet.",
+    "stats": {
+      "founded": "Gegründet",
+      "foundedDate": "8. Juli 2025",
+      "base": "Standort",
+      "baseLocation": "Kaiserslautern, Deutschland",
+      "legalForm": "Rechtsform",
+      "legalFormValue": "eingetragener Verein",
+      "partners": "Partner",
+      "partnersValue": "Europaweit"
+    },
+    "originStory": {
+      "title": "Unsere Entstehungsgeschichte",
+      "subtitle": "Aus einer Jugendgruppe hervorgegangen, entwickelt sich zum europäischen Jugendkraftwerk.",
+      "description": "IJBK e.V. entstand aus dem Studentischen Netzwerk der RPTU (OID E10322231) und ist seit dem 8. Juli 2025 als eingetragener gemeinnütziger Verein registriert. Heute gestalten wir Erfahrungen, bei denen junge Menschen aus verschiedensten Hintergründen gemeinsam lernen, reisen und sinnvolle Projekte umsetzen.",
+      "badges": ["Erasmus+-zertifizierter Partner", "Inklusive Auswahl"]
+    },
+    "mission": {
+      "title": "Unsere Mission",
+      "subtitle": "Befähigung von Jugendlichen durch digitale Fähigkeiten, nachhaltiges Denken, kreative Zusammenarbeit und europäischen Austausch."
+    },
+    "missionAreas": {
+      "digitalSkills": {
+        "title": "Digitale Fähigkeiten & KI",
+        "description": "Umfassende digitale Kompetenz, KI-Ethik und praktische Prototyping-Sitzungen, die Beschäftigungsfähigkeit und Selbstvertrauen freisetzen."
+      },
+      "entrepreneurship": {
+        "title": "Soziales Unternehmertum",
+        "description": "Inkubation von von Jugendlichen geleiteten Lösungen mit messbarem Impact, Mentoring und investorenfertige Kommunikation."
+      },
+      "intercultural": {
+        "title": "Interkulturelles Lernen",
+        "description": "Immersive Erasmus+-Austausche, die Sprachen, Lebensmittel, Kunst und kollaborative Projektabwicklung miteinander verbinden."
+      },
+      "sustainability": {
+        "title": "Nachhaltigkeit",
+        "description": "Von Klimakompetenz bis zu abfallfreien Veranstaltungen und Outdoor-Lernlaboren in den Wäldern von Kaiserslautern."
+      }
+    },
+    "values": {
+      "innovationFirst": {
+        "title": "Innovation an erster Stelle",
+        "text": "Erprobung von KI, digitalen Tools und kreativer Moderation, um Jugendliches Lernen fesselnd zu halten."
+      },
+      "radicalInclusion": {
+        "title": "Radikale Inklusion",
+        "text": "Gestaltung von zugangsgerechten Erfahrungen: Stipendien, sichere Räume und vielfältige Moderator:innen."
+      },
+      "sustainability": {
+        "title": "Nachhaltigkeit in der Praxis",
+        "text": "Jede Reise und jedes Workshop berücksichtigt Fußabdrücke, lokale Partner und nachhaltige Veränderung."
+      },
+      "coCreation": {
+        "title": "Co-Creation",
+        "text": "Wir bauen mit Jugendlichen, nicht für Jugendliche — von der Agenda-Gestaltung bis zur Evaluation."
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Gemeinsam digitale, interkulturelle und nachhaltige Zukunftsaussichten schaffen.",
+    "followUs": "Folgen Sie uns"
+  },
+  "contact": {
+    "title": "Kontaktieren Sie uns",
+    "subtitle": "Lass uns zusammenarbeiten"
+  },
+  "languageSwitcher": {
+    "english": "English",
+    "german": "Deutsch"
+  }
+}

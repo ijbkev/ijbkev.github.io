@@ -29,17 +29,17 @@ const ScrollToTop = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
-        <div className="cosmic-veil" aria-hidden />
-        <div className="fixed inset-0 pointer-events-none z-0" aria-hidden>
-          <div className="holo-grid" />
-        </div>
-        <div className="relative z-10">
-          <BrowserRouter>
-            <ScrollToTop />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+          <div className="cosmic-veil" aria-hidden />
+          <div className="fixed inset-0 pointer-events-none z-0" aria-hidden>
+            <div className="holo-grid" />
+          </div>
+          <div className="relative z-10">
+            <BrowserRouter>
+              <ScrollToTop />
             <Routes>
               <Route path="/" element={<Homepage />} />
               <Route path="/about" element={<About />} />
@@ -50,13 +50,13 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/erasmus-plus" element={<ErasmusPlus />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-            <WhatsAppWidget />
-          </BrowserRouter>
+              </Routes>
+              <WhatsAppWidget />
+            </BrowserRouter>
+          </div>
         </div>
-      </div>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 
 export default App;

@@ -1,0 +1,102 @@
+{
+  "common": {
+    "home": "Home",
+    "about": "About Us",
+    "whatIsErasmus": "What is E+",
+    "blog": "Blog",
+    "team": "Team",
+    "partnership": "Partnership",
+    "projects": "Projects",
+    "contact": "Let's talk",
+    "learnMore": "Learn more",
+    "getStarted": "Get started"
+  },
+  "header": {
+    "orgName": "IJBK e.V.",
+    "tagline": "Jugend & Bildung"
+  },
+  "homepage": {
+    "hero": {
+      "title": "Youth-led innovation for digital, intercultural, and sustainable futures",
+      "subtitle": "Erasmus+, AI labs, social entrepreneurship, and exchange experiences — all designed by young people, for young people.",
+      "cta": "Join our next cohort"
+    },
+    "focusAreas": {
+      "title": "What we do",
+      "subtitle": "Four interconnected pathways to transformative learning:"
+    }
+  },
+  "about": {
+    "badge": "Registered Non-Profit e.V.",
+    "pageTitle": "Who we are",
+    "pageSubtitle": "Internationaler Jugend- und Bildungsverein Kaiserslautern e.V. is a youth-led NGO shaping digital, intercultural, and sustainable futures through Erasmus+ collaborations.",
+    "stats": {
+      "founded": "Founded",
+      "foundedDate": "8 July 2025",
+      "base": "Base",
+      "baseLocation": "Kaiserslautern, Germany",
+      "legalForm": "Legal form",
+      "legalFormValue": "eingetragener Verein",
+      "partners": "Partners",
+      "partnersValue": "Europe-wide"
+    },
+    "originStory": {
+      "title": "Our origin story",
+      "subtitle": "Born from a Youth Group, scaled into a European youth powerhouse.",
+      "description": "IJBK e.V. evolved from the Studentisches Netzwerk der RPTU (OID E10322231) to a registered non-profit on 8 July 2025. Today, we design experiences where young people from every background learn, travel, and build purposeful projects together.",
+      "badges": ["Erasmus+ certified partner", "Inclusive selection"]
+    },
+    "mission": {
+      "title": "Our mission",
+      "subtitle": "To empower youth through digital skills, sustainable thinking, creative collaboration, and European exchange."
+    },
+    "missionAreas": {
+      "digitalSkills": {
+        "title": "Digital Skills & AI",
+        "description": "Comprehensive digital literacy, AI ethics, and hands-on prototyping sessions that unlock employability and confidence."
+      },
+      "entrepreneurship": {
+        "title": "Social Entrepreneurship",
+        "description": "Incubating youth-led solutions with measurable impact, mentoring, and investor-ready storytelling."
+      },
+      "intercultural": {
+        "title": "Intercultural Learning",
+        "description": "Immersive Erasmus+ exchanges that weave together languages, food, art, and collaborative project delivery."
+      },
+      "sustainability": {
+        "title": "Sustainability",
+        "description": "From climate literacy to low-waste events and outdoor learning labs across Kaiserslautern's forests."
+      }
+    },
+    "values": {
+      "innovationFirst": {
+        "title": "Innovation first",
+        "text": "Piloting AI, digital tools, and creative facilitation to keep youth learning magnetic."
+      },
+      "radicalInclusion": {
+        "title": "Radical inclusion",
+        "text": "Designing access-first experiences: scholarships, safe spaces, and diverse facilitators."
+      },
+      "sustainability": {
+        "title": "Sustainability in action",
+        "text": "Every trip and workshop considers footprints, local partners, and lasting change."
+      },
+      "coCreation": {
+        "title": "Co-creation",
+        "text": "We build with youth, not for youth — from agenda design to evaluation."
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Building digital, intercultural, and sustainable futures together.",
+    "followUs": "Follow us"
+  },
+  "contact": {
+    "title": "Contact us",
+    "subtitle": "Let's collaborate"
+  },
+  "languageSwitcher": {
+    "english": "English",
+    "german": "Deutsch"
+  }
+}

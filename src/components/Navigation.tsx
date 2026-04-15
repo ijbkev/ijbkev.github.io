@@ -1,20 +1,23 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import logo from "@/assets/logo.png";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
   const location = useLocation();
+  const { lang = "en" } = useParams<{ lang?: string }>();
 
   const navItems = [
-    { name: "Home", path: "/" },
-    { name: "About Us", path: "/about" },
-    { name: "What is E+", path: "/erasmus-plus" },
-    { name: "Blog", path: "/blog" },
-    { name: "Team", path: "/team" },
-    { name: "Partnership", path: "/join" },
+    { name: t("common.about"), path: `/${lang}/about` },
+    { name: t("common.whatIsErasmus"), path: `/${lang}/erasmus-plus` },
+    { name: t("common.blog"), path: `/${lang}/blog` },
+    { name: t("common.team"), path: `/${lang}/team` },
+    { name: t("common.partnership"), path: `/${lang}/join` },
   ];
 
   const isActive = (path: string) => location.pathname === path;
