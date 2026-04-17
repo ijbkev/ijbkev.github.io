@@ -198,6 +198,44 @@
     animation-duration: 18s;
   }
 
+  .saber-trail {
+    position: absolute;
+    width: min(88vw, 1120px);
+    height: 8px;
+    top: 22%;
+    left: -24%;
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      rgba(56, 189, 248, 0),
+      rgba(56, 189, 248, 0.8) 24%,
+      rgba(191, 219, 254, 0.95) 50%,
+      rgba(56, 189, 248, 0.78) 76%,
+      rgba(56, 189, 248, 0)
+    );
+    transform: rotate(-16deg);
+    opacity: 0.32;
+    mix-blend-mode: screen;
+    filter: blur(1px);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.45), 0 0 20px rgba(59, 130, 246, 0.22);
+    animation: saber-sweep 9s ease-in-out infinite alternate, saber-flicker 1.8s steps(3, end) infinite;
+  }
+
+  .saber-trail::before {
+    content: "";
+    position: absolute;
+    inset: -14px -8px;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      rgba(56, 189, 248, 0),
+      rgba(59, 130, 246, 0.35) 50%,
+      rgba(56, 189, 248, 0)
+    );
+    filter: blur(12px);
+    opacity: 0.45;
+  }
+
   .holo-card {
     position: relative;
     overflow: hidden;
@@ -417,6 +455,18 @@
   0% { transform: translate3d(-10px, 4px, 0) skewX(-6deg) rotate(-1deg); }
   50% { transform: translate3d(8px, -6px, 0) skewX(4deg) rotate(1deg); }
   100% { transform: translate3d(-6px, 6px, 0) skewX(-2deg) rotate(-2deg); }
+}
+
+@keyframes saber-sweep {
+  0% { transform: translate3d(-26px, -6px, 0) rotate(-16deg); }
+  50% { transform: translate3d(18px, 8px, 0) rotate(-14deg); }
+  100% { transform: translate3d(-10px, 14px, 0) rotate(-18deg); }
+}
+
+@keyframes saber-flicker {
+  0%, 100% { opacity: 0.26; }
+  35% { opacity: 0.34; }
+  70% { opacity: 0.29; }
 }
 
 @keyframes pulse {

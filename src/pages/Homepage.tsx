@@ -239,14 +239,14 @@ const Homepage = () => {
         {/* HERO */}
         <section className="relative isolate scroll-fade">
           <div
-            className="absolute inset-0 opacity-60"
+            className="absolute inset-0 opacity-45"
             style={{
               backgroundImage: `url(/lovable-uploads/hero-background.jpg)`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-950/70 to-slate-950" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/82 to-slate-950" />
           <div
             className="absolute inset-0 mix-blend-overlay"
             style={{
@@ -254,6 +254,10 @@ const Homepage = () => {
                 "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)",
             }}
           />
+
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+            <div className="saber-trail" />
+          </div>
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
@@ -470,64 +474,8 @@ const Homepage = () => {
           </div>
         </section>
 
-        {/* PROGRAMS */}
-        <section className="py-12 md:py-14 relative scroll-fade">
-          <div className="absolute inset-x-0 -top-16 h-24 bg-gradient-to-b from-primary/5 via-primary/0 to-transparent pointer-events-none" />
-          <div className="page-shell space-y-8 relative">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
-                  Live & upcoming
-                </p>
-              </div>
-
-              <Button asChild variant="outline" className="hover-lift">
-                <Link to="/projects" className="inline-flex items-center">
-                  View all projects
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-
-            <Card className="relative overflow-hidden bg-gradient-hero text-white shadow-strong border-none holo-card hover-lift">
-              <span className="shine" aria-hidden />
-              <CardContent className="p-6 md:p-7 relative z-10">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                  {/* Left */}
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="chip bg-white/15 text-white">Updates</span>
-                      <span className="text-sm text-white/80">
-                        Future projects
-                      </span>
-                    </div>
-
-                    <p className="text-white/85 leading-relaxed max-w-2xl text-sm md:text-base">
-                      We're preparing the next wave of inclusive, zero-fee Erasmus+ projects. Stay tuned here or jump to the Projects page to explore past programmes and future calls.
-                    </p>
-
-                  </div>
-
-                  <div className="hidden lg:flex lg:flex-col gap-3 lg:items-end">
-                    <div className="glass rounded-full border-white/20 px-4 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">
-                        Past programmes
-                      </p>
-                    </div>
-                    <div className="glass rounded-full border-white/20 px-4 py-2">
-                      <p className="text-sm font-semibold text-white">See Projects for details</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-
-
         {/* GALLERY */}
-        <section className="py-16 md:py-20 bg-muted scroll-fade">
+        <section className="pt-6 pb-16 md:pt-8 md:pb-20 bg-muted scroll-fade">
           <div className="page-shell space-y-10">
             <div className="text-center space-y-3">
               <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -565,6 +513,69 @@ const Homepage = () => {
                   </div>
                 </Card>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* PROGRAMS */}
+        <section className="py-14 md:py-16 relative scroll-fade">
+          <div className="page-shell space-y-7">
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-base md:text-lg uppercase tracking-[0.2em] text-muted-foreground">
+                Live & upcoming
+              </p>
+              <span className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                Project radar
+              </span>
+            </div>
+
+            <div className="grid gap-4">
+              <Card className="border bg-background shadow-soft hover-lift">
+                <CardContent className="p-5 md:p-6 space-y-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        What we are preparing
+                      </p>
+                      <h3 className="mt-2 text-xl md:text-2xl font-semibold text-foreground leading-tight">
+                        Next Erasmus+ calls are in design phase
+                      </h3>
+                    </div>
+                    <div className="flex flex-col items-end gap-3">
+                      <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        In progress
+                      </span>
+                      <Button asChild className="shrink-0">
+                        <Link to="/projects" className="inline-flex items-center">
+                          Explore Projects
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl">
+                    We are shaping the next wave of inclusive, zero-fee mobility projects. Final topics, destinations, and partner confirmations are being aligned before publication.
+                  </p>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border bg-muted/40 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Current stage</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">Concept to partners</p>
+                    </div>
+                    <div className="rounded-xl border bg-muted/40 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Funding mode</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">Erasmus+ supported</p>
+                    </div>
+                    <div className="rounded-xl border bg-muted/40 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Participation</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">Zero participant fee</p>
+                    </div>
+                  </div>
+
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>

@@ -5,21 +5,34 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Link } from "react-router-dom";
 
+type Project = {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  statusTone: string;
+  date: string;
+  location: string;
+  participants: string;
+  description: string;
+  highlights: string[];
+  applicationLink?: string;
+};
+
 const Projects = () => {
-  const projects = [
+  const projects: Project[] = [
     {
       id: "discover-eu",
       title: "Fully funded travel across Europe with DiscoverEU",
       category: "EU Travel Initiative",
-      status: "Upcoming",
-      statusTone: "warning",
+      status: "Applications Closed",
+      statusTone: "info",
       date: "1 April 2026",
       location: "Europe",
       participants: "15",
       description:
         "DiscoverEU opens Europe by train. Three curated routes with leaders, Interrail passes, accommodation, food, and local transport fully covered — no participation fee.",
       highlights: ["FREE Interrail Pass", "Daily pocket money", "Cultural exchange stops", "Leaders per route"],
-      applicationLink: "https://forms.gle/PLDCB35wsTjaHPoP7",
     },
     {
       id: "ai-social-impact",
