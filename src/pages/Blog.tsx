@@ -3,10 +3,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, MapPin, ArrowRight } from "lucide-react";
-import actItOutImage from "@/assets/act-it-out.jpg";
-import aiSocialImpactImage from "@/assets/ye-social-estonia.jpeg";
 import { Link } from "react-router-dom";
-import aiSocialImpactVideo from "@/assets/ye-social-estonia.mp4";
 
 
 const Blog = () => {
@@ -22,8 +19,8 @@ const Blog = () => {
       readingTime: "2 min read",
       author: "IJBK Team",
       mediaType: "video",
-      mediaSrc: aiSocialImpactVideo,
-      poster: aiSocialImpactImage, // optional fallback preview
+      mediaSrc: "/lovable-uploads/ye-social-estonia.mp4",
+      poster: "/lovable-uploads/ye-social-estonia.jpeg",
       featured: true,
       content: [
         "We took part in the Erasmus+ Youth Exchange AI 4 Social Impact in Tallinn, Estonia, from 5th to 12th December 2025. During this inspiring week, young people explored how Artificial Intelligence can be used ethically and responsibly to create positive social change.",
@@ -50,7 +47,7 @@ const Blog = () => {
       location: "Debrecen, Hungary",
       readingTime: "1 min read",
       author: "IJBK Team",
-      image: actItOutImage,
+      image: "/lovable-uploads/act-it-out.jpg",
       featured: false,
       content: [
         "We took part in an Erasmus+ Training Course in Debrecen, Hungary, from 28th September to 7th October 2025. Over these 10 inspiring days, youth workers explored the creative methods of Image Theatre, Forum Theatre, and Newspaper Theatre, discovering how to use them as powerful tools for driving social change in their communities.",

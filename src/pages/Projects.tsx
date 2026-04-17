@@ -86,6 +86,19 @@ const Projects = () => {
         "Sustainability-focused hikes mixing outdoor activity, environmental education, and community building.",
       highlights: ["Environmental education", "Sustainable tourism", "Local partnerships", "Outdoor learning"],
     },
+    {
+      id: "green-stage-sustainable-future",
+      title: "Green Stage for Sustainable Future",
+      category: "Erasmus+ Youth Exchange",
+      status: "Completed",
+      statusTone: "success",
+      date: "2025",
+      location: "Europe",
+      participants: "30+ Young People",
+      description:
+        "A sustainability-focused Erasmus+ journey where participants designed eco-actions, awareness campaigns, and local impact plans through non-formal education.",
+      highlights: ["Climate action workshops", "Green theatre methods", "Community eco-campaigns", "Youth-led sustainability plans"],
+    },
   ];
 
   const statusStyles: Record<string, string> = {
@@ -244,7 +257,7 @@ const Projects = () => {
             ))}
           </div>
           <div className="flex justify-center">
-            <ButtonLink to="/join">Partner with us</ButtonLink>
+            <ButtonLink to="/join" />
           </div>
         </div>
       </section>

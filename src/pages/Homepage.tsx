@@ -15,7 +15,6 @@ import {
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import heroImage from "@/assets/hero-background.jpg";
 
 
 type StatConfig = {
@@ -242,7 +241,7 @@ const Homepage = () => {
           <div
             className="absolute inset-0 opacity-60"
             style={{
-              backgroundImage: `url(${heroImage})`,
+              backgroundImage: `url(/lovable-uploads/hero-background.jpg)`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}

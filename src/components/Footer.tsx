@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Instagram, ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
-import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
@@ -16,7 +15,7 @@ const Footer = () => {
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 grid place-items-center">
                 <img
-                  src={logo}
+                  src="/logo.png"
                   alt="IJBK logo"
                   className="w-11 h-11 object-contain"
                 />

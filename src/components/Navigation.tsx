@@ -1,23 +1,19 @@
 import { useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import logo from "@/assets/logo.png";
-import LanguageSwitcher from "./LanguageSwitcher";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { t } = useTranslation();
   const location = useLocation();
-  const { lang = "en" } = useParams<{ lang?: string }>();
 
   const navItems = [
-    { name: t("common.about"), path: `/${lang}/about` },
-    { name: t("common.whatIsErasmus"), path: `/${lang}/erasmus-plus` },
-    { name: t("common.blog"), path: `/${lang}/blog` },
-    { name: t("common.team"), path: `/${lang}/team` },
-    { name: t("common.partnership"), path: `/${lang}/join` },
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+    { name: "What is Erasmus+", path: "/erasmus-plus" },
+    { name: "Blog", path: "/blog" },
+    { name: "Team", path: "/team" },
+    { name: "Partnership", path: "/join" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -31,7 +27,7 @@ const Navigation = () => {
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-11 h-11 grid place-items-center">
               <img
-                src={logo}
+                src="/logo.png"
                 alt="IJBK logo"
                 className="w-11 h-11 object-contain"
               />

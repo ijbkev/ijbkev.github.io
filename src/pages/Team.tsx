@@ -2,12 +2,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import type { SyntheticEvent } from "react";
-import viditImage from "@/assets/vidit.jpg";
-import omImage from "@/assets/om.png";
-import lenochkaImage from "@/assets/lenochka.png";
-import babaImage from "@/assets/baba.png";
-import prateekImage from "@/assets/prateek.png";
-import alexImage from "@/assets/alex.png";
 import { Badge } from "@/components/ui/badge";
 
 const Team = () => {
@@ -93,12 +87,12 @@ const Team = () => {
       onDragStart: (e: SyntheticEvent) => e.preventDefault(),
       style: { pointerEvents: "none" as const },
     };
-    if (name === "Vidit Goyal") return <img src={viditImage} alt={name} {...commonProps} />;
-    if (name === "Om Tiwari") return <img src={omImage} alt={name} {...commonProps} />;
-    if (name === "Yeliena Bemeshchuk") return <img src={lenochkaImage} alt={name} {...commonProps} />;
-    if (name === "Rohit Singh Negi") return <img src={babaImage} alt={name} {...commonProps} />;
-    if (name === "Prateek Kumar Sharma") return <img src={prateekImage} alt={name} {...commonProps} />;
-    if (name === "Alex C." || name === "Alex Conrad") return <img src={alexImage} alt={name} {...commonProps} />;
+    if (name === "Vidit Goyal") return <img src="/lovable-uploads/vidit.png" alt={name} {...commonProps} />;
+    if (name === "Om Tiwari") return <img src="/lovable-uploads/om.png" alt={name} {...commonProps} />;
+    if (name === "Yeliena Bemeshchuk") return <img src="/lovable-uploads/lenochka.png" alt={name} {...commonProps} />;
+    if (name === "Rohit Singh Negi") return <img src="/lovable-uploads/baba.png" alt={name} {...commonProps} />;
+    if (name === "Prateek Kumar Sharma") return <img src="/lovable-uploads/prateek.png" alt={name} {...commonProps} />;
+    if (name === "Alex C." || name === "Alex Conrad") return <img src="/lovable-uploads/alex.png" alt={name} {...commonProps} />;
     return (
       <div className="w-full h-full bg-gradient-hero text-white grid place-items-center text-xl font-semibold">
         {name
