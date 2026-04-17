@@ -380,7 +380,7 @@ const Homepage = () => {
                 <CardContent className="p-6 sm:p-8 space-y-6">
                   <div className="flex items-center gap-3">
                     <span className="chip bg-primary/10 text-primary">
-                      What we do
+                      1. What we do
                     </span>
                     <span className="text-sm text-muted-foreground">
                       Impact-first, youth-led
@@ -391,15 +391,11 @@ const Homepage = () => {
                     <div className="flex items-start gap-4">
                       <Calendar className="w-5 h-5 text-primary mt-1" />
                       <div>
-                        <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
+                        <h4 className="text-sm uppercase tracking-[0.18em] text-foreground font-bold">
                           Right now
-                        </p>
-                        <h3 className="text-xl font-semibold text-foreground">
-                          Recruiting participants for DiscoverEU
-                        </h3>
+                        </h4>
                         <p className="text-muted-foreground">
-                          3 guided Interrail routes starting April 2026 with full
-                          travel, food, and stay support.
+                          Stay tuned for the next Erasmus+ opportunity and check Projects for updates.
                         </p>
                       </div>
                     </div>
@@ -500,50 +496,26 @@ const Homepage = () => {
                   {/* Left */}
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="chip bg-white/15 text-white">DiscoverEU</span>
+                      <span className="chip bg-white/15 text-white">Updates</span>
                       <span className="text-sm text-white/80">
-                        Fully funded Interrail routes
+                        Future projects
                       </span>
                     </div>
 
-                    <h3 className="text-xl md:text-2xl font-semibold leading-tight">
-                      Travel Europe with leaders + daily support
-                    </h3>
-
                     <p className="text-white/85 leading-relaxed max-w-2xl text-sm md:text-base">
-                      DiscoverEU is an action of the Erasmus+ programme that lets young people explore
-                      Europe’s diversity and cultural heritage. Selected participants receive a travel pass and travel mainly by rail, connecting
-                      with people across the continent.
-                      <br />
-                      It’s a learning journey designed to build confidence, independence, and a sense
-                      of belonging in Europe.
+                      We're preparing the next wave of inclusive, zero-fee Erasmus+ projects. Stay tuned here or jump to the Projects page to explore past programmes and future calls.
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <a
-                        href="https://forms.gle/PLDCB35wsTjaHPoP7"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2 font-semibold hover:-translate-y-0.5 transition-transform"
-                      >
-                        Apply now
-                        <ArrowUpRight className="w-4 h-4" />
-                      </a>
-                    </div>
                   </div>
 
-                  {/* Right: compact info chips */}
-                  <div className="flex flex-wrap lg:flex-col gap-3 lg:items-end">
+                  <div className="hidden lg:flex lg:flex-col gap-3 lg:items-end">
                     <div className="glass rounded-full border-white/20 px-4 py-2">
-                      <p className="text-sm font-semibold text-white">3 Routes</p>
-                    </div>
-                    <div className="glass rounded-full border-white/20 px-4 py-2">
-                      <p className="text-sm font-semibold text-white">
-                        15 + 3 Leaders
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">
+                        Past programmes
                       </p>
                     </div>
                     <div className="glass rounded-full border-white/20 px-4 py-2">
-                      <p className="text-sm font-semibold text-white">Apr 2026</p>
+                      <p className="text-sm font-semibold text-white">See Projects for details</p>
                     </div>
                   </div>
                 </div>

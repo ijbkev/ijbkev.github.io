@@ -47,10 +47,10 @@ const Footer = () => {
                 <div className="flex items-center gap-2">
                   <Mail size={16} />
                   <a
-                    href="mailto:ijbk.connect@gmail.com"
+                    href="mailto:office@ijbk-de.org"
                     className="hover:text-white transition-colors"
                   >
-                    ijbk.connect@gmail.com
+                    office@ijbk-de.org
                   </a>
                 </div>
 
