@@ -22,6 +22,19 @@ type Project = {
 const Projects = () => {
   const projects: Project[] = [
     {
+      id: "green-stage-sustainable-future",
+      title: "Green Stage for Sustainable Future",
+      category: "Erasmus+ Youth Exchange",
+      status: "Closed",
+      statusTone: "warning",
+      date: "22–31 May 2026",
+      location: "Norway",
+      participants: "37",
+      description:
+        "Climate action meets theatre: sustainability, creativity, and nature-based learning with a public showcase.",
+      highlights: ["Theatre & storytelling", "Sustainability workshops", "Hikes + eco-farm visit"],
+    },
+    {
       id: "discover-eu",
       title: "Fully funded travel across Europe with DiscoverEU",
       category: "EU Travel Initiative",
@@ -42,33 +55,33 @@ const Projects = () => {
       statusTone: "success",
       date: "5 – 12 December 2025",
       location: "Tallinn, Estonia",
-      participants: "Estonia, Lithuania, Germany & Poland",
+      participants: "EE, LT, DE & PL",
       description:
         "A co-creative exchange on ethical AI, prototyping solutions for social challenges while building cross-country friendships.",
       highlights: ["Ethical AI labs", "Solution design", "Cross-country teams", "Showcase day"],
     },
     {
-      id: "ka152",
+      id: "KA152",
       title: "KA152: Digitalisation Matters",
       category: "Erasmus+ Youth Exchange",
       status: "Completed",
       statusTone: "success",
       date: "2024",
-      location: "Multiple EU Countries",
-      participants: "30+ Young People",
+      location: "Germany",
+      participants: "30+",
       description:
         "A digital literacy sprint covering AI tools, online safety, and collaboration to strengthen European youth skills.",
       highlights: ["Digital skills workshops", "AI tools training", "Cross-cultural teams", "Project-based learning"],
     },
     {
-      id: "ka153",
+      id: "KA153",
       title: "KA153: AI Tools 4 Youth Work",
       category: "Erasmus+ Training Course",
       status: "Completed",
       statusTone: "success",
       date: "2024",
-      location: "Germany & Partner Countries",
-      participants: "25 Youth Workers",
+      location: "North Macedonia",
+      participants: "25",
       description:
         "Upskilling youth workers with practical AI ethics, toolkits, and facilitation techniques for local programs.",
       highlights: ["AI ethics", "Practical toolkits", "Youth worker capacity building", "Open resources"],
@@ -81,7 +94,7 @@ const Projects = () => {
       statusTone: "success",
       date: "2025",
       location: "Türkiye",
-      participants: "20 Participants",
+      participants: "20",
       description:
         "Combining culinary arts with AI in the food industry — exploring culture through kitchens and code.",
       highlights: ["Cultural immersion", "AI in food", "Traditional cooking", "Tech integration"],
@@ -98,19 +111,6 @@ const Projects = () => {
       description:
         "Sustainability-focused hikes mixing outdoor activity, environmental education, and community building.",
       highlights: ["Environmental education", "Sustainable tourism", "Local partnerships", "Outdoor learning"],
-    },
-    {
-      id: "green-stage-sustainable-future",
-      title: "Green Stage for Sustainable Future",
-      category: "Erasmus+ Youth Exchange",
-      status: "Completed",
-      statusTone: "success",
-      date: "2025",
-      location: "Europe",
-      participants: "30+ Young People",
-      description:
-        "A sustainability-focused Erasmus+ journey where participants designed eco-actions, awareness campaigns, and local impact plans through non-formal education.",
-      highlights: ["Climate action workshops", "Green theatre methods", "Community eco-campaigns", "Youth-led sustainability plans"],
     },
   ];
 
@@ -182,7 +182,7 @@ const Projects = () => {
           {projects.map((project) => (
             <Card
               key={project.id}
-              className={`panel-strong h-full holo-card hover-lift ${project.id === "discover-eu" ? "ring-2 ring-amber-300" : ""}`}
+              className="panel-strong h-full holo-card hover-lift"
             >
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start justify-between gap-3">
@@ -198,11 +198,11 @@ const Projects = () => {
                   <div className="text-right text-muted-foreground text-sm">
                     <div className="flex items-center gap-2 justify-end">
                       <Calendar size={16} />
-                      <span>{project.date}</span>
+                      <span className="whitespace-nowrap">{project.date}</span>
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <MapPin size={16} />
-                      <span>{project.location}</span>
+                      <span className="whitespace-nowrap">{project.location}</span>
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <Users size={16} />
