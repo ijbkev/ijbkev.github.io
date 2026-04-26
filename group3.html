@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiscoverEU Memories Journal: Group 3 - Backpackers TBD</title>
+  <style>
+    :root {
+      --bg-blue: #355b98;
+      --bg-teal: #4ead9d;
+      --bg-mint: #9ecfa9;
+      --text: #1f1724;
+      --muted: #6f5f75;
+      --accent: #d8ff22;
+      --section: rgba(78, 173, 157, 0.94);
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: white;
+      background:
+        radial-gradient(circle at 67% 36%, rgba(168, 215, 173, 0.86), transparent 30%),
+        radial-gradient(circle at 50% 72%, rgba(74, 170, 157, 0.75), transparent 36%),
+        radial-gradient(circle at 22% 28%, rgba(53, 91, 152, 0.9), transparent 38%),
+        linear-gradient(125deg, var(--bg-blue), var(--bg-teal) 46%, var(--bg-mint));
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 55% 42%, rgba(255,255,255,0.08), transparent 25%);
+      filter: blur(8px);
+      opacity: 0.72;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 18px 28px 14px;
+      background: linear-gradient(180deg, rgba(42, 78, 131, 0.9), rgba(42, 78, 131, 0.25));
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      border-radius: 17px;
+      background: rgba(255,255,255,0.15);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+      font-size: 34px;
+      flex: 0 0 auto;
+    }
+
+    .meta {
+      margin-bottom: 3px;
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0.86;
+    }
+
+    h1 {
+      margin: 0;
+      line-height: 1.03;
+      font-size: clamp(26px, 3vw, 39px);
+      letter-spacing: -0.045em;
+      font-weight: 900;
+      text-wrap: balance;
+    }
+
+    .description {
+      max-width: 1480px;
+      margin: 8px 0 0 70px;
+      color: rgba(255,255,255,0.86);
+      font-size: clamp(14px, 1.08vw, 17px);
+      line-height: 1.45;
+      font-weight: 500;
+    }
+
+    .pill {
+      border: 0;
+      color: white;
+      background: rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 11px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+      transition: 0.18s ease;
+      font-family: var(--font);
+    }
+
+    .pill:hover {
+      background: rgba(255,255,255,0.24);
+      transform: translateY(-1px);
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 98px;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 28px;
+      background: linear-gradient(180deg, rgba(42, 118, 134, 0.56), rgba(42, 118, 134, 0.16));
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 210px;
+      max-width: 620px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      border-radius: 16px;
+      padding: 14px 44px 14px 18px;
+      background: rgba(255,255,255,0.16);
+      color: white;
+      font-family: var(--font);
+      font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.13);
+    }
+
+    .search-wrap input::placeholder { color: rgba(255,255,255,0.68); }
+
+    .search-symbol {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.75;
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 13px;
+      background: rgba(255,255,255,0.13);
+      color: white;
+      cursor: pointer;
+      font-weight: 850;
+      font-family: var(--font);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09);
+      transition: 0.18s ease;
+    }
+
+    .chip:hover,
+    .chip.active {
+      background: var(--accent);
+      color: #171700;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      padding: 28px 0 80px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 26px 24px;
+    }
+
+    .stat {
+      min-width: 126px;
+      border-radius: 18px;
+      padding: 13px 16px;
+      background: rgba(255,255,255,0.14);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09);
+      backdrop-filter: blur(10px);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.78;
+    }
+
+    .section {
+      margin-bottom: 46px;
+      padding-bottom: 8px;
+    }
+
+    .section-heading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .section-title,
+    .section-icon {
+      background: var(--section);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+    }
+
+    .section-title {
+      display: inline-flex;
+      align-items: center;
+      min-height: 46px;
+      padding: 8px 15px;
+      border-radius: 0 9px 9px 0;
+      font-size: clamp(20px, 1.8vw, 25px);
+      font-weight: 950;
+      letter-spacing: -0.03em;
+    }
+
+    .section-count {
+      margin-left: 8px;
+      font-size: 13px;
+      font-weight: 900;
+      opacity: 0.72;
+    }
+
+    .section-icon {
+      display: inline-grid;
+      place-items: center;
+      min-width: 46px;
+      min-height: 46px;
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-size: 25px;
+      font-weight: 700;
+    }
+
+    .rail {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(330px, 440px);
+      gap: 22px;
+      overflow-x: auto;
+      padding: 12px 26px 36px;
+      scroll-snap-type: x proximity;
+      scrollbar-color: rgba(255,255,255,0.4) transparent;
+      align-items: start;
+    }
+
+    .rail::-webkit-scrollbar { height: 10px; }
+    .rail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 99px; }
+
+    .card {
+      scroll-snap-align: start;
+      min-height: 345px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      color: var(--text);
+      background: linear-gradient(180deg, #ffffff, #f7fcfd);
+      border: 1px solid rgba(255,255,255,0.56);
+      border-radius: 22px;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.75);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(216, 255, 34, 0.82);
+      box-shadow: 0 28px 66px rgba(0,0,0,0.32), 0 0 0 3px rgba(216,255,34,0.18);
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 16px 10px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.2;
+      letter-spacing: -0.028em;
+      font-weight: 950;
+    }
+
+    .dots {
+      font-size: 22px;
+      line-height: 1;
+      color: #93859b;
+      transform: translateY(-3px);
+    }
+
+    .thumb {
+      margin: 0 16px;
+      height: 260px;
+      border-radius: 15px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #f2f8fb, #e5f4f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border: 1px solid rgba(35, 64, 88, 0.1);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 8px 22px rgba(15, 42, 61, 0.08);
+    }
+
+    .thumb img,
+    .thumb video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain !important;
+      object-position: center center;
+      background: linear-gradient(135deg, #f2f8fb, #e5f4f1);
+    }
+
+    .fallback-preview {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      color: #243032;
+      background: linear-gradient(135deg, #ffffff, #eaf4f7);
+    }
+
+    .fallback-preview strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 18px;
+    }
+
+    .fallback-icon { font-size: 50px; }
+
+    .badge {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      border-radius: 0 10px 0 0;
+      padding: 7px 13px;
+      background: rgba(255,255,255,0.92);
+      color: #4c4052;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    .play {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.52);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      padding-left: 4px;
+      backdrop-filter: blur(8px);
+    }
+
+    .caption {
+      margin: 13px 16px 16px;
+      padding: 12px 13px;
+      color: #342639;
+      background: rgba(237, 248, 249, 0.78);
+      border-radius: 14px;
+      font-size: 15px;
+      line-height: 1.38;
+      font-weight: 550;
+    }
+
+    .empty {
+      margin: 0 26px;
+      padding: 22px;
+      color: rgba(255,255,255,0.88);
+      background: rgba(255,255,255,0.12);
+      border-radius: 14px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 24px;
+      background: rgba(0, 18, 28, 0.78);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-box {
+      width: min(1160px, 96vw);
+      height: min(860px, 92vh);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      color: var(--text);
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 28px 100px rgba(0,0,0,0.45);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px 18px;
+      border-bottom: 1px solid #e7eef1;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.025em;
+      font-weight: 950;
+    }
+
+    .modal-desc {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .close {
+      flex: 0 0 auto;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      color: #17262d;
+      background: #edf3f5;
+      font-size: 28px;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .close:hover { background: #dfe9ea; }
+
+    .modal-content {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #00121c;
+    }
+
+    .modal-content iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: white;
+    }
+
+    .modal-content img,
+    .modal-content video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain !important;
+      object-position: center center;
+      background: black;
+    }
+
+    @media (max-width: 900px) {
+      .toolbar {
+        position: relative;
+        top: auto;
+        align-items: stretch;
+        flex-direction: column;
+        padding: 12px 18px;
+      }
+      .search-wrap { max-width: none; }
+      .chips { justify-content: flex-start; }
+    }
+
+    @media (max-width: 760px) {
+      header { padding: 16px 18px; }
+      .topbar { align-items: flex-start; }
+      .actions { display: none; }
+      .description { margin-left: 0; }
+      .brand { align-items: flex-start; }
+      .logo { width: 46px; height: 46px; font-size: 27px; }
+      .rail { grid-auto-columns: minmax(285px, 85vw); padding: 10px 16px 34px; }
+      .section-title { font-size: 20px; }
+      .thumb { height: 245px; }
+      .stats { padding-inline: 16px; }
+      .modal { padding: 10px; }
+      .modal-box { width: 100%; height: 94vh; border-radius: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">🎒</div>
+        <div>
+          <div class="meta">IJBK e.V. • DiscoverEU</div>
+          <h1 id="pageTitle"></h1>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="pill" type="button" onclick="sharePage()">↗ Share</button>
+      </div>
+    </div>
+    <p class="description" id="pageDescription"></p>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <input id="searchInput" type="search" placeholder="Search journals, videos, photos, cities..." />
+      <span class="search-symbol">⌕</span>
+    </div>
+    <div class="chips" id="filterChips"></div>
+  </div>
+
+  <main id="app"></main>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <h3 class="modal-title" id="modalTitle"></h3>
+          <p class="modal-desc" id="modalDesc"></p>
+        </div>
+        <button class="close" type="button" onclick="closeModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-content" id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const site = {
+      title: "DiscoverEU Memories Journal: Group 3 - Backpackers TBD",
+      description: "The journey took place from 4 to 23 April 2026, lasting 20 days in total. These journals compile the collective reflections of all 6 participants, including accompanying persons, involved in the DiscoverEU project conducted from 4th to 23rd April 2026. Countries Covered: Germany, Poland, Slovakia, Hungary, and Austria.",
+      sections: [
+        {
+          id: "journals",
+          title: "Journals",
+          type: "pdf",
+          items: [
+            { title: "Pai Doose", description: "", file: "assets3/journals/pai-doose.pdf", thumbnail: "assets3/journals/pai-doose-cover.jpg" }
+          ]
+        },
+        {
+          id: "city-videos",
+          title: "City Videos",
+          type: "video",
+          items: []
+        },
+        {
+          id: "photo-wall",
+          title: "Photo Wall",
+          type: "image",
+          items: []
+        }
+      ]
+    };
+
+    const app = document.getElementById("app");
+    const filterChips = document.getElementById("filterChips");
+    const searchInput = document.getElementById("searchInput");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDesc = document.getElementById("modalDesc");
+    const modalContent = document.getElementById("modalContent");
+
+    let activeFilter = "all";
+    let searchTerm = "";
+
+    document.title = site.title;
+    document.getElementById("pageTitle").textContent = site.title;
+    document.getElementById("pageDescription").textContent = site.description;
+    searchInput.addEventListener("input", function () {
+      searchTerm = this.value.trim().toLowerCase();
+      render();
+    });
+
+    function render() {
+      app.innerHTML = "";
+      renderFilters();
+      app.appendChild(createStats());
+
+      const sections = site.sections.filter(function (section) {
+        if (activeFilter !== "all" && activeFilter !== section.id) return false;
+        return getFilteredItems(section).length > 0 || searchTerm === "";
+      });
+
+      if (sections.length === 0) {
+        app.appendChild(createEmpty("No matching posts found. Try another search word."));
+        return;
+      }
+
+      sections.forEach(function (section) {
+        const items = getFilteredItems(section);
+        const sectionEl = document.createElement("section");
+        sectionEl.className = "section";
+        sectionEl.id = section.id;
+
+        const heading = document.createElement("div");
+        heading.className = "section-heading";
+        heading.innerHTML = '<div class="section-title">' + escapeHtml(section.title) + ' <span class="section-count">' + items.length + '</span></div><div class="section-icon">＋</div><div class="section-icon">...</div>';
+        sectionEl.appendChild(heading);
+
+        if (items.length === 0) {
+          sectionEl.appendChild(createEmpty("No posts added yet. Add files to assets3 and update this section in the code."));
+        } else {
+          const rail = document.createElement("div");
+          rail.className = "rail";
+          items.forEach(function (item) {
+            rail.appendChild(createCard(section.type, item));
+          });
+          sectionEl.appendChild(rail);
+        }
+
+        app.appendChild(sectionEl);
+      });
+    }
+
+    function renderFilters() {
+      filterChips.innerHTML = "";
+      const filters = [{ id: "all", label: "All" }].concat(site.sections.map(function (s) {
+        return { id: s.id, label: s.title };
+      }));
+
+      filters.forEach(function (filter) {
+        const button = document.createElement("button");
+        button.className = "chip" + (activeFilter === filter.id ? " active" : "");
+        button.type = "button";
+        button.textContent = filter.label;
+        button.addEventListener("click", function () {
+          activeFilter = filter.id;
+          render();
+        });
+        filterChips.appendChild(button);
+      });
+    }
+
+    function getFilteredItems(section) {
+      return section.items.filter(function (item) {
+        const haystack = (item.title + " " + (item.description || "") + " " + (item.file || "")).toLowerCase();
+        return haystack.includes(searchTerm);
+      });
+    }
+
+    function createStats() {
+      const totals = site.sections.reduce(function (acc, section) {
+        acc.total += section.items.length;
+        acc[section.type] = (acc[section.type] || 0) + section.items.length;
+        return acc;
+      }, { total: 0, pdf: 0, video: 0, image: 0 });
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "stats";
+      wrapper.innerHTML = '<div class="stat"><strong>' + totals.total + '</strong><span>Total posts</span></div><div class="stat"><strong>' + totals.pdf + '</strong><span>Journals</span></div><div class="stat"><strong>' + totals.video + '</strong><span>Videos</span></div><div class="stat"><strong>' + totals.image + '</strong><span>Photos</span></div>';
+      return wrapper;
+    }
+
+    function createCard(type, item) {
+      const card = document.createElement("article");
+      card.className = "card";
+      card.tabIndex = 0;
+
+      const titleRow = document.createElement("div");
+      titleRow.className = "card-title-row";
+      titleRow.innerHTML = '<h2>' + escapeHtml(item.title) + '</h2><span class="dots">⋮</span>';
+      card.appendChild(titleRow);
+
+      card.appendChild(createThumb(type, item));
+
+      if (item.description) {
+        const caption = document.createElement("p");
+        caption.className = "caption";
+        caption.textContent = item.description;
+        card.appendChild(caption);
+      }
+
+      card.addEventListener("click", function () { openModal(type, item); });
+      card.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") openModal(type, item);
+      });
+
+      return card;
+    }
+
+    function createThumb(type, item) {
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+
+      if (type === "pdf") {
+        const img = document.createElement("img");
+        img.src = item.thumbnail;
+        img.alt = item.title + " PDF preview";
+        img.addEventListener("load", function () { markOrientation(img); });
+        img.addEventListener("error", function () { showFallback(thumb, "📄", "PDF Journal"); });
+        thumb.appendChild(img);
+        addBadge(thumb, "PDF");
+        return thumb;
+      }
+
+      if (type === "video") {
+        if (item.thumbnail) {
+          const img = document.createElement("img");
+          img.src = item.thumbnail;
+          img.alt = item.title + " video preview";
+          img.addEventListener("load", function () { markOrientation(img); });
+          img.addEventListener("error", function () { showFallback(thumb, "▶", "City Video"); });
+          thumb.appendChild(img);
+        } else {
+          const video = document.createElement("video");
+          video.src = item.file;
+          video.muted = true;
+          video.preload = "metadata";
+          video.addEventListener("loadedmetadata", function () { markOrientation(video); });
+          video.addEventListener("error", function () { showFallback(thumb, "▶", "City Video"); });
+          thumb.appendChild(video);
+        }
+        const play = document.createElement("div");
+        play.className = "play";
+        play.textContent = "▶";
+        thumb.appendChild(play);
+        return thumb;
+      }
+
+      const img = document.createElement("img");
+      img.src = item.file;
+      img.alt = item.title;
+      img.loading = "lazy";
+      img.addEventListener("load", function () { markOrientation(img); });
+      img.addEventListener("error", function () { showFallback(thumb, "🖼️", "Photo"); });
+      thumb.appendChild(img);
+      return thumb;
+    }
+
+    function addBadge(parent, text) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = text;
+      parent.appendChild(badge);
+    }
+
+    function showFallback(parent, icon, label) {
+      parent.innerHTML = '<div class="fallback-preview"><div><div class="fallback-icon">' + icon + '</div><strong>' + label + '</strong></div></div>';
+    }
+
+    function markOrientation(media) {
+      const width = media.naturalWidth || media.videoWidth || 0;
+      const height = media.naturalHeight || media.videoHeight || 0;
+      const holder = media.closest(".thumb") || media.closest(".modal-content");
+      if (!holder || !width || !height) return;
+      holder.classList.remove("media-portrait", "media-landscape", "media-square");
+      if (height > width * 1.08) holder.classList.add("media-portrait");
+      else if (width > height * 1.08) holder.classList.add("media-landscape");
+      else holder.classList.add("media-square");
+    }
+
+    function openModal(type, item) {
+      modalTitle.textContent = item.title;
+      modalDesc.textContent = item.description || "";
+      modalDesc.style.display = item.description ? "block" : "none";
+      modalContent.innerHTML = "";
+
+      if (type === "pdf") {
+        const iframe = document.createElement("iframe");
+        iframe.src = item.file;
+        iframe.title = item.title;
+        modalContent.appendChild(iframe);
+      } else if (type === "image") {
+        const img = document.createElement("img");
+        img.src = item.file;
+        img.alt = item.title;
+        img.addEventListener("load", function () { markOrientation(img); });
+        img.addEventListener("error", function () { showFallback(modalContent, "🖼️", "Photo file not found"); });
+        modalContent.appendChild(img);
+      } else if (type === "video") {
+        const video = document.createElement("video");
+        video.src = item.file;
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.addEventListener("loadedmetadata", function () { markOrientation(video); });
+        video.addEventListener("error", function () { showFallback(modalContent, "▶", "Video file not found"); });
+        modalContent.appendChild(video);
+      }
+
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+      modalContent.innerHTML = "";
+      document.body.style.overflow = "";
+    }
+
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal) closeModal();
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeModal();
+    });
+
+    async function sharePage() {
+      const pageLink = window.location.href;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: site.title, text: site.description, url: pageLink });
+          return;
+        } catch (error) {
+          if (error.name === "AbortError") return;
+        }
+      }
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(pageLink);
+        alert("Page link copied: " + pageLink);
+      } else {
+        prompt("Copy this page link:", pageLink);
+      }
+    }
+
+    function createEmpty(text) {
+      const div = document.createElement("div");
+      div.className = "empty";
+      div.textContent = text;
+      return div;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    render();
+  </script>
+</body>
+</html>
