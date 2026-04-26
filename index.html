@@ -298,15 +298,13 @@
     }
 
     .rail {
-      display: grid;
-      grid-auto-flow: column;
-      grid-auto-columns: minmax(330px, 440px);
+      display: flex;
       gap: 22px;
       overflow-x: auto;
       padding: 12px 26px 36px;
       scroll-snap-type: x proximity;
       scrollbar-color: rgba(255,255,255,0.4) transparent;
-      align-items: start;
+      align-items: flex-start;
     }
 
     .rail::-webkit-scrollbar {
@@ -320,6 +318,8 @@
 
     .card {
       scroll-snap-align: start;
+      flex: 0 0 min(430px, 86vw);
+      width: min(430px, 86vw);
       background: linear-gradient(180deg, #ffffff, #fbf7fd);
       color: var(--text);
       border-radius: 22px;
@@ -327,11 +327,25 @@
       box-shadow: 0 18px 44px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.75);
       border: 1px solid rgba(255,255,255,0.56);
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, width 0.25s ease, flex-basis 0.25s ease;
       min-height: 345px;
       display: flex;
       flex-direction: column;
       position: relative;
+    }
+
+    .card.media-portrait-card {
+      flex-basis: min(285px, 72vw);
+      width: min(285px, 72vw);
+    }
+
+    .card.media-portrait-card .thumb {
+      height: 390px;
+    }
+
+    .card.media-landscape-card {
+      flex-basis: min(430px, 86vw);
+      width: min(430px, 86vw);
     }
 
     .card:hover {
@@ -930,6 +944,7 @@
           filteredItems.forEach(item => {
             const card = createCard(section.type, item);
             rail.appendChild(card);
+            if ((section.type === "image") && !item.layout) detectBackgroundImageOrientation(card, item.file);
           });
 
           sectionEl.appendChild(rail);
@@ -993,6 +1008,10 @@
     function createCard(type, item) {
       const card = document.createElement("article");
       card.className = "card";
+      if (item.layout === "portrait") card.classList.add("media-portrait-card");
+      if (item.layout === "landscape") card.classList.add("media-landscape-card");
+      card.dataset.type = type;
+      card.dataset.file = item.file || "";
       card.tabIndex = 0;
       card.onclick = () => openModal(type, item);
       card.onkeydown = (event) => {
@@ -1037,7 +1056,7 @@
       if (type === "video") {
         return `
           <div class="thumb${mediaClass}">
-            ${item.thumbnail ? `<img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} video preview" onload="markOrientation(this)" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata" onloadedmetadata="markOrientation(this)"></video>`}
+            ${item.thumbnail ? `<img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} video preview" onload="markOrientation(this); markCardOrientation(this)" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata" onloadedmetadata="markOrientation(this); markCardOrientation(this)"></video>`}
             <div class="play">▶</div>
           </div>
         `;
@@ -1050,8 +1069,34 @@
       `;
     }
 
+    function markCardOrientation(media) {
+      const width = media.naturalWidth || media.videoWidth || 0;
+      const height = media.naturalHeight || media.videoHeight || 0;
+      const card = media.closest(".card");
+      if (!card || !width || !height) return;
+
+      card.classList.remove("media-portrait-card", "media-landscape-card", "media-square-card");
+      if (height > width * 1.18) card.classList.add("media-portrait-card");
+      else if (width > height * 1.18) card.classList.add("media-landscape-card");
+      else card.classList.add("media-square-card");
+    }
+
+    function detectBackgroundImageOrientation(card, src) {
+      const img = new Image();
+      img.onload = () => markCardOrientationFromSize(card, img.naturalWidth, img.naturalHeight);
+      img.src = src;
+    }
+
+    function markCardOrientationFromSize(card, width, height) {
+      if (!card || !width || !height) return;
+      card.classList.remove("media-portrait-card", "media-landscape-card", "media-square-card");
+      if (height > width * 1.18) card.classList.add("media-portrait-card");
+      else if (width > height * 1.18) card.classList.add("media-landscape-card");
+      else card.classList.add("media-square-card");
+    }
+
     function escapeCssUrl(str) {
-      return String(str).replaceAll("\\", "\\\\").replaceAll("'", "\\'").replaceAll("\"", "\\\"");
+      return String(str).replaceAll("\", "\\").replaceAll("'", "\'").replaceAll("\"", "\\"");
     }
 
     function markOrientation(media) {
