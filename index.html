@@ -3,20 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DiscoverEU Memories Journal</title>
+  <title>DiscoverEU Memories Journals</title>
   <style>
     :root {
-      --bg1: #37005f;
-      --bg2: #8d006e;
-      --bg3: #cf007d;
-      --card: #ffffff;
-      --text: #1f1724;
-      --muted: #6f5f75;
-      --accent: #d8ff22;
-      --section-tab: rgba(203, 20, 158, 0.88);
-      --glass: rgba(255, 255, 255, 0.13);
-      --shadow: 0 18px 45px rgba(0, 0, 0, 0.23);
-      --radius: 16px;
+      --text: #fff;
+      --muted: rgba(255,255,255,0.78);
+      --card: rgba(255,255,255,0.14);
+      --card-border: rgba(255,255,255,0.2);
+      --shadow: 0 28px 80px rgba(0,0,0,0.32);
       --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
@@ -30,17 +24,18 @@
 
     body {
       margin: 0;
-      font-family: var(--font);
-      color: white;
       min-height: 100vh;
+      font-family: var(--font);
+      color: var(--text);
       background:
-        radial-gradient(circle at 70% 55%, rgba(255, 0, 136, 0.58), transparent 22%),
-        radial-gradient(circle at 47% 92%, rgba(203, 0, 144, 0.48), transparent 27%),
-        linear-gradient(120deg, var(--bg1), var(--bg2) 46%, var(--bg3));
+        radial-gradient(circle at 16% 16%, rgba(216, 255, 34, 0.42), transparent 25%),
+        radial-gradient(circle at 82% 18%, rgba(255, 0, 150, 0.45), transparent 27%),
+        radial-gradient(circle at 28% 78%, rgba(0, 200, 130, 0.42), transparent 28%),
+        radial-gradient(circle at 72% 75%, rgba(110, 0, 180, 0.56), transparent 30%),
+        linear-gradient(135deg, #07151e, #32005d 45%, #006c54);
       overflow-x: hidden;
-      text-rendering: geometricPrecision;
       -webkit-font-smoothing: antialiased;
-      font-size: 16px;
+      text-rendering: geometricPrecision;
     }
 
     body::before {
@@ -48,613 +43,324 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      background: radial-gradient(circle at 45% 54%, rgba(255,255,255,0.08), transparent 18%);
-      filter: blur(6px);
-      opacity: 0.7;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: radial-gradient(circle at center, black, transparent 72%);
+      opacity: 0.55;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 56px;
     }
 
     header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(16px);
-      background: linear-gradient(180deg, rgba(73, 0, 94, 0.9), rgba(73, 0, 94, 0.35));
-      padding: 18px 28px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.09);
-    }
-
-    .topbar {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      align-items: flex-start;
+      gap: 24px;
+      padding: 18px 0 34px;
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 14px;
-      min-width: 0;
     }
 
     .logo {
-      width: 56px;
-      height: 56px;
+      width: 58px;
+      height: 58px;
       display: grid;
       place-items: center;
-      border-radius: 17px;
-      background: var(--glass);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
-      font-size: 32px;
-      flex: 0 0 auto;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.14);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 12px 32px rgba(0,0,0,0.22);
+      font-size: 31px;
     }
 
-    .meta {
-      font-size: 13px;
-      font-weight: 650;
-      letter-spacing: 0.01em;
-      opacity: 0.84;
-      margin-bottom: 3px;
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 12px;
     }
 
     h1 {
       margin: 0;
-      line-height: 1.03;
-      font-size: clamp(26px, 3vw, 39px);
-      letter-spacing: -0.045em;
-      font-weight: 900;
+      font-size: clamp(34px, 5.6vw, 76px);
+      line-height: 0.94;
+      letter-spacing: -0.07em;
+      max-width: 830px;
       text-wrap: balance;
     }
 
-    .description {
-      max-width: 1480px;
-      margin: 8px 0 0 70px;
-      color: rgba(255,255,255,0.83);
-      font-size: clamp(14px, 1.08vw, 17px);
+    .header-note {
+      max-width: 320px;
+      color: var(--muted);
       line-height: 1.45;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 540;
+      padding-top: 10px;
     }
 
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .pill {
-      border: 0;
-      color: white;
-      background: rgba(255,255,255,0.13);
-      border-radius: 14px;
-      padding: 11px 16px;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
-      transition: 0.18s ease;
-      font-family: var(--font);
-    }
-
-    .pill:hover {
-      background: rgba(255,255,255,0.21);
-      transform: translateY(-1px);
-    }
-
-    .toolbar {
-      position: sticky;
-      top: 98px;
-      z-index: 8;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 14px 28px;
-      backdrop-filter: blur(14px);
-      background: linear-gradient(180deg, rgba(80,0,100,0.58), rgba(80,0,100,0.18));
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-    }
-
-    .search-wrap {
-      flex: 1;
-      min-width: 210px;
-      max-width: 620px;
+    .hero {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+      border-radius: 34px;
+      padding: clamp(22px, 4vw, 42px);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
       position: relative;
     }
 
-    .search-wrap input {
-      width: 100%;
-      border: 0;
-      outline: none;
-      border-radius: 16px;
-      padding: 14px 44px 14px 18px;
-      background: rgba(255,255,255,0.16);
-      color: white;
-      font-family: var(--font);
-      font-weight: 700;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.13);
-    }
-
-    .search-wrap input::placeholder {
-      color: rgba(255,255,255,0.65);
-    }
-
-    .search-symbol {
+    .hero::after {
+      content: "";
       position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      opacity: 0.75;
+      width: 360px;
+      height: 360px;
+      right: -120px;
+      top: -120px;
+      background: radial-gradient(circle, rgba(216,255,34,0.28), transparent 65%);
+      pointer-events: none;
     }
 
-    .chips {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .chip {
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 13px;
-      background: rgba(255,255,255,0.12);
-      color: white;
-      cursor: pointer;
-      font-weight: 850;
-      font-family: var(--font);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09);
-      transition: 0.18s ease;
-    }
-
-    .chip:hover,
-    .chip.active {
-      background: var(--accent);
-      color: #171700;
-    }
-
-    main {
+    .hero-grid {
       position: relative;
       z-index: 1;
-      padding: 28px 0 80px;
+      display: grid;
+      grid-template-columns: 1.02fr 0.98fr;
+      gap: 26px;
+      align-items: stretch;
     }
 
-    .stats {
+    .intro {
+      min-height: 100%;
       display: flex;
-      gap: 10px;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 28px;
+    }
+
+    .intro h2 {
+      margin: 0;
+      font-size: clamp(26px, 3.4vw, 46px);
+      line-height: 1.02;
+      letter-spacing: -0.055em;
+      text-wrap: balance;
+    }
+
+    .intro p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.52;
+      max-width: 620px;
+    }
+
+    .quick-stats {
+      display: flex;
       flex-wrap: wrap;
-      padding: 0 26px 24px;
+      gap: 10px;
     }
 
     .stat {
-      min-width: 126px;
-      border-radius: 18px;
-      padding: 13px 16px;
-      background: rgba(255,255,255,0.13);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09);
-      backdrop-filter: blur(10px);
+      flex: 1 1 128px;
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.14);
     }
 
     .stat strong {
       display: block;
-      font-size: 24px;
+      font-size: 30px;
       line-height: 1;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.04em;
     }
 
     .stat span {
       display: block;
-      margin-top: 5px;
+      margin-top: 7px;
+      color: rgba(255,255,255,0.72);
       font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
+      font-weight: 850;
       text-transform: uppercase;
-      opacity: 0.78;
+      letter-spacing: 0.06em;
     }
 
-    .section {
-      margin-bottom: 46px;
-      padding-bottom: 8px;
-    }
-
-    .section-heading {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: 0;
-      margin-bottom: 18px;
-    }
-
-    .section-title {
-      display: inline-flex;
-      align-items: center;
-      min-height: 46px;
-      padding: 8px 15px;
-      background: var(--section-tab);
-      border-radius: 0 9px 9px 0;
-      font-size: clamp(20px, 1.8vw, 25px);
-      font-weight: 950;
-      letter-spacing: -0.03em;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
-    }
-
-    .section-count {
-      margin-left: 8px;
-      font-size: 13px;
-      font-weight: 900;
-      opacity: 0.7;
-    }
-
-    .section-icon {
-      display: inline-grid;
-      place-items: center;
-      min-width: 46px;
-      min-height: 46px;
-      padding: 8px 12px;
-      background: var(--section-tab);
-      border-radius: 9px;
-      font-size: 25px;
-      font-weight: 700;
-    }
-
-    .rail {
-      display: flex;
-      gap: 22px;
-      overflow-x: auto;
-      padding: 12px 26px 36px;
-      scroll-snap-type: x proximity;
-      scrollbar-color: rgba(255,255,255,0.4) transparent;
-      align-items: flex-start;
-    }
-
-    .rail::-webkit-scrollbar {
-      height: 10px;
-    }
-
-    .rail::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.35);
-      border-radius: 99px;
-    }
-
-    .card {
-      scroll-snap-align: start;
-      flex: 0 0 min(430px, 86vw);
-      width: min(430px, 86vw);
-      background: linear-gradient(180deg, #ffffff, #fbf7fd);
-      color: var(--text);
-      border-radius: 22px;
-      overflow: hidden;
-      box-shadow: 0 18px 44px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.75);
-      border: 1px solid rgba(255,255,255,0.56);
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, width 0.25s ease, flex-basis 0.25s ease;
-      min-height: 345px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-
-    .card.media-portrait-card {
-      flex-basis: min(285px, 72vw);
-      width: min(285px, 72vw);
-    }
-
-    .card.media-portrait-card .thumb {
-      height: 390px;
-    }
-
-    .card.media-landscape-card {
-      flex-basis: min(430px, 86vw);
-      width: min(430px, 86vw);
-    }
-
-    .card:hover {
-      transform: translateY(-6px);
-      border-color: rgba(216, 255, 34, 0.82);
-      box-shadow: 0 28px 66px rgba(0,0,0,0.32), 0 0 0 3px rgba(216,255,34,0.18);
-    }
-
-    .card-title-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 16px 16px 10px;
-    }
-
-    .card h2 {
-      margin: 0;
-      font-size: 19px;
-      line-height: 1.2;
-      letter-spacing: -0.028em;
-      font-weight: 950;
-    }
-
-    .dots {
-      font-size: 22px;
-      line-height: 1;
-      color: #93859b;
-      transform: translateY(-3px);
-    }
-
-    .thumb {
-      margin: 0 16px;
-      height: 260px;
-      border-radius: 15px;
-      overflow: hidden;
-      background: linear-gradient(135deg, #f8f2fb, #efe5f4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      border: 1px solid rgba(72, 35, 88, 0.1);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 8px 22px rgba(48, 15, 61, 0.08);
-    }
-
-    .thumb img,
-    .thumb video {
-      display: block;
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain !important;
-      object-position: center center;
-      background: linear-gradient(135deg, #f8f2fb, #efe5f4);
-    }
-
-    .thumb.media-portrait img,
-    .thumb.media-portrait video,
-    .thumb.media-landscape img,
-    .thumb.media-landscape video,
-    .thumb.media-square img,
-    .thumb.media-square video {
-      object-fit: contain !important;
-    }
-
-    .pdf-thumb {
-      background: linear-gradient(135deg, #fff, #f2eef6);
-      color: #25172d;
-      padding: 22px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    .pdf-icon {
-      width: 96px;
-      height: 126px;
+    .groups {
       display: grid;
-      place-items: center;
-      border-radius: 9px;
-      background: #fff;
-      border: 2px solid #e7dfea;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-      font-size: 38px;
+      grid-template-columns: 1fr;
+      gap: 18px;
     }
 
-    .badge {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      border-radius: 0 10px 0 0;
-      padding: 7px 13px;
-      background: rgba(255,255,255,0.9);
-      color: #4c4052;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.04em;
-    }
-
-    .play {
-      position: absolute;
-      width: 64px;
-      height: 64px;
-      border-radius: 999px;
-      background: rgba(0,0,0,0.52);
-      color: white;
-      display: grid;
-      place-items: center;
-      font-size: 28px;
-      padding-left: 4px;
-      backdrop-filter: blur(8px);
-    }
-
-    .caption {
-      margin: 13px 16px 16px;
-      padding: 12px 13px;
-      color: #342639;
-      background: rgba(245, 237, 249, 0.75);
-      border-radius: 14px;
-      font-size: 15px;
-      line-height: 1.38;
-      font-weight: 550;
-    }
-
-
-
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      background: rgba(12, 0, 18, 0.78);
-      backdrop-filter: blur(10px);
+    .group-card {
+      position: relative;
+      min-height: 245px;
+      overflow: hidden;
+      border-radius: 28px;
       padding: 24px;
+      text-decoration: none;
+      color: white;
+      isolation: isolate;
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 22px 52px rgba(0,0,0,0.28);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
-    .modal.open {
-      display: flex;
+    .group-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 30px 78px rgba(0,0,0,0.36);
+      border-color: rgba(216,255,34,0.78);
     }
 
-    .modal-box {
-      width: min(1160px, 96vw);
-      height: min(860px, 92vh);
-      background: white;
-      color: var(--text);
-      border-radius: 20px;
-      box-shadow: 0 28px 100px rgba(0,0,0,0.45);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+    .group-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
     }
 
-    .modal-head {
+    .group-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.38)),
+        radial-gradient(circle at 84% 18%, rgba(255,255,255,0.26), transparent 24%);
+    }
+
+    .group1::before {
+      background:
+        radial-gradient(circle at 30% 24%, rgba(220, 230, 34, 0.82), transparent 28%),
+        radial-gradient(circle at 72% 50%, rgba(0, 126, 94, 0.9), transparent 35%),
+        linear-gradient(135deg, #13a537, #d7d31f 47%, #00765f);
+    }
+
+    .group2::before {
+      background:
+        radial-gradient(circle at 72% 50%, rgba(255, 0, 146, 0.82), transparent 32%),
+        radial-gradient(circle at 35% 32%, rgba(90, 0, 140, 0.9), transparent 33%),
+        linear-gradient(135deg, #37005f, #8d006e 46%, #cf007d);
+    }
+
+    .group-top {
       display: flex;
+      justify-content: space-between;
       align-items: flex-start;
+      gap: 16px;
+    }
+
+    .emoji {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 19px;
+      background: rgba(255,255,255,0.18);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+      font-size: 32px;
+    }
+
+    .arrow {
+      width: 45px;
+      height: 45px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      font-size: 22px;
+      font-weight: 900;
+      transition: transform 0.2s ease;
+    }
+
+    .group-card:hover .arrow {
+      transform: translateX(4px);
+    }
+
+    .group-card h3 {
+      margin: 26px 0 8px;
+      font-size: clamp(24px, 3vw, 36px);
+      line-height: 1;
+      letter-spacing: -0.055em;
+      max-width: 560px;
+    }
+
+    .group-card p {
+      margin: 0;
+      max-width: 640px;
+      color: rgba(255,255,255,0.84);
+      font-size: 15px;
+      line-height: 1.45;
+      font-weight: 540;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.9);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.02em;
+    }
+
+    .footer {
+      display: flex;
       justify-content: space-between;
       gap: 18px;
-      padding: 16px 18px;
-      border-bottom: 1px solid #eee7f1;
-    }
-
-    .modal-title {
-      margin: 0;
-      font-size: 22px;
-      letter-spacing: -0.025em;
-      font-weight: 950;
-    }
-
-    .modal-desc {
-      margin: 6px 0 0;
-      color: var(--muted);
-      line-height: 1.4;
+      align-items: center;
+      margin-top: 24px;
+      padding: 18px 4px 0;
+      color: rgba(255,255,255,0.7);
       font-size: 14px;
-      font-weight: 500;
+      line-height: 1.45;
     }
 
-    .close {
-      border: 0;
-      background: #f2edf5;
-      color: #25172d;
-      width: 42px;
-      height: 42px;
-      border-radius: 999px;
-      font-size: 28px;
-      cursor: pointer;
-      flex: 0 0 auto;
-      font-family: var(--font);
+    .footer a {
+      color: white;
+      font-weight: 800;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.45);
     }
 
-    .close:hover {
-      background: #e7dfea;
-    }
-
-    .modal-content {
-      flex: 1;
-      min-height: 0;
-      background: #130019;
-      display: grid;
-      place-items: center;
-    }
-
-    .modal-content iframe,
-    .modal-content embed {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      background: white;
-    }
-
-    .modal-content img {
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
-      object-fit: contain;
-      display: block;
-    }
-
-    .modal-content.portrait-modal {
-      padding: 0;
-      overflow: hidden;
-      align-items: center;
-      justify-items: center;
-    }
-
-    .modal-content.portrait-modal img {
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain !important;
-    }
-
-    .modal-content video {
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      background: black;
-      display: block;
-    }
-
-    .modal-content.media-modal {
-      padding: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-content.media-modal img,
-    .modal-content.media-modal video {
-      display: block;
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain !important;
-      object-position: center center;
-    }
-
-    .empty {
-      margin: 0 26px;
-      padding: 22px;
-      background: rgba(255,255,255,0.12);
-      border-radius: 14px;
-      color: rgba(255,255,255,0.86);
-    }
-
-    @media (max-width: 900px) {
-      .toolbar {
-        position: relative;
-        top: auto;
-        align-items: stretch;
-        flex-direction: column;
-        padding: 12px 18px;
-      }
-
-      .search-wrap {
-        max-width: none;
-      }
-
-      .chips {
-        justify-content: flex-start;
-      }
-    }
-
-    @media (max-width: 760px) {
+    @media (max-width: 920px) {
       header {
-        padding: 16px 18px;
+        flex-direction: column;
+        padding-bottom: 24px;
       }
 
-      .topbar {
-        align-items: flex-start;
+      .header-note {
+        max-width: 760px;
+        padding-top: 0;
       }
 
-      .actions {
-        display: none;
+      .hero-grid {
+        grid-template-columns: 1fr;
       }
+    }
 
-      .description {
-        margin-left: 0;
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 20px, 1220px);
+        padding-top: 18px;
       }
 
       .brand {
@@ -662,551 +368,110 @@
       }
 
       .logo {
-        width: 46px;
-        height: 46px;
+        width: 48px;
+        height: 48px;
         font-size: 26px;
       }
 
-      .rail {
-        grid-auto-columns: minmax(285px, 85vw);
-        padding: 10px 16px 34px;
+      .hero {
+        border-radius: 24px;
       }
 
-      .section-title {
-        font-size: 20px;
+      .group-card {
+        min-height: 255px;
+        border-radius: 24px;
+        padding: 20px;
       }
 
-      .thumb {
-        height: 190px;
-      }
-
-      .thumb {
-        height: 245px;
-      }
-
-      .stats {
-        padding-inline: 16px;
-      }
-
-      .modal {
-        padding: 10px;
-      }
-
-      .modal-box {
-        width: 100%;
-        height: 94vh;
-        border-radius: 16px;
+      .footer {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="topbar">
+  <div class="page">
+    <header>
       <div class="brand">
-        <div class="logo">🍻</div>
+        <div class="logo">🚆</div>
         <div>
-          <div class="meta">IJBK e.V. • DiscoverEU</div>
-          <h1 id="pageTitle">DiscoverEU Memories Journal: Group 2 - Six Packs on Track</h1>
+          <p class="eyebrow">IJBK e.V. • DiscoverEU Memories</p>
+          <h1>Choose your travel journal wall</h1>
         </div>
       </div>
-
-      <div class="actions">
-        <button class="pill" onclick="sharePage()">↗ Share</button>
+      <div class="header-note">
+        Two DiscoverEU groups, two routes, one shared memory archive. Open a group wall to view journals, city videos, and photo memories.
       </div>
-    </div>
-    <p class="description" id="pageDescription">
-      The journey took place from 4 to 23 April 2026, lasting 20 days in total. These journals compile the collective reflections of all 6 participants, including accompanying persons, involved in the DiscoverEU project conducted from 4th to 23rd April 2026. Countries Covered: Germany, Slovenia, Croatia, Hungary, and Czechia.
-    </p>
-  </header>
+    </header>
 
-  <div class="toolbar">
-    <div class="search-wrap">
-      <input id="searchInput" type="search" placeholder="Search journals, videos, photos, cities..." oninput="setSearch(this.value)" />
-      <span class="search-symbol">⌕</span>
-    </div>
-    <div class="chips" id="filterChips"></div>
-  </div>
-
-  <main id="app"></main>
-
-
-  <div class="modal" id="modal" aria-hidden="true">
-    <div class="modal-box" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <div>
-          <h3 class="modal-title" id="modalTitle"></h3>
-          <p class="modal-desc" id="modalDesc"></p>
-        </div>
-        <button class="close" onclick="closeModal()" aria-label="Close">×</button>
-      </div>
-      <div class="modal-content" id="modalContent"></div>
-    </div>
-  </div>
-
-  <script>
-    /*
-      HOW TO ADD FILES ON GITHUB PAGES
-      1. Put PDFs inside:    assets/journals/
-      2. Put videos inside:  assets/videos/
-      3. Put photos inside:  assets/photos/
-      4. Add one new object in the correct section below.
-
-      Naming convention used here:
-      Name: Vidit Goyal
-      PDF:  assets/journals/vidit-goyal.pdf
-      Cover: assets/journals/vidit-goyal-cover.jpg
-
-      GitHub Pages is static, so visitors cannot permanently upload files from the website itself.
-      You upload by adding files to your GitHub repository.
-    */
-
-    const site = {
-      title: "DiscoverEU Memories Journal: Group 2 - Six Packs on Track",
-      description: "The journey took place from 4 to 23 April 2026, lasting 20 days in total. These journals compile the collective reflections of all 6 participants, including accompanying persons, involved in the DiscoverEU project conducted from 4th to 23rd April 2026. Countries Covered: Germany, Slovenia, Croatia, Hungary, and Czechia.",
-
-      sections: [
-        {
-          id: "journals",
-          title: "Journals",
-          type: "pdf",
-          items: [
-            {
-              title: "Vidit Goyal",
-              description: "",
-              file: "assets/journals/vidit-goyal.pdf",
-              thumbnail: "assets/journals/vidit-goyal-cover.jpg"
-            },
-            {
-              title: "Lena Brammer",
-              description: "",
-              file: "assets/journals/lena-brammer.pdf",
-              thumbnail: "assets/journals/lena-brammer-cover.jpg"
-            },
-            {
-              title: "Panagiotis Giltidis",
-              description: "",
-              file: "assets/journals/panagiotis-giltidis.pdf",
-              thumbnail: "assets/journals/panagiotis-giltidis-cover.jpg"
-            },
-            {
-              title: "Solveig Koppen",
-              description: "",
-              file: "assets/journals/solveig-koppen.pdf",
-              thumbnail: "assets/journals/solveig-koppen-cover.jpg"
-            },
-            {
-              title: "Starlet Luna Strobel",
-              description: "",
-              file: "assets/journals/starlet-luna-strobel.pdf",
-              thumbnail: "assets/journals/starlet-luna-strobel-cover.jpg"
-            },
-            {
-              title: "Benedict Walter Gehe",
-              description: "",
-              file: "assets/journals/benedict-walter-gehe.pdf",
-              thumbnail: "assets/journals/benedict-walter-gehe-cover.jpg"
-            }
-          ]
-        },
-        {
-          id: "city-videos",
-          title: "City Videos",
-          type: "video",
-          items: [
-            {
-              title: "Zagreb, Croatia",
-              description: "Walking through Zagreb, visiting local spots, and capturing the first city memories of the journey.",
-              file: "assets/videos/zagreb.mp4",
-              thumbnail: "assets/videos/zagreb-cover.jpg"
-            },
-            {
-              title: "Ljubljana, Slovenia",
-              description: "Exploring Ljubljana’s cozy streets, creative corners, and relaxed group moments in Slovenia’s capital.",
-              file: "assets/videos/ljubljana.mp4",
-              thumbnail: "assets/videos/ljubljana-cover.jpg"
-            },
-            {
-              title: "Budapest, Hungary",
-              description: "Discovering Budapest through riverside views, historic streets, and shared moments across the city.",
-              file: "assets/videos/budapest.mp4",
-              thumbnail: "assets/videos/budapest-cover.jpg"
-            },
-            {
-              title: "Prague, Czech Republic",
-              description: "A Prague video diary with city walks, cultural discoveries, and group memories from Czech Republic.",
-              file: "assets/videos/prague.mp4",
-              thumbnail: "assets/videos/prague-cover.jpg"
-            }
-          ]
-        },
-        {
-          id: "photo-wall",
-          title: "Photo Wall",
-          type: "image",
-          items: [
-            {
-              title: "Zagreb, Croatia",
-              description: "Visiting the Europa Experience exhibition.",
-              file: "assets/photos/zagreb.jpg"
-            },
-            {
-              title: "Bled, Slovenia",
-              description: "A day trip to Bled, a beautiful town in Slovenia.",
-              file: "assets/photos/bled.jpg"
-            },
-            {
-              title: "Ljubljana, Slovenia",
-              description: "Visiting the Chocolate Museum and learning how chocolate is made.",
-              file: "assets/photos/ljubljana.jpg"
-            },
-            {
-              title: "Prague, Czechia",
-              description: "At Kino, completing the selfie challenge.",
-              file: "assets/photos/prague.jpg"
-            },
-            {
-              title: "Budapest, Hungary",
-              description: "Discovering the Budapest Parliament and collecting memories together.",
-              file: "assets/photos/budapest.jpg",
-              layout: "portrait"
-            }
-          ]
-        }
-      ]
-    };
-
-    const app = document.getElementById("app");
-    const modal = document.getElementById("modal");
-    const modalTitle = document.getElementById("modalTitle");
-    const modalDesc = document.getElementById("modalDesc");
-    const modalContent = document.getElementById("modalContent");
-    const filterChips = document.getElementById("filterChips");
-
-    let activeFilter = "all";
-    let searchTerm = "";
-    let slideshowItems = [];
-    let slideshowIndex = 0;
-
-    document.title = site.title;
-    document.getElementById("pageTitle").textContent = site.title;
-    document.getElementById("pageDescription").textContent = site.description;
-
-    function renderFilters() {
-      const filters = [
-        { id: "all", label: "All" },
-        ...site.sections.map(section => ({ id: section.id, label: section.title }))
-      ];
-
-      filterChips.innerHTML = filters.map(filter => `
-        <button class="chip ${activeFilter === filter.id ? "active" : ""}" onclick="setFilter('${filter.id}')">
-          ${escapeHtml(filter.label)}
-        </button>
-      `).join("");
-    }
-
-    function render() {
-      app.innerHTML = "";
-      renderFilters();
-
-      const visibleSections = getVisibleSections();
-      const stats = calculateStats();
-      app.appendChild(createStats(stats));
-
-      visibleSections.forEach(section => {
-        const filteredItems = filterItems(section.items, section.id);
-        const sectionEl = document.createElement("section");
-        sectionEl.className = "section";
-        sectionEl.id = section.id;
-
-        sectionEl.innerHTML = `
-          <div class="section-heading">
-            <div class="section-title">${escapeHtml(section.title)} <span class="section-count">${filteredItems.length}</span></div>
-            <div class="section-icon">＋</div>
-            <div class="section-icon">...</div>
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="intro">
+          <div>
+            <h2>DiscoverEU Memories Journal<br />4–23 April 2026</h2>
+            <p>
+              This page is the main entry point for the project archive. Select the correct group below to open its Padlet-style memory wall.
+            </p>
           </div>
-        `;
 
-        if (filteredItems.length === 0) {
-          sectionEl.innerHTML += `<div class="empty">No matching posts here.</div>`;
-        } else {
-          const rail = document.createElement("div");
-          rail.className = "rail";
-
-          filteredItems.forEach(item => {
-            const card = createCard(section.type, item);
-            rail.appendChild(card);
-          });
-
-          sectionEl.appendChild(rail);
-        }
-
-        app.appendChild(sectionEl);
-      });
-
-      if (visibleSections.length === 0) {
-        app.innerHTML += `<div class="empty">No matching posts found. Try another search word.</div>`;
-      }
-    }
-
-    function getVisibleSections() {
-      return site.sections.filter(section => {
-        if (activeFilter !== "all" && activeFilter !== section.id) return false;
-        return filterItems(section.items, section.id).length > 0 || searchTerm === "";
-      });
-    }
-
-    function filterItems(items, sectionId) {
-      return items.filter(item => {
-        if (activeFilter !== "all" && activeFilter !== sectionId) return false;
-        const haystack = `${item.title} ${item.description || ""} ${item.file || ""}`.toLowerCase();
-        return haystack.includes(searchTerm.toLowerCase().trim());
-      });
-    }
-
-    function calculateStats() {
-      const totals = site.sections.reduce((acc, section) => {
-        acc.total += section.items.length;
-        acc[section.type] = (acc[section.type] || 0) + section.items.length;
-        return acc;
-      }, { total: 0, pdf: 0, video: 0, image: 0 });
-
-      return totals;
-    }
-
-    function createStats(stats) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "stats";
-      wrapper.innerHTML = `
-        <div class="stat"><strong>${stats.total}</strong><span>Total posts</span></div>
-        <div class="stat"><strong>${stats.pdf}</strong><span>Journals</span></div>
-        <div class="stat"><strong>${stats.video}</strong><span>Videos</span></div>
-        <div class="stat"><strong>${stats.image}</strong><span>Photos</span></div>
-      `;
-      return wrapper;
-    }
-
-    function setFilter(filter) {
-      activeFilter = filter;
-      render();
-    }
-
-    function setSearch(value) {
-      searchTerm = value;
-      render();
-    }
-
-    function createCard(type, item) {
-      const card = document.createElement("article");
-      card.className = "card";
-      if (item.layout === "portrait") card.classList.add("media-portrait-card");
-      if (item.layout === "landscape") card.classList.add("media-landscape-card");
-      card.dataset.type = type;
-      card.dataset.file = item.file || "";
-      card.tabIndex = 0;
-      card.onclick = () => openModal(type, item);
-      card.onkeydown = (event) => {
-        if (event.key === "Enter" || event.key === " ") openModal(type, item);
-      };
-
-      const thumbHtml = getThumbHtml(type, item);
-
-      card.innerHTML = `
-        <div class="card-title-row">
-          <h2>${escapeHtml(item.title)}</h2>
-          <span class="dots">⋮</span>
-        </div>
-        ${thumbHtml}
-        ${item.description ? `<p class="caption">${escapeHtml(item.description)}</p>` : ""}
-      `;
-
-      return card;
-    }
-
-    function getTypeLabel(type) {
-      if (type === "pdf") return "PDF Journal";
-      if (type === "video") return "City Video";
-      return "Photo";
-    }
-
-    function getThumbHtml(type, item) {
-      const mediaClass = type === "image" || type === "video" ? " auto-media" : "";
-
-      if (type === "pdf") {
-        if (item.thumbnail) {
-          return `
-            <div class="thumb${mediaClass}">
-              <img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} PDF preview" onerror="this.parentElement.innerHTML = pdfFallbackHtml()" />
-              <span class="badge">PDF</span>
+          <div class="quick-stats">
+            <div class="stat">
+              <strong>2</strong>
+              <span>Groups</span>
             </div>
-          `;
-        }
-        return `<div class="thumb pdf-thumb"><div class="pdf-icon">📄</div><strong>Open PDF</strong><span class="badge">PDF</span></div>`;
-      }
-
-      if (type === "video") {
-        return `
-          <div class="thumb${mediaClass}">
-            ${item.thumbnail ? `<img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} video preview" onload="markOrientation(this); markCardOrientation(this)" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata" onloadedmetadata="markOrientation(this); markCardOrientation(this)"></video>`}
-            <div class="play">▶</div>
+            <div class="stat">
+              <strong>20</strong>
+              <span>Travel days</span>
+            </div>
+            <div class="stat">
+              <strong>EU</strong>
+              <span>Rail journey</span>
+            </div>
           </div>
-        `;
-      }
-
-      return `
-        <div class="thumb${mediaClass}" data-src="${escapeAttr(item.file)}">
-          <img src="${escapeAttr(item.file)}" alt="${escapeAttr(item.title)}" loading="lazy" onload="markOrientation(this); markCardOrientation(this)" />
         </div>
-      `;
-    }
 
-    function markCardOrientation(media) {
-      const width = media.naturalWidth || media.videoWidth || 0;
-      const height = media.naturalHeight || media.videoHeight || 0;
-      const card = media.closest(".card");
-      if (!card || !width || !height) return;
+        <div class="groups">
+          <a class="group-card group1" href="group1.html" aria-label="Open Group 1 memory wall">
+            <div class="group-top">
+              <div class="emoji">🐑</div>
+              <div class="arrow">→</div>
+            </div>
+            <h3>Group 1 - Schäfer und die Schafe</h3>
+            <p>Journals, city videos, and photo memories from the Group 1 DiscoverEU journey.</p>
+            <div class="tags">
+              <span class="tag">Germany</span>
+              <span class="tag">Czechia</span>
+              <span class="tag">Poland</span>
+              <span class="tag">Slovakia</span>
+              <span class="tag">Hungary</span>
+            </div>
+          </a>
 
-      card.classList.remove("media-portrait-card", "media-landscape-card", "media-square-card");
-      if (height > width * 1.18) card.classList.add("media-portrait-card");
-      else if (width > height * 1.18) card.classList.add("media-landscape-card");
-      else card.classList.add("media-square-card");
-    }
+          <a class="group-card group2" href="group2.html" aria-label="Open Group 2 memory wall">
+            <div class="group-top">
+              <div class="emoji">🍻</div>
+              <div class="arrow">→</div>
+            </div>
+            <h3>Group 2 - Six Packs on Track</h3>
+            <p>Journals, city videos, and photo memories from the Group 2 DiscoverEU journey.</p>
+            <div class="tags">
+              <span class="tag">Germany</span>
+              <span class="tag">Slovenia</span>
+              <span class="tag">Croatia</span>
+              <span class="tag">Hungary</span>
+              <span class="tag">Czechia</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
 
-    function markOrientation(media) {
-      const width = media.naturalWidth || media.videoWidth || 0;
-      const height = media.naturalHeight || media.videoHeight || 0;
-      const holder = media.closest(".thumb") || media.closest(".modal-content");
-      if (!holder || !width || !height) return;
-
-      holder.classList.remove("media-portrait", "media-landscape", "media-square");
-      if (height > width * 1.08) holder.classList.add("media-portrait");
-      else if (width > height * 1.08) holder.classList.add("media-landscape");
-      else holder.classList.add("media-square");
-    }
-
-    function pdfFallbackHtml() {
-      return '<div class="pdf-thumb" style="width:100%;height:100%"><div class="pdf-icon">📄</div><strong>Open PDF</strong><span class="badge">PDF</span></div>';
-    }
-
-    function openModal(type, item) {
-      modalTitle.textContent = item.title;
-      modalDesc.textContent = item.description || "";
-      modalDesc.style.display = item.description ? "block" : "none";
-      modalContent.innerHTML = "";
-      modalContent.className = type === "image" || type === "video" ? "modal-content media-modal" : "modal-content";
-
-      if (type === "pdf") {
-        const iframe = document.createElement("iframe");
-        iframe.src = item.file;
-        iframe.title = item.title;
-        modalContent.appendChild(iframe);
-      }
-
-      if (type === "image") {
-        const img = document.createElement("img");
-        img.src = item.file;
-        img.alt = item.title;
-        img.onload = () => markOrientation(img);
-        modalContent.appendChild(img);
-      }
-
-      if (type === "video") {
-        const video = document.createElement("video");
-        video.src = item.file;
-        video.controls = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.onloadedmetadata = () => markOrientation(video);
-        modalContent.appendChild(video);
-      }
-
-      modal.classList.add("open");
-      modal.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
-
-    function closeModal() {
-      modal.classList.remove("open");
-      modal.setAttribute("aria-hidden", "true");
-      modalContent.innerHTML = "";
-      document.body.style.overflow = "";
-    }
-
-    modal.addEventListener("click", event => {
-      if (event.target === modal) closeModal();
-    });
-
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape") closeModal();
-    });
-
-    async function sharePage() {
-      const pageLink = window.location.href;
-      const shareData = {
-        title: site.title,
-        text: site.description,
-        url: pageLink
-      };
-
-      if (navigator.share) {
-        try {
-          await navigator.share(shareData);
-          return;
-        } catch (error) {
-          // If the user cancels the share dialog, do nothing.
-          if (error.name === "AbortError") return;
-        }
-      }
-
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(pageLink);
-        alert("Page link copied: " + pageLink);
-      } else {
-        prompt("Copy this page link:", pageLink);
-      }
-    }
-
-    function toggleSlideshow() {
-      slideshowItems = site.sections.flatMap(section =>
-        filterItems(section.items, section.id).map(item => ({ ...item, type: section.type }))
-      );
-      if (slideshowItems.length === 0) return;
-      slideshowIndex = 0;
-      openCurrentSlide();
-    }
-
-    function openCurrentSlide() {
-      const item = slideshowItems[slideshowIndex];
-      openModal(item.type, item);
-    }
-
-    document.addEventListener("keydown", event => {
-      if (!modal.classList.contains("open") || slideshowItems.length === 0) return;
-      if (event.key === "ArrowRight") {
-        slideshowIndex = (slideshowIndex + 1) % slideshowItems.length;
-        openCurrentSlide();
-      }
-      if (event.key === "ArrowLeft") {
-        slideshowIndex = (slideshowIndex - 1 + slideshowItems.length) % slideshowItems.length;
-        openCurrentSlide();
-      }
-    });
-
-
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    function escapeAttr(str) {
-      return escapeHtml(str);
-    }
-
-    render();
-  </script>
+    <div class="footer">
+      <span>Tip: keep this file as <strong>index.html</strong>, then save the two group pages as <strong>group1.html</strong> and <strong>group2.html</strong>.</span>
+      <a href="group1.html">Open Group 1</a>
+      <a href="group2.html">Open Group 2</a>
+    </div>
+  </div>
 </body>
 </html>
