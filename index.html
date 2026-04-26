@@ -360,10 +360,10 @@
 
     .thumb {
       margin: 0 13px;
-      height: 205px;
+      height: 245px;
       border-radius: 10px;
       overflow: hidden;
-      background: #eee;
+      background: linear-gradient(135deg, #f8f2fb, #efe5f4);
       display: grid;
       place-items: center;
       position: relative;
@@ -373,18 +373,21 @@
     .thumb video {
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .thumb.portrait {
-      height: 320px;
-      background: #f4eef6;
-    }
-
-    .thumb.portrait img {
       object-fit: contain;
-      background: #f4eef6;
+      object-position: center center;
+      display: block;
+      background: linear-gradient(135deg, #f8f2fb, #efe5f4);
+    }
+
+    .thumb.media-portrait img,
+    .thumb.media-portrait video,
+    .thumb.media-landscape img,
+    .thumb.media-landscape video,
+    .thumb.media-square img,
+    .thumb.media-square video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     .pdf-thumb {
@@ -536,15 +539,49 @@
     .modal-content img {
       max-width: 100%;
       max-height: 100%;
+      width: auto;
+      height: auto;
       object-fit: contain;
       display: block;
     }
 
+    .modal-content.portrait-modal {
+      padding: 18px;
+      overflow: auto;
+      align-items: start;
+      justify-items: center;
+    }
+
+    .modal-content.portrait-modal img {
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: none;
+      object-fit: contain;
+    }
+
     .modal-content video {
       width: 100%;
+      height: 100%;
+      max-width: 100%;
       max-height: 100%;
+      object-fit: contain;
       background: black;
       display: block;
+    }
+
+    .modal-content.media-modal {
+      padding: 18px;
+      overflow: auto;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .modal-content.media-modal img,
+    .modal-content.media-modal video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
     }
 
     .empty {
@@ -613,8 +650,8 @@
         height: 190px;
       }
 
-      .thumb.portrait {
-        height: 315px;
+      .thumb {
+        height: 230px;
       }
 
       .stats {
@@ -959,12 +996,12 @@
     }
 
     function getThumbHtml(type, item) {
-      const portraitClass = item.layout === "portrait" ? " portrait" : "";
+      const mediaClass = type === "image" || type === "video" ? " auto-media" : "";
 
       if (type === "pdf") {
         if (item.thumbnail) {
           return `
-            <div class="thumb${portraitClass}">
+            <div class="thumb${mediaClass}">
               <img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} PDF preview" onerror="this.parentElement.innerHTML = pdfFallbackHtml()" />
               <span class="badge">PDF</span>
             </div>
@@ -975,18 +1012,30 @@
 
       if (type === "video") {
         return `
-          <div class="thumb${portraitClass}">
-            ${item.thumbnail ? `<img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} video preview" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata"></video>`}
+          <div class="thumb${mediaClass}">
+            ${item.thumbnail ? `<img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} video preview" onload="markOrientation(this)" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata" onloadedmetadata="markOrientation(this)"></video>`}
             <div class="play">▶</div>
           </div>
         `;
       }
 
       return `
-        <div class="thumb${portraitClass}">
-          <img src="${escapeAttr(item.file)}" alt="${escapeAttr(item.title)}" />
+        <div class="thumb${mediaClass}">
+          <img src="${escapeAttr(item.file)}" alt="${escapeAttr(item.title)}" onload="markOrientation(this)" />
         </div>
       `;
+    }
+
+    function markOrientation(media) {
+      const width = media.naturalWidth || media.videoWidth || 0;
+      const height = media.naturalHeight || media.videoHeight || 0;
+      const holder = media.closest(".thumb") || media.closest(".modal-content");
+      if (!holder || !width || !height) return;
+
+      holder.classList.remove("media-portrait", "media-landscape", "media-square");
+      if (height > width * 1.08) holder.classList.add("media-portrait");
+      else if (width > height * 1.08) holder.classList.add("media-landscape");
+      else holder.classList.add("media-square");
     }
 
     function pdfFallbackHtml() {
@@ -998,6 +1047,7 @@
       modalDesc.textContent = item.description || "";
       modalDesc.style.display = item.description ? "block" : "none";
       modalContent.innerHTML = "";
+      modalContent.className = type === "image" || type === "video" ? "modal-content media-modal" : "modal-content";
 
       if (type === "pdf") {
         const iframe = document.createElement("iframe");
@@ -1019,6 +1069,7 @@
         video.controls = true;
         video.autoplay = true;
         video.playsInline = true;
+        video.onloadedmetadata = () => markOrientation(video);
         modalContent.appendChild(video);
       }
 
