@@ -373,7 +373,9 @@
     .thumb video {
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain !important;
       object-position: center center;
       display: block;
       background: linear-gradient(135deg, #f8f2fb, #efe5f4);
@@ -546,18 +548,18 @@
     }
 
     .modal-content.portrait-modal {
-      padding: 18px;
-      overflow: auto;
-      align-items: start;
+      padding: 0;
+      overflow: hidden;
+      align-items: center;
       justify-items: center;
     }
 
     .modal-content.portrait-modal img {
-      width: auto;
-      height: auto;
+      width: 100%;
+      height: 100%;
       max-width: 100%;
-      max-height: none;
-      object-fit: contain;
+      max-height: 100%;
+      object-fit: contain !important;
     }
 
     .modal-content video {
@@ -571,17 +573,20 @@
     }
 
     .modal-content.media-modal {
-      padding: 18px;
-      overflow: auto;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
       align-items: center;
-      justify-items: center;
+      justify-content: center;
     }
 
     .modal-content.media-modal img,
     .modal-content.media-modal video {
+      width: 100%;
+      height: 100%;
       max-width: 100%;
       max-height: 100%;
-      object-fit: contain;
+      object-fit: contain !important;
     }
 
     .empty {
@@ -1060,6 +1065,7 @@
         const img = document.createElement("img");
         img.src = item.file;
         img.alt = item.title;
+        img.onload = () => markOrientation(img);
         modalContent.appendChild(img);
       }
 
