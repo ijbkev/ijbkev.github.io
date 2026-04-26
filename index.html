@@ -330,30 +330,76 @@
       letter-spacing: 0.02em;
     }
 
-    .footer {
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      align-items: center;
+    .official-strip {
       margin-top: 24px;
-      padding: 18px 4px 0;
-      color: rgba(255,255,255,0.7);
-      font-size: 14px;
-      line-height: 1.45;
-      flex-wrap: wrap;
+      padding: 20px clamp(18px, 3vw, 30px);
+      border-radius: 28px;
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 20px 58px rgba(0,0,0,0.24);
+      backdrop-filter: blur(16px);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 22px;
     }
 
-    .footer-links {
+    .org-block {
       display: flex;
-      flex-wrap: wrap;
+      align-items: center;
       gap: 14px;
+      min-width: 0;
     }
 
-    .footer a {
-      color: white;
-      font-weight: 800;
-      text-decoration: none;
-      border-bottom: 1px solid rgba(255,255,255,0.45);
+    .org-logo {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      padding: 5px;
+      flex: 0 0 auto;
+    }
+
+    .org-name-small {
+      margin: 0 0 3px;
+      color: rgba(255,255,255,0.66);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .org-name {
+      margin: 0;
+      font-size: clamp(17px, 1.7vw, 24px);
+      line-height: 1.16;
+      letter-spacing: -0.035em;
+      font-weight: 950;
+      text-wrap: balance;
+    }
+
+    .programme-logos {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .programme-logo {
+      height: 54px;
+      max-width: 260px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: white;
+      padding: 6px 10px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+    }
+
+    .programme-logo.eu-funded {
+      height: 64px;
+      max-width: 330px;
     }
 
     @media (max-width: 1100px) {
@@ -408,9 +454,26 @@
         padding: 20px;
       }
 
-      .footer {
-        flex-direction: column;
-        align-items: flex-start;
+      .official-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .programme-logos {
+        justify-content: flex-start;
+      }
+
+      .programme-logo {
+        height: 44px;
+        max-width: 100%;
+      }
+
+      .programme-logo.eu-funded {
+        height: 52px;
+      }
+
+      .org-logo {
+        width: 46px;
+        height: 46px;
       }
     }
   </style>
@@ -513,5 +576,21 @@
         </div>
       </div>
     </section>
+
+    <section class="official-strip" aria-label="Project and organisation logos">
+      <div class="org-block">
+        <img class="org-logo" src="logos/ijbk-logo.png" alt="IJBK e.V. logo" />
+        <div>
+          <p class="org-name-small">Organised by</p>
+          <p class="org-name">Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.</p>
+        </div>
+      </div>
+
+      <div class="programme-logos">
+        <img class="programme-logo" src="logos/erasmus.jpg" alt="Erasmus+ logo" />
+        <img class="programme-logo eu-funded" src="logos/eu_funded_en.jpg" alt="Funded by the European Union logo" />
+      </div>
+    </section>
+  </div>
 </body>
 </html>
