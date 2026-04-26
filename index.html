@@ -6,10 +6,8 @@
   <title>DiscoverEU Memories Journals</title>
   <style>
     :root {
-      --text: #fff;
+      --text: #ffffff;
       --muted: rgba(255,255,255,0.78);
-      --card: rgba(255,255,255,0.14);
-      --card-border: rgba(255,255,255,0.2);
       --shadow: 0 28px 80px rgba(0,0,0,0.32);
       --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
@@ -28,11 +26,11 @@
       font-family: var(--font);
       color: var(--text);
       background:
-        radial-gradient(circle at 16% 16%, rgba(216, 255, 34, 0.42), transparent 25%),
-        radial-gradient(circle at 82% 18%, rgba(255, 0, 150, 0.45), transparent 27%),
-        radial-gradient(circle at 28% 78%, rgba(0, 200, 130, 0.42), transparent 28%),
-        radial-gradient(circle at 72% 75%, rgba(110, 0, 180, 0.56), transparent 30%),
-        linear-gradient(135deg, #07151e, #32005d 45%, #006c54);
+        radial-gradient(circle at 14% 16%, rgba(216, 255, 34, 0.42), transparent 24%),
+        radial-gradient(circle at 82% 18%, rgba(255, 0, 150, 0.42), transparent 26%),
+        radial-gradient(circle at 28% 78%, rgba(0, 200, 130, 0.38), transparent 28%),
+        radial-gradient(circle at 72% 78%, rgba(80, 160, 210, 0.48), transparent 31%),
+        linear-gradient(135deg, #07151e, #32005d 42%, #006c54);
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
       text-rendering: geometricPrecision;
@@ -54,7 +52,7 @@
     .page {
       position: relative;
       z-index: 1;
-      width: min(1220px, calc(100% - 32px));
+      width: min(1250px, calc(100% - 32px));
       margin: 0 auto;
       padding: 34px 0 56px;
     }
@@ -82,6 +80,7 @@
       background: rgba(255,255,255,0.14);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 12px 32px rgba(0,0,0,0.22);
       font-size: 31px;
+      flex: 0 0 auto;
     }
 
     .eyebrow {
@@ -98,12 +97,12 @@
       font-size: clamp(34px, 5.6vw, 76px);
       line-height: 0.94;
       letter-spacing: -0.07em;
-      max-width: 830px;
+      max-width: 850px;
       text-wrap: balance;
     }
 
     .header-note {
-      max-width: 320px;
+      max-width: 330px;
       color: var(--muted);
       line-height: 1.45;
       font-size: 15px;
@@ -137,7 +136,7 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: 1.02fr 0.98fr;
+      grid-template-columns: 0.78fr 1.22fr;
       gap: 26px;
       align-items: stretch;
     }
@@ -199,13 +198,13 @@
 
     .groups {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 18px;
     }
 
     .group-card {
       position: relative;
-      min-height: 245px;
+      min-height: 390px;
       overflow: hidden;
       border-radius: 28px;
       padding: 24px;
@@ -215,6 +214,9 @@
       border: 1px solid rgba(255,255,255,0.22);
       box-shadow: 0 22px 52px rgba(0,0,0,0.28);
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     .group-card:hover {
@@ -236,7 +238,7 @@
       inset: 0;
       z-index: -1;
       background:
-        linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.38)),
+        linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.43)),
         radial-gradient(circle at 84% 18%, rgba(255,255,255,0.26), transparent 24%);
     }
 
@@ -252,6 +254,13 @@
         radial-gradient(circle at 72% 50%, rgba(255, 0, 146, 0.82), transparent 32%),
         radial-gradient(circle at 35% 32%, rgba(90, 0, 140, 0.9), transparent 33%),
         linear-gradient(135deg, #37005f, #8d006e 46%, #cf007d);
+    }
+
+    .group3::before {
+      background:
+        radial-gradient(circle at 66% 32%, rgba(168, 215, 173, 0.86), transparent 30%),
+        radial-gradient(circle at 23% 34%, rgba(53, 91, 152, 0.9), transparent 34%),
+        linear-gradient(135deg, #355b98, #4ead9d 48%, #9ecfa9);
     }
 
     .group-top {
@@ -298,7 +307,6 @@
 
     .group-card p {
       margin: 0;
-      max-width: 640px;
       color: rgba(255,255,255,0.84);
       font-size: 15px;
       line-height: 1.45;
@@ -332,6 +340,13 @@
       color: rgba(255,255,255,0.7);
       font-size: 14px;
       line-height: 1.45;
+      flex-wrap: wrap;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
     }
 
     .footer a {
@@ -339,6 +354,20 @@
       font-weight: 800;
       text-decoration: none;
       border-bottom: 1px solid rgba(255,255,255,0.45);
+    }
+
+    @media (max-width: 1100px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .groups {
+        grid-template-columns: 1fr;
+      }
+
+      .group-card {
+        min-height: 250px;
+      }
     }
 
     @media (max-width: 920px) {
@@ -350,10 +379,6 @@
       .header-note {
         max-width: 760px;
         padding-top: 0;
-      }
-
-      .hero-grid {
-        grid-template-columns: 1fr;
       }
     }
 
@@ -378,7 +403,7 @@
       }
 
       .group-card {
-        min-height: 255px;
+        min-height: 270px;
         border-radius: 24px;
         padding: 20px;
       }
@@ -401,7 +426,7 @@
         </div>
       </div>
       <div class="header-note">
-        Two DiscoverEU groups, two routes, one shared memory archive. Open a group wall to view journals, city videos, and photo memories.
+        Three DiscoverEU groups, three routes, one shared memory archive. Open a group wall to view journals, city videos, and photo memories.
       </div>
     </header>
 
@@ -417,7 +442,7 @@
 
           <div class="quick-stats">
             <div class="stat">
-              <strong>2</strong>
+              <strong>3</strong>
               <span>Groups</span>
             </div>
             <div class="stat">
@@ -433,12 +458,14 @@
 
         <div class="groups">
           <a class="group-card group1" href="group1.html" aria-label="Open Group 1 memory wall">
-            <div class="group-top">
-              <div class="emoji">🐑</div>
-              <div class="arrow">→</div>
+            <div>
+              <div class="group-top">
+                <div class="emoji">🐑</div>
+                <div class="arrow">→</div>
+              </div>
+              <h3>Group 1 - Schäfer und die Schafe</h3>
+              <p>Journals, city videos, and photo memories from the Group 1 DiscoverEU journey.</p>
             </div>
-            <h3>Group 1 - Schäfer und die Schafe</h3>
-            <p>Journals, city videos, and photo memories from the Group 1 DiscoverEU journey.</p>
             <div class="tags">
               <span class="tag">Germany</span>
               <span class="tag">Czechia</span>
@@ -449,12 +476,14 @@
           </a>
 
           <a class="group-card group2" href="group2.html" aria-label="Open Group 2 memory wall">
-            <div class="group-top">
-              <div class="emoji">🍻</div>
-              <div class="arrow">→</div>
+            <div>
+              <div class="group-top">
+                <div class="emoji">🍻</div>
+                <div class="arrow">→</div>
+              </div>
+              <h3>Group 2 - Six Packs on Track</h3>
+              <p>Journals, city videos, and photo memories from the Group 2 DiscoverEU journey.</p>
             </div>
-            <h3>Group 2 - Six Packs on Track</h3>
-            <p>Journals, city videos, and photo memories from the Group 2 DiscoverEU journey.</p>
             <div class="tags">
               <span class="tag">Germany</span>
               <span class="tag">Slovenia</span>
@@ -463,14 +492,35 @@
               <span class="tag">Czechia</span>
             </div>
           </a>
+
+          <a class="group-card group3" href="group3.html" aria-label="Open Group 3 memory wall">
+            <div>
+              <div class="group-top">
+                <div class="emoji">🎒</div>
+                <div class="arrow">→</div>
+              </div>
+              <h3>Group 3 - Backpackers TBD</h3>
+              <p>Journals, city videos, and photo memories from the Group 3 DiscoverEU journey.</p>
+            </div>
+            <div class="tags">
+              <span class="tag">Germany</span>
+              <span class="tag">Poland</span>
+              <span class="tag">Slovakia</span>
+              <span class="tag">Hungary</span>
+              <span class="tag">Austria</span>
+            </div>
+          </a>
         </div>
       </div>
     </section>
 
     <div class="footer">
-      <span>Tip: keep this file as <strong>index.html</strong>, then save the two group pages as <strong>group1.html</strong> and <strong>group2.html</strong>.</span>
-      <a href="group1.html">Open Group 1</a>
-      <a href="group2.html">Open Group 2</a>
+      <span>Keep this file as <strong>index.html</strong>, then save the group pages as <strong>group1.html</strong>, <strong>group2.html</strong>, and <strong>group3.html</strong>.</span>
+      <div class="footer-links">
+        <a href="group1.html">Open Group 1</a>
+        <a href="group2.html">Open Group 2</a>
+        <a href="group3.html">Open Group 3</a>
+      </div>
     </div>
   </div>
 </body>
