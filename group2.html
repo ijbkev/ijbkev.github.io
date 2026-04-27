@@ -17,6 +17,10 @@
       --glass: rgba(255, 255, 255, 0.13);
       --shadow: 0 18px 45px rgba(0, 0, 0, 0.23);
       --radius: 16px;
+      --space-1: 8px;
+      --space-2: 12px;
+      --space-3: 16px;
+      --space-4: 24px;
       --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
@@ -249,8 +253,9 @@
     }
 
     .section {
-      margin-bottom: 46px;
-      padding-bottom: 8px;
+      margin-bottom: 40px;
+      padding-bottom: 4px;
+      animation: fadeUp 0.55s ease both;
     }
 
     .section-heading {
@@ -258,7 +263,7 @@
       align-items: center;
       gap: 8px;
       margin-left: 0;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
     .section-title {
@@ -297,9 +302,9 @@
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: minmax(330px, 440px);
-      gap: 22px;
+      gap: 18px;
       overflow-x: auto;
-      padding: 12px 26px 36px;
+      padding: 10px 22px 30px;
       scroll-snap-type: x proximity;
       scrollbar-color: rgba(255,255,255,0.4) transparent;
       align-items: start;
@@ -327,7 +332,8 @@
       border-radius: 22px;
       box-shadow: 0 18px 44px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.75);
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      animation: fadeUp 0.55s ease both;
     }
 
 
@@ -342,7 +348,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 14px;
-      padding: 16px 16px 10px;
+      padding: 14px 14px 8px;
     }
 
     .card h2 {
@@ -361,8 +367,8 @@
     }
 
     .thumb {
-      margin: 0 16px;
-      height: 260px;
+      margin: 0 14px;
+      height: 248px;
       border-radius: 15px;
       overflow: hidden;
       background: linear-gradient(135deg, #f8f2fb, #efe5f4);
@@ -447,8 +453,8 @@
     }
 
     .caption {
-      margin: 13px 16px 16px;
-      padding: 12px 13px;
+      margin: 10px 14px 14px;
+      padding: 11px 12px;
       color: #342639;
       background: rgba(245, 237, 249, 0.75);
       border-radius: 14px;
@@ -598,8 +604,8 @@
     }
 
     .empty {
-      margin: 0 26px;
-      padding: 22px;
+      margin: 0 22px;
+      padding: 20px;
       background: rgba(255,255,255,0.12);
       border-radius: 14px;
       color: rgba(255,255,255,0.86);
@@ -652,7 +658,7 @@
 
       .rail {
         grid-auto-columns: minmax(285px, 85vw);
-        padding: 10px 16px 34px;
+        padding: 10px 14px 30px;
       }
 
       .section-title {
@@ -679,6 +685,17 @@
         width: 100%;
         height: 94vh;
         border-radius: 16px;
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
   </style>
@@ -902,6 +919,7 @@
         const sectionEl = document.createElement("section");
         sectionEl.className = "section";
         sectionEl.id = section.id;
+        sectionEl.style.animationDelay = (visibleSections.indexOf(section) * 90) + "ms";
 
         sectionEl.innerHTML = `
           <div class="section-heading">
@@ -917,8 +935,9 @@
           const rail = document.createElement("div");
           rail.className = "rail";
 
-          filteredItems.forEach(item => {
+          filteredItems.forEach((item, index) => {
             const card = createCard(section.type, item);
+            card.style.animationDelay = (index * 60) + "ms";
             rail.appendChild(card);
           });
 

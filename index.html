@@ -9,6 +9,11 @@
       --text: #ffffff;
       --muted: rgba(255,255,255,0.78);
       --shadow: 0 28px 80px rgba(0,0,0,0.32);
+      --space-1: 8px;
+      --space-2: 12px;
+      --space-3: 16px;
+      --space-4: 24px;
+      --space-5: 32px;
       --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
@@ -54,15 +59,15 @@
       z-index: 1;
       width: min(1250px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 34px 0 56px;
+      padding: 28px 0 48px;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 24px;
-      padding: 18px 0 34px;
+      gap: var(--space-4);
+      padding: 14px 0 28px;
     }
 
     .brand {
@@ -114,11 +119,12 @@
       border: 1px solid rgba(255,255,255,0.16);
       background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
       border-radius: 34px;
-      padding: clamp(22px, 4vw, 42px);
+      padding: clamp(20px, 3.6vw, 38px);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
       overflow: hidden;
       position: relative;
+      animation: fadeUp 0.7s ease both;
     }
 
     .hero::after {
@@ -137,7 +143,7 @@
       z-index: 1;
       display: grid;
       grid-template-columns: 0.78fr 1.22fr;
-      gap: 26px;
+      gap: var(--space-4);
       align-items: stretch;
     }
 
@@ -146,7 +152,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 28px;
+      gap: 22px;
     }
 
     .intro h2 {
@@ -158,9 +164,9 @@
     }
 
     .intro p {
-      margin: 12px 0 0;
+      margin: 10px 0 0;
       color: var(--muted);
-      font-size: 17px;
+      font-size: 16px;
       line-height: 1.52;
       max-width: 620px;
     }
@@ -168,13 +174,13 @@
     .quick-stats {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: var(--space-2);
     }
 
     .stat {
       flex: 1 1 128px;
       border-radius: 20px;
-      padding: 16px;
+      padding: 14px;
       background: rgba(255,255,255,0.12);
       border: 1px solid rgba(255,255,255,0.14);
     }
@@ -199,7 +205,7 @@
     .groups {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 18px;
+      gap: var(--space-4);
     }
 
     .group-card {
@@ -207,16 +213,17 @@
       min-height: 390px;
       overflow: hidden;
       border-radius: 28px;
-      padding: 24px;
+      padding: 22px;
       text-decoration: none;
       color: white;
       isolation: isolate;
       border: 1px solid rgba(255,255,255,0.22);
       box-shadow: 0 22px 52px rgba(0,0,0,0.28);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      animation: fadeUp 0.65s ease both;
     }
 
     .group-card:hover {
@@ -298,7 +305,7 @@
     }
 
     .group-card h3 {
-      margin: 26px 0 8px;
+      margin: 22px 0 8px;
       font-size: clamp(24px, 3vw, 36px);
       line-height: 1;
       letter-spacing: -0.055em;
@@ -317,7 +324,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 18px;
+      margin-top: 14px;
     }
 
     .tag {
@@ -331,8 +338,8 @@
     }
 
     .official-strip {
-      margin-top: 24px;
-      padding: 20px clamp(18px, 3vw, 30px);
+      margin-top: 20px;
+      padding: 18px clamp(16px, 2.6vw, 28px);
       border-radius: 28px;
       background: rgba(255,255,255,0.13);
       border: 1px solid rgba(255,255,255,0.18);
@@ -391,10 +398,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 92px;
+      min-height: 88px;
       border-radius: 18px;
       background: #ffffff;
-      padding: 12px 16px;
+      padding: 10px 14px;
       box-shadow: 0 14px 36px rgba(0,0,0,0.22);
       border: 1px solid rgba(255,255,255,0.82);
     }
@@ -460,7 +467,7 @@
       .group-card {
         min-height: 270px;
         border-radius: 24px;
-        padding: 20px;
+        padding: 18px;
       }
 
       .official-strip {
@@ -488,6 +495,17 @@
       .org-logo {
         width: 46px;
         height: 46px;
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
   </style>
@@ -534,7 +552,7 @@
         </div>
 
         <div class="groups">
-          <a class="group-card group1" href="group1.html" aria-label="Open Group 1 memory wall">
+            <a class="group-card group1" href="group1.html" aria-label="Open Group 1 memory wall" style="animation-delay: 0.05s">
             <div>
               <div class="group-top">
                 <div class="emoji">🐑</div>
@@ -552,7 +570,7 @@
             </div>
           </a>
 
-          <a class="group-card group2" href="group2.html" aria-label="Open Group 2 memory wall">
+          <a class="group-card group2" href="group2.html" aria-label="Open Group 2 memory wall" style="animation-delay: 0.14s">
             <div>
               <div class="group-top">
                 <div class="emoji">🍻</div>
@@ -570,7 +588,7 @@
             </div>
           </a>
 
-          <a class="group-card group3" href="group3.html" aria-label="Open Group 3 memory wall">
+          <a class="group-card group3" href="group3.html" aria-label="Open Group 3 memory wall" style="animation-delay: 0.23s">
             <div>
               <div class="group-top">
                 <div class="emoji">🎒</div>
