@@ -630,10 +630,10 @@
           title: "City Videos",
           type: "video",
           items: [
-            { title: "Warsaw, Poland", description: "Exploring Warsaw through city walks, historical places, and shared group moments.", file: "assets1/videos/warsaw.mp4", thumbnail: "assets1/videos/warsaw-cover.jpg" },
-            { title: "Prague, Czech Republic", description: "A Prague video diary with cultural discoveries, city views, and memories from Czech Republic.", file: "assets1/videos/prague.mp4", thumbnail: "assets1/videos/prague-cover.jpg" },
-            { title: "Bratislava, Slovakia", description: "Capturing Bratislava’s old town, relaxed atmosphere, and group discoveries along the route.", file: "assets1/videos/bratislava.mp4", thumbnail: "assets1/videos/bratislava-cover.jpg" },
-            { title: "Budapest, Hungary", description: "Discovering Budapest through riverside views, historic streets, and final journey memories.", file: "assets1/videos/budapest.mp4", thumbnail: "assets1/videos/budapest-cover.jpg" }
+            { title: "Wroclaw, Poland", description: "Exploring Wroclaw through city walks, historical places, and shared group moments.", file: "https://youtu.be/bGL2K4lrcEA" },
+            { title: "Budapest, Hungary", description: "Discovering Budapest through riverside views, historic streets, and final journey memories.", file: "https://youtu.be/0ePXstjprSE" },
+            { title: "Bratislava, Slovakia", description: "Capturing Bratislava’s old town, relaxed atmosphere, and group discoveries along the route.", file: "https://youtu.be/GnqSPq2AyqE" },
+            { title: "Czechia", description: "A Czechia shorts-style video with quick travel memories and city views.", file: "https://youtube.com/shorts/4MvdNxyK_lA?feature=share" }
           ]
         },
         {
@@ -795,9 +795,10 @@
       }
 
       if (type === "video") {
-        if (item.thumbnail) {
+        const youtubeThumbnail = getYouTubeThumbnail(item.file);
+        if (item.thumbnail || youtubeThumbnail) {
           const img = document.createElement("img");
-          img.src = item.thumbnail;
+          img.src = item.thumbnail || youtubeThumbnail;
           img.alt = item.title + " video preview";
           img.addEventListener("load", function () { markOrientation(img); });
           img.addEventListener("error", function () { showFallback(thumb, "▶", "City Video"); });
@@ -839,6 +840,23 @@
       parent.innerHTML = '<div class="fallback-preview"><div><div class="fallback-icon">' + icon + '</div><strong>' + label + '</strong></div></div>';
     }
 
+    function getYouTubeId(url) {
+      if (!url) return null;
+      const match = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function getYouTubeThumbnail(url) {
+      const id = getYouTubeId(url);
+      return id ? "https://img.youtube.com/vi/" + id + "/hqdefault.jpg" : null;
+    }
+
+    function getYouTubeEmbedUrl(url) {
+      const id = getYouTubeId(url);
+      if (!id) return null;
+      return "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&rel=0&playsinline=1";
+    }
+
     function markOrientation(media) {
       const width = media.naturalWidth || media.videoWidth || 0;
       const height = media.naturalHeight || media.videoHeight || 0;
@@ -869,14 +887,24 @@
         img.addEventListener("error", function () { showFallback(modalContent, "🖼️", "Photo file not found"); });
         modalContent.appendChild(img);
       } else if (type === "video") {
-        const video = document.createElement("video");
-        video.src = item.file;
-        video.controls = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.addEventListener("loadedmetadata", function () { markOrientation(video); });
-        video.addEventListener("error", function () { showFallback(modalContent, "▶", "Video file not found"); });
-        modalContent.appendChild(video);
+        const embedUrl = getYouTubeEmbedUrl(item.file);
+        if (embedUrl) {
+          const iframe = document.createElement("iframe");
+          iframe.src = embedUrl;
+          iframe.title = item.title;
+          iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+          iframe.allowFullscreen = true;
+          modalContent.appendChild(iframe);
+        } else {
+          const video = document.createElement("video");
+          video.src = item.file;
+          video.controls = true;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.addEventListener("loadedmetadata", function () { markOrientation(video); });
+          video.addEventListener("error", function () { showFallback(modalContent, "▶", "Video file not found"); });
+          modalContent.appendChild(video);
+        }
       }
 
       modal.classList.add("open");
