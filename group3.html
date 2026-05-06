@@ -715,6 +715,15 @@
 
         app.appendChild(sectionEl);
       });
+
+      requestAnimationFrame(resetRailsToStart);
+    }
+
+    function resetRailsToStart() {
+      const rails = app.querySelectorAll(".rail");
+      rails.forEach(function (rail) {
+        rail.scrollLeft = 0;
+      });
     }
 
     function renderFilters() {
@@ -929,6 +938,10 @@
 
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") closeModal();
+    });
+
+    window.addEventListener("pageshow", function () {
+      requestAnimationFrame(resetRailsToStart);
     });
 
     async function sharePage() {

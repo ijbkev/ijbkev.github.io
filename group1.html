@@ -6,13 +6,13 @@
   <title>DiscoverEU Memories Journal: Group 1 - Schäfer und die Schafe</title>
   <style>
     :root {
-      --bg-green: #7fbeb4;
-      --bg-light-green: #b9ddd4;
-      --bg-yellow: #dbe9dc;
+      --bg-green: #5f7976;
+      --bg-light-green: #7f9b97;
+      --bg-yellow: #a8bbb6;
       --text: #1f1724;
       --muted: #6f5f75;
       --accent: #d8ff22;
-      --section: rgba(122, 182, 173, 0.94);
+      --section: rgba(105, 136, 132, 0.92);
       --space-1: 8px;
       --space-2: 12px;
       --space-3: 16px;
@@ -30,9 +30,9 @@
       font-family: var(--font);
       color: white;
       background:
-        radial-gradient(circle at 35% 16%, rgba(245, 235, 196, 0.7), transparent 24%),
-        radial-gradient(circle at 22% 50%, rgba(185, 221, 212, 0.82), transparent 34%),
-        radial-gradient(circle at 74% 36%, rgba(131, 191, 181, 0.76), transparent 32%),
+        radial-gradient(circle at 35% 16%, rgba(220, 225, 207, 0.52), transparent 24%),
+        radial-gradient(circle at 22% 50%, rgba(159, 183, 177, 0.6), transparent 34%),
+        radial-gradient(circle at 74% 36%, rgba(110, 143, 139, 0.52), transparent 32%),
         linear-gradient(125deg, var(--bg-green), var(--bg-light-green) 42%, var(--bg-yellow));
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
@@ -52,7 +52,7 @@
     header {
       z-index: 10;
       padding: 18px 28px 14px;
-      background: linear-gradient(180deg, rgba(122, 182, 173, 0.92), rgba(122, 182, 173, 0.28));
+      background: linear-gradient(180deg, rgba(90, 122, 118, 0.9), rgba(90, 122, 118, 0.26));
       backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
@@ -711,6 +711,15 @@
 
         app.appendChild(sectionEl);
       });
+
+      requestAnimationFrame(resetRailsToStart);
+    }
+
+    function resetRailsToStart() {
+      const rails = app.querySelectorAll(".rail");
+      rails.forEach(function (rail) {
+        rail.scrollLeft = 0;
+      });
     }
 
     function renderFilters() {
@@ -925,6 +934,10 @@
 
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") closeModal();
+    });
+
+    window.addEventListener("pageshow", function () {
+      requestAnimationFrame(resetRailsToStart);
     });
 
     async function sharePage() {

@@ -833,7 +833,7 @@
             {
               title: "Prague, Czech Republic",
               description: "A Prague video diary with city walks, cultural discoveries, and group memories from Czech Republic.",
-              file: "assets2/videos/prague.mp4",
+              file: "https://youtube.com/shorts/I2xMqmEjnQQ",
               thumbnail: "assets2/videos/prague-cover.jpg"
             }
           ]
@@ -947,6 +947,15 @@
       if (visibleSections.length === 0) {
         app.innerHTML += `<div class="empty">No matching posts found. Try another search word.</div>`;
       }
+
+      requestAnimationFrame(resetRailsToStart);
+    }
+
+    function resetRailsToStart() {
+      const rails = app.querySelectorAll(".rail");
+      rails.forEach(rail => {
+        rail.scrollLeft = 0;
+      });
     }
 
     function getVisibleSections() {
@@ -1165,6 +1174,10 @@
 
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") closeModal();
+    });
+
+    window.addEventListener("pageshow", () => {
+      requestAnimationFrame(resetRailsToStart);
     });
 
     async function sharePage() {
