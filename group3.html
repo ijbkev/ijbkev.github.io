@@ -13,6 +13,17 @@
       --muted: #6f5f75;
       --accent: #d8ff22;
       --section: rgba(78, 173, 157, 0.94);
+      --card-bg-top: #f4fafb;
+      --card-bg-bottom: #e7f1f3;
+      --card-border: rgba(255,255,255,0.5);
+      --card-shadow: 0 14px 34px rgba(15, 48, 61, 0.22);
+      --card-hover-border: rgba(211, 240, 235, 0.95);
+      --card-hover-ring: rgba(121, 184, 175, 0.28);
+      --thumb-bg-start: #edf5f7;
+      --thumb-bg-end: #e2edf0;
+      --thumb-border: rgba(45, 88, 106, 0.14);
+      --caption-bg: rgba(227, 241, 243, 0.84);
+      --caption-text: #2b3640;
       --space-1: 8px;
       --space-2: 12px;
       --space-3: 16px;
@@ -303,10 +314,11 @@
       position: relative;
       overflow: hidden;
       color: var(--text);
-      background: linear-gradient(180deg, #ffffff, #f7fcfd);
-      border: 1px solid rgba(255,255,255,0.56);
+      background: linear-gradient(165deg, var(--card-bg-top), var(--card-bg-bottom));
+      border: 1px solid var(--card-border);
       border-radius: 22px;
-      box-shadow: 0 18px 44px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.75);
+      box-shadow: var(--card-shadow), inset 0 0 0 1px rgba(255,255,255,0.65);
+      backdrop-filter: blur(5px);
       cursor: pointer;
       transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
       animation: fadeUp 0.55s ease both;
@@ -314,8 +326,8 @@
 
     .card:hover {
       transform: translateY(-6px);
-      border-color: rgba(216, 255, 34, 0.82);
-      box-shadow: 0 28px 66px rgba(0,0,0,0.32), 0 0 0 3px rgba(216,255,34,0.18);
+      border-color: var(--card-hover-border);
+      box-shadow: 0 24px 54px rgba(12, 40, 51, 0.28), 0 0 0 3px var(--card-hover-ring);
     }
 
     .card-title-row {
@@ -346,12 +358,12 @@
       height: 248px;
       border-radius: 15px;
       overflow: hidden;
-      background: linear-gradient(135deg, #f2f8fb, #e5f4f1);
+      background: linear-gradient(135deg, var(--thumb-bg-start), var(--thumb-bg-end));
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      border: 1px solid rgba(35, 64, 88, 0.1);
+      border: 1px solid var(--thumb-border);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 8px 22px rgba(15, 42, 61, 0.08);
     }
 
@@ -364,7 +376,7 @@
       max-height: 100%;
       object-fit: contain !important;
       object-position: center center;
-      background: linear-gradient(135deg, #f2f8fb, #e5f4f1);
+      background: linear-gradient(135deg, var(--thumb-bg-start), var(--thumb-bg-end));
     }
 
     .fallback-preview {
@@ -416,8 +428,8 @@
     .caption {
       margin: 10px 14px 14px;
       padding: 11px 12px;
-      color: #342639;
-      background: rgba(237, 248, 249, 0.78);
+      color: var(--caption-text);
+      background: var(--caption-bg);
       border-radius: 14px;
       font-size: 15px;
       line-height: 1.38;

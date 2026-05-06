@@ -16,6 +16,17 @@
       --section-tab: rgba(203, 20, 158, 0.88);
       --glass: rgba(255, 255, 255, 0.13);
       --shadow: 0 18px 45px rgba(0, 0, 0, 0.23);
+      --card-bg-top: #fbf7fc;
+      --card-bg-bottom: #f1e8f5;
+      --card-border: rgba(255,255,255,0.5);
+      --card-shadow: 0 14px 34px rgba(40, 20, 58, 0.24);
+      --card-hover-border: rgba(241, 214, 246, 0.95);
+      --card-hover-ring: rgba(196, 138, 211, 0.28);
+      --thumb-bg-start: #f5eff8;
+      --thumb-bg-end: #ece3f2;
+      --thumb-border: rgba(84, 56, 96, 0.16);
+      --caption-bg: rgba(241, 232, 246, 0.85);
+      --caption-text: #35273d;
       --radius: 16px;
       --space-1: 8px;
       --space-2: 12px;
@@ -327,10 +338,11 @@
       position: relative;
       overflow: hidden;
       color: var(--text);
-      background: linear-gradient(180deg, #ffffff, #fbf7fd);
-      border: 1px solid rgba(255,255,255,0.56);
+      background: linear-gradient(165deg, var(--card-bg-top), var(--card-bg-bottom));
+      border: 1px solid var(--card-border);
       border-radius: 22px;
-      box-shadow: 0 18px 44px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.75);
+      box-shadow: var(--card-shadow), inset 0 0 0 1px rgba(255,255,255,0.65);
+      backdrop-filter: blur(5px);
       cursor: pointer;
       transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
       animation: fadeUp 0.55s ease both;
@@ -339,8 +351,8 @@
 
     .card:hover {
       transform: translateY(-6px);
-      border-color: rgba(216, 255, 34, 0.82);
-      box-shadow: 0 28px 66px rgba(0,0,0,0.32), 0 0 0 3px rgba(216,255,34,0.18);
+      border-color: var(--card-hover-border);
+      box-shadow: 0 24px 54px rgba(35, 18, 48, 0.28), 0 0 0 3px var(--card-hover-ring);
     }
 
     .card-title-row {
@@ -371,12 +383,12 @@
       height: 248px;
       border-radius: 15px;
       overflow: hidden;
-      background: linear-gradient(135deg, #f8f2fb, #efe5f4);
+      background: linear-gradient(135deg, var(--thumb-bg-start), var(--thumb-bg-end));
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      border: 1px solid rgba(72, 35, 88, 0.1);
+      border: 1px solid var(--thumb-border);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 8px 22px rgba(48, 15, 61, 0.08);
     }
 
@@ -389,7 +401,7 @@
       max-height: 100%;
       object-fit: contain !important;
       object-position: center center;
-      background: linear-gradient(135deg, #f8f2fb, #efe5f4);
+      background: linear-gradient(135deg, var(--thumb-bg-start), var(--thumb-bg-end));
     }
 
     .thumb.media-portrait img,
@@ -641,8 +653,8 @@
       .actions {
         display: none;
       }
-
-      .description {
+        color: var(--caption-text);
+        background: var(--caption-bg);
         margin-left: 0;
       }
 
