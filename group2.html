@@ -816,22 +816,19 @@
           type: "video",
           items: [
             {
-              title: "Zagreb, Croatia",
-              description: "Walking through Zagreb, visiting local spots, and capturing the first city memories of the journey.",
-              file: "assets2/videos/zagreb.mp4",
-              thumbnail: "assets2/videos/zagreb-cover.jpg"
+              title: "Budapest, Hungary",
+              description: "Discovering Budapest through riverside views, historic streets, and shared memories across the city.",
+              file: "https://youtu.be/MqBkpHRqKXs"
             },
             {
               title: "Ljubljana, Slovenia",
               description: "Exploring Ljubljana’s cozy streets, creative corners, and relaxed group moments in Slovenia’s capital.",
-              file: "assets2/videos/ljubljana.mp4",
-              thumbnail: "assets2/videos/ljubljana-cover.jpg"
+              file: "https://youtu.be/Kpxq5SgLAS4"
             },
             {
-              title: "Budapest, Hungary",
-              description: "Discovering Budapest through riverside views, historic streets, and shared moments across the city.",
-              file: "assets2/videos/budapest.mp4",
-              thumbnail: "assets2/videos/budapest-cover.jpg"
+              title: "Zagreb, Croatia",
+              description: "Walking through Zagreb, visiting local spots, and capturing the first city memories of the journey.",
+              file: "https://youtu.be/Coziy5Pm4To"
             },
             {
               title: "Prague, Czech Republic",
@@ -1032,6 +1029,22 @@
       return "Photo";
     }
 
+    function getYouTubeId(url) {
+      if (!url) return null;
+      const match = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function getYouTubeThumbnail(url) {
+      const id = getYouTubeId(url);
+      return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+    }
+
+    function getYouTubeEmbedUrl(url) {
+      const id = getYouTubeId(url);
+      return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1` : null;
+    }
+
     function getThumbHtml(type, item) {
       const mediaClass = type === "image" || type === "video" ? " auto-media" : "";
 
@@ -1048,9 +1061,10 @@
       }
 
       if (type === "video") {
+        const youtubeThumbnail = getYouTubeThumbnail(item.file);
         return `
           <div class="thumb${mediaClass}">
-            ${item.thumbnail ? `<img src="${escapeAttr(item.thumbnail)}" alt="${escapeAttr(item.title)} video preview" onload="markOrientation(this); markCardOrientation(this)" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata" onloadedmetadata="markOrientation(this); markCardOrientation(this)"></video>`}
+            ${item.thumbnail || youtubeThumbnail ? `<img src="${escapeAttr(item.thumbnail || youtubeThumbnail)}" alt="${escapeAttr(item.title)} video preview" onload="markOrientation(this); markCardOrientation(this)" />` : `<video src="${escapeAttr(item.file)}" muted preload="metadata" onloadedmetadata="markOrientation(this); markCardOrientation(this)"></video>`}
             <div class="play">▶</div>
           </div>
         `;
@@ -1114,13 +1128,23 @@
       }
 
       if (type === "video") {
-        const video = document.createElement("video");
-        video.src = item.file;
-        video.controls = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.onloadedmetadata = () => markOrientation(video);
-        modalContent.appendChild(video);
+        const embedUrl = getYouTubeEmbedUrl(item.file);
+        if (embedUrl) {
+          const iframe = document.createElement("iframe");
+          iframe.src = embedUrl;
+          iframe.title = item.title;
+          iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+          iframe.allowFullscreen = true;
+          modalContent.appendChild(iframe);
+        } else {
+          const video = document.createElement("video");
+          video.src = item.file;
+          video.controls = true;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.onloadedmetadata = () => markOrientation(video);
+          modalContent.appendChild(video);
+        }
       }
 
       modal.classList.add("open");
