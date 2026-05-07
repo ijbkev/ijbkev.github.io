@@ -575,6 +575,135 @@
         transform: translateY(0);
       }
     }
+
+    .official-strip {
+      margin-top: 42px;
+      padding: 24px clamp(18px, 3vw, 32px);
+      border-radius: 28px;
+      background: rgba(74, 150, 145, 0.22);
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 20px 58px rgba(0,0,0,0.16);
+      backdrop-filter: blur(16px);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .org-block {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .org-logo {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.12);
+      padding: 6px;
+      flex: 0 0 auto;
+    }
+
+    .org-name-small {
+      margin: 0 0 4px;
+      color: rgba(255,255,255,0.72);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .org-name {
+      margin: 0;
+      font-size: clamp(16px, 1.6vw, 22px);
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+      font-weight: 900;
+      text-wrap: balance;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .programme-logos {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .logo-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 84px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.94);
+      padding: 10px 14px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+    }
+
+    .programme-logo {
+      height: 64px;
+      max-width: 280px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .programme-logo.eu-funded {
+      height: 72px;
+      max-width: 380px;
+    }
+
+    @media (max-width: 900px) {
+      .official-strip {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .programme-logos {
+        justify-content: flex-start;
+        width: 100%;
+      }
+
+      .logo-card {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .official-strip {
+        padding: 18px 16px;
+        gap: 18px;
+      }
+
+      .org-logo {
+        width: 54px;
+        height: 54px;
+      }
+
+      .org-name {
+        font-size: 14px;
+      }
+
+      .org-name-small {
+        font-size: 11px;
+      }
+
+      .logo-card {
+        min-height: 76px;
+      }
+
+      .programme-logo {
+        height: 52px;
+      }
+
+      .programme-logo.eu-funded {
+        height: 58px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -583,7 +712,7 @@
       <div class="brand">
         <div class="logo">🎒</div>
         <div>
-          <div class="meta">IJBK e.V. • DiscoverEU</div>
+          <div class="meta">IJBK e.V. • 2025-2-DE04-KA155-YOU-000369746</div>
           <h1 id="pageTitle"></h1>
         </div>
       </div>
@@ -617,6 +746,25 @@
       <div class="modal-content" id="modalContent"></div>
     </div>
   </div>
+
+  <section class="official-strip" aria-label="Project and organisation logos">
+    <div class="org-block">
+      <img class="org-logo" src="logos/ijbk-logo.png" alt="IJBK e.V. logo" />
+      <div>
+        <p class="org-name-small">Organised by</p>
+        <p class="org-name">Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.</p>
+      </div>
+    </div>
+
+    <div class="programme-logos">
+      <div class="logo-card">
+        <img class="programme-logo" src="logos/erasmus.png" alt="Erasmus+ logo" />
+      </div>
+      <div class="logo-card">
+        <img class="programme-logo eu-funded" src="logos/eu_funded_en.jpg" alt="Funded by the European Union logo" />
+      </div>
+    </div>
+  </section>
 
   <script>
     const site = {
