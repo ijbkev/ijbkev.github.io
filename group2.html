@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DiscoverEU Memories Journal</title>
   <script src="pdf-interceptor.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+    }
+  </script>
   <style>
     :root {
       --bg1: #37005f;
