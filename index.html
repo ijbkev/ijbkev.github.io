@@ -418,6 +418,35 @@
       max-width: 430px;
     }
 
+    nav {
+      display: flex;
+      gap: var(--space-4);
+      align-items: center;
+    }
+
+    nav a {
+      padding: 10px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.22s ease;
+    }
+
+    nav a:hover {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(255,255,255,0.28);
+      transform: translateY(-2px);
+    }
+
+    nav a.active {
+      background: rgba(216, 255, 34, 0.18);
+      border-color: rgba(216, 255, 34, 0.5);
+    }
+
     @media (max-width: 1100px) {
       .hero-grid {
         grid-template-columns: 1fr;
@@ -436,11 +465,17 @@
       header {
         flex-direction: column;
         padding-bottom: 24px;
+        gap: var(--space-3);
       }
 
       .header-note {
         max-width: 760px;
         padding-top: 0;
+      }
+
+      nav {
+        width: 100%;
+        flex-wrap: wrap;
       }
     }
 
@@ -458,6 +493,15 @@
         width: 48px;
         height: 48px;
         font-size: 26px;
+      }
+
+      header {
+        padding-bottom: 18px;
+      }
+
+      nav a {
+        padding: 8px 12px;
+        font-size: 13px;
       }
 
       .hero {
@@ -520,6 +564,10 @@
           <h1>DiscoverEU Memories Journal<br />4–23 April 2026</h1>
         </div>
       </div>
+      <nav>
+        <a href="index.html" class="active">Home</a>
+        <a href="about.html">About</a>
+      </nav>
     </header>
 
     <section class="hero">

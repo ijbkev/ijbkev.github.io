@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About DiscoverEU Memories Journal</title>
+  <style>
+    :root {
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.78);
+      --shadow: 0 28px 80px rgba(0,0,0,0.32);
+      --space-1: 8px;
+      --space-2: 12px;
+      --space-3: 16px;
+      --space-4: 24px;
+      --space-5: 32px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 14% 16%, rgba(216, 255, 34, 0.42), transparent 24%),
+        radial-gradient(circle at 82% 18%, rgba(255, 0, 150, 0.42), transparent 26%),
+        radial-gradient(circle at 28% 78%, rgba(0, 200, 130, 0.38), transparent 28%),
+        radial-gradient(circle at 72% 78%, rgba(80, 160, 210, 0.48), transparent 31%),
+        linear-gradient(135deg, #07151e, #32005d 42%, #006c54);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: radial-gradient(circle at center, black, transparent 72%);
+      opacity: 0.55;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      width: min(1250px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--space-4);
+      padding: 14px 0 28px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.14);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 12px 32px rgba(0,0,0,0.22);
+      font-size: 31px;
+      flex: 0 0 auto;
+      text-decoration: none;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 4.8vw, 48px);
+      line-height: 0.94;
+      letter-spacing: -0.07em;
+      max-width: 850px;
+      text-wrap: balance;
+    }
+
+    nav {
+      display: flex;
+      gap: var(--space-4);
+      align-items: center;
+    }
+
+    nav a {
+      padding: 10px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.22s ease;
+    }
+
+    nav a:hover {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(255,255,255,0.28);
+      transform: translateY(-2px);
+    }
+
+    nav a.active {
+      background: rgba(216, 255, 34, 0.18);
+      border-color: rgba(216, 255, 34, 0.5);
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .content-section {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border-radius: 28px;
+      padding: clamp(24px, 3vw, 40px);
+      backdrop-filter: blur(18px);
+      animation: fadeUp 0.7s ease both;
+    }
+
+    .content-section:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    .content-section:nth-child(3) {
+      animation-delay: 0.2s;
+    }
+
+    .content-section:nth-child(4) {
+      animation-delay: 0.3s;
+    }
+
+    .content-section:nth-child(5) {
+      animation-delay: 0.4s;
+    }
+
+    .content-section:nth-child(6) {
+      animation-delay: 0.5s;
+    }
+
+    .content-section h2 {
+      margin: 0 0 16px 0;
+      font-size: clamp(24px, 3vw, 36px);
+      line-height: 1.1;
+      letter-spacing: -0.055em;
+    }
+
+    .content-section h3 {
+      margin: 20px 0 12px 0;
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.1;
+      letter-spacing: -0.035em;
+    }
+
+    .content-section p {
+      margin: 0 0 16px 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 900px;
+    }
+
+    .content-section p:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .content-section ul {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .content-section ul li {
+      margin-bottom: 10px;
+    }
+
+    .content-section strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .booklet-link {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 12px 20px;
+      border-radius: 18px;
+      background: rgba(216, 255, 34, 0.18);
+      border: 1px solid rgba(216, 255, 34, 0.5);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.22s ease;
+    }
+
+    .booklet-link:hover {
+      background: rgba(216, 255, 34, 0.28);
+      border-color: rgba(216, 255, 34, 0.8);
+      transform: translateY(-2px);
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+      margin: 0;
+    }
+
+    .official-strip {
+      margin-top: 40px;
+      padding: 18px clamp(16px, 2.6vw, 28px);
+      border-radius: 28px;
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 20px 58px rgba(0,0,0,0.24);
+      backdrop-filter: blur(16px);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 22px;
+    }
+
+    .org-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .org-logo {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      padding: 5px;
+      flex: 0 0 auto;
+    }
+
+    .org-name-small {
+      margin: 0 0 3px;
+      color: rgba(255,255,255,0.66);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .org-name {
+      margin: 0;
+      font-size: clamp(17px, 1.7vw, 24px);
+      line-height: 1.16;
+      letter-spacing: -0.035em;
+      font-weight: 950;
+      text-wrap: balance;
+    }
+
+    .programme-logos {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .logo-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 88px;
+      border-radius: 18px;
+      background: #ffffff;
+      padding: 10px 14px;
+      box-shadow: 0 14px 36px rgba(0,0,0,0.22);
+      border: 1px solid rgba(255,255,255,0.82);
+    }
+
+    .programme-logo {
+      height: 68px;
+      max-width: 330px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .programme-logo.eu-funded {
+      height: 78px;
+      max-width: 430px;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 920px) {
+      header {
+        flex-direction: column;
+        gap: var(--space-3);
+        padding-bottom: 24px;
+      }
+
+      nav {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .official-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .programme-logos {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 20px, 1220px);
+        padding-top: 18px;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+
+      .logo {
+        width: 48px;
+        height: 48px;
+        font-size: 26px;
+      }
+
+      header {
+        padding-bottom: 18px;
+      }
+
+      nav a {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .content-section {
+        border-radius: 20px;
+        padding: 20px;
+      }
+
+      .logo-card {
+        width: 100%;
+        min-height: 82px;
+      }
+
+      .programme-logo {
+        height: 58px;
+        max-width: 100%;
+      }
+
+      .programme-logo.eu-funded {
+        height: 64px;
+      }
+
+      .org-logo {
+        width: 46px;
+        height: 46px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <a href="index.html" class="logo" title="Back to home">🚆</a>
+        <div>
+          <p class="eyebrow">IJBK e.V. • 2025-2-DE04-KA155-YOU-000369746</p>
+          <h1>About DiscoverEU<br />Memories Journal</h1>
+        </div>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="about.html" class="active">About</a>
+      </nav>
+    </header>
+
+    <div class="content">
+      <section class="content-section">
+        <h2>DiscoverEU Memories Journal</h2>
+        <p><strong>DiscoverEU Memories Journal</strong> is a DiscoverEU Inclusion project that brought together young people to explore Europe through train travel, creativity, reflection, and intercultural learning.</p>
+        <p>The project created space for young people, including participants with fewer opportunities, to travel across different European cities, discover new cultures, meet local communities, and express their experiences through journals, photos, stories, and creative reflections.</p>
+        <p>This website presents the collective memories of all 18 people involved in the project, including accompanying persons. Each group followed a different route and documented their journey in their own creative way.</p>
+      </section>
+
+      <section class="content-section">
+        <h2>About Erasmus+ and DiscoverEU</h2>
+        <h3>Erasmus+</h3>
+        <p><strong>Erasmus+</strong> is the European Union programme supporting education, training, youth, and sport. It creates opportunities for young people to learn, travel, participate in international activities, and develop important personal, social, and professional skills.</p>
+        
+        <h3>DiscoverEU</h3>
+        <p><strong>DiscoverEU</strong> gives young people the opportunity to explore Europe mainly by train. It helps them experience cultural diversity, understand European values, become more independent, and feel more connected to Europe.</p>
+        <p>Through the <strong>DiscoverEU Inclusion Action</strong>, young people with fewer opportunities receive additional support so they can participate on equal terms with others.</p>
+      </section>
+
+      <section class="content-section">
+        <h2>Project Aim</h2>
+        <p>The aim of <strong>DiscoverEU Memories Journal</strong> is to combine travel, inclusion, creativity, and European identity.</p>
+        <p>Through this project, participants were encouraged to:</p>
+        <ul>
+          <li>Explore different European cities by train</li>
+          <li>Develop confidence in travelling</li>
+          <li>Understand different cultures and lifestyles</li>
+          <li>Reflect on inclusion, diversity, and European values</li>
+          <li>Express their experiences through creative journals</li>
+          <li>Share their memories with others through digital dissemination</li>
+        </ul>
+        <p>The project is not only about visiting places. It is about learning from the journey, building self-confidence, sharing personal perspectives, and showing how travel can support inclusion and intercultural understanding.</p>
+      </section>
+
+      <section class="content-section">
+        <h2>Our Collective Journal</h2>
+        <p>The main result of the project is the <strong>DiscoverEU Memories Journal</strong>, a collective booklet created from the reflections, photos, journal entries, and creative contributions of the participants.</p>
+        <p>The booklet brings together different voices, routes, cities, and experiences into one shared project memory.</p>
+        <p><strong>Final Collective Booklet:</strong></p>
+        <a href="https://drive.google.com/file/d/1cwOC8g5UUEvrSmc2zo4HmHlJWT90QBpw/view?usp=sharing" target="_blank" class="booklet-link">View the Collective Booklet</a>
+      </section>
+
+      <section class="content-section">
+        <h2>What You Can Find on This Website</h2>
+        <p>On this website, you can explore:</p>
+        <ul>
+          <li>The final collective journal booklet</li>
+          <li>Group travel routes</li>
+          <li>Selected photos and videos</li>
+          <li>Participant reflections</li>
+          <li>Creative journal pages</li>
+          <li>City memories</li>
+          <li>Dissemination outputs from the project</li>
+        </ul>
+        <p>The website serves as a digital memory space and a dissemination platform for the project.</p>
+      </section>
+
+      <section class="content-section">
+        <h2>Dissemination and Impact</h2>
+        <p>The project results are shared to make the experience visible beyond the group itself. Through the website, booklet, group journals, photos, and videos, we aim to inspire other young people to discover Erasmus+, DiscoverEU, and international youth opportunities.</p>
+        <p>The project shows how travel can support inclusion, creativity, self-expression, and a stronger sense of European belonging.</p>
+      </section>
+
+      <section class="content-section">
+        <h2>EU Visibility Disclaimer</h2>
+        <p><strong>Funded by the European Union.</strong> Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the granting authority. Neither the European Union nor the granting authority can be held responsible for them.</p>
+      </section>
+    </div>
+
+    <section class="official-strip" aria-label="Project and organisation logos">
+      <div class="org-block">
+        <img class="org-logo" src="logos/ijbk-logo.png" alt="IJBK e.V. logo" />
+        <div>
+          <p class="org-name-small">Organised by</p>
+          <p class="org-name">Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.</p>
+        </div>
+      </div>
+
+      <div class="programme-logos">
+        <div class="logo-card">
+          <img class="programme-logo" src="logos/erasmus.png" alt="Erasmus+ logo" />
+        </div>
+        <div class="logo-card">
+          <img class="programme-logo eu-funded" src="logos/eu_funded_en.jpg" alt="Funded by the European Union logo" />
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
