@@ -53,8 +53,24 @@
             console.log('PDF Interceptor: Opening PDF in modal popup:', flipbookUrl);
             // Modify the item to point to flipbook URL instead of PDF
             item.file = flipbookUrl;
-            // The original openModal will create an iframe with the flipbook URL
-            return originalOpenModal.call(this, type, item);
+            
+            // Call the original openModal
+            const result = originalOpenModal.call(this, type, item);
+            
+            // Now enhance the iframe with fullscreen support
+            setTimeout(() => {
+              const iframe = document.querySelector('iframe');
+              if (iframe) {
+                iframe.setAttribute('allowfullscreen', 'true');
+                iframe.setAttribute('allow', 'fullscreen');
+                console.log('PDF Interceptor: Added fullscreen permissions to iframe');
+                
+                // Focus the iframe so keyboard events work properly
+                iframe.focus();
+              }
+            }, 100);
+            
+            return result;
           }
         }
         
@@ -62,6 +78,32 @@
         return originalOpenModal.call(this, type, item);
       };
       console.log('PDF Interceptor: openModal function intercepted');
+      
+      // Also intercept keyboard events to prevent parent navigation when modal is open
+      document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('modal');
+        if (modal && modal.classList.contains('open')) {
+          // If modal is open and user presses arrow keys, don't let them bubble to parent
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            const iframe = document.querySelector('iframe');
+            if (iframe) {
+              // Pass the event to the iframe's document
+              const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+              if (iframeDoc) {
+                const keyEvent = new KeyboardEvent('keydown', {
+                  key: e.key,
+                  code: e.code,
+                  bubbles: true,
+                  cancelable: true
+                });
+                iframeDoc.dispatchEvent(keyEvent);
+              }
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }
+        }
+      }, true); // Use capture phase to intercept before other handlers
     } else {
       // If openModal doesn't exist yet, try again later
       setTimeout(interceptOpenModal, 100);
