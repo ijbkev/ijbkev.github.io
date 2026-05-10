@@ -445,7 +445,7 @@
     const driveFileId = urlParams.get('drive');
     const fallbackPdfUrl = urlParams.get('fallback');
     const DEFAULT_PDF_FILE = driveFileId ? `drive:${driveFileId}` : (urlParams.get('pdf') || "book.pdf");
-    const forceLargeReader = urlParams.get("large") === "1" || Boolean(driveFileId);
+    const forceLargeReader = urlParams.get("large") === "1";
     const largeReaderDisabled = urlParams.get("large") === "0";
     const LARGE_READER_PAGE_LIMIT = Number(urlParams.get("largeLimit")) || 180;
     const INITIAL_FLIPBOOK_PAGES = Number(urlParams.get("initialPages")) || 32;
@@ -645,7 +645,7 @@
       return size;
     }
 
-    function makePlaceholder(pageNumber, text = "Page waiting to render") {
+    function makePlaceholder(pageNumber, text = "Loading page") {
       return `
         <div class="placeholder">
           <div>${text}</div>
@@ -796,7 +796,7 @@
 
     function shouldUseLargeReader() {
       if (largeReaderDisabled) return false;
-      return forceLargeReader || totalPages > LARGE_READER_PAGE_LIMIT;
+      return forceLargeReader;
     }
 
     function destroyCurrentBook() {
