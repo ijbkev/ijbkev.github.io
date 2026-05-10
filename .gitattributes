@@ -1,0 +1,9 @@
+# Prevent compression of binary files
+*.pdf binary -diff -merge
+*.zip binary -diff -merge
+*.jpg binary -diff -merge
+*.jpeg binary -diff -merge
+*.png binary -diff -merge
+*.gif binary -diff -merge
+*.mp4 binary -diff -merge
+*.webm binary -diff -merge

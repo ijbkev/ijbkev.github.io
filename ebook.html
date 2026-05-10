@@ -724,17 +724,30 @@
       console.log('Loading PDF from path:', pdfPath);
 
       try {
-        // Try to load PDF directly with workerSrc explicitly configured
-        const loadingTask = pdfjsLib.getDocument({
-          url: pdfPath,
-          withCredentials: false,
-          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-          cMapPacked: true
+        // Always fetch as ArrayBuffer first - this is the most reliable method
+        console.log('Fetching PDF...');
+        const response = await fetch(pdfPath, {
+          headers: { 'Cache-Control': 'no-cache' }
         });
         
-        pdfDoc = await loadingTask.promise;
-        console.log('PDF loaded via URL method');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('Fetched PDF successfully, size:', arrayBuffer.byteLength, 'bytes');
+        
+        // Convert to Uint8Array for PDF.js
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Load PDF from binary data
+        pdfDoc = await pdfjsLib.getDocument({ 
+          data: uint8Array,
+          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+          cMapPacked: true
+        }).promise;
+        
+        console.log('PDF parsed successfully');
         totalPages = pdfDoc.numPages;
 
         if (!totalPages) {
@@ -750,39 +763,11 @@
       } catch (error) {
         console.error('PDF loading error:', error);
         console.log('Failed to load PDF from:', pdfPath);
-        
-        // If URL method fails, try ArrayBuffer method as fallback
-        console.log('Trying ArrayBuffer method as fallback...');
-        try {
-          const response = await fetch(pdfPath);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
-          const arrayBuffer = await response.arrayBuffer();
-          console.log('Fetched PDF, size:', arrayBuffer.byteLength, 'bytes');
-          
-          pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-          totalPages = pdfDoc.numPages;
-
-          if (!totalPages) {
-            throw new Error("This PDF has no pages.");
-          }
-
-          const firstPage = await pdfDoc.getPage(1);
-          const firstViewport = firstPage.getViewport({ scale: 1 });
-          pageAspectRatio = firstViewport.width / firstViewport.height;
-
-          await buildFlipbook(1);
-          showMessage("PDF loaded successfully.");
-        } catch (fallbackError) {
-          console.error('ArrayBuffer fallback also failed:', fallbackError);
-          statusEl.textContent = "Could not load PDF";
-          showMessage(
-            `Could not load PDF: ${source}. Error: ${fallbackError.message}`,
-            true
-          );
-        }
+        statusEl.textContent = "Could not load PDF";
+        showMessage(
+          `Could not load PDF: ${source}. Error: ${error.message}`,
+          true
+        );
       } finally {
         setButtonsDisabled(false);
       }
