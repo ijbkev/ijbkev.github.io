@@ -329,8 +329,6 @@
       </div>
 
       <div class="toolbar-group">
-        <label class="file-label" for="fileInput">Open PDF</label>
-        <input id="fileInput" type="file" accept="application/pdf" />
         <button id="soundBtn" title="Sound on/off">Sound: On</button>
         <button id="fullscreenBtn" class="primary">Fullscreen</button>
       </div>
@@ -384,7 +382,6 @@
     const zoomSelect = document.getElementById("zoomSelect");
     const fullscreenBtn = document.getElementById("fullscreenBtn");
     const soundBtn = document.getElementById("soundBtn");
-    const fileInput = document.getElementById("fileInput");
 
     let pdfDoc = null;
     let pageFlip = null;
@@ -812,19 +809,15 @@
 
     document.addEventListener("fullscreenchange", () => {
       fullscreenBtn.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+      // Force immediate resize and rebuild when entering/exiting fullscreen
+      setTimeout(() => {
+        if (!pdfDoc || !pageFlip) return;
+        const current = getCurrentPageNumber();
+        buildFlipbook(current);
+      }, 50);
     });
 
-    fileInput.addEventListener("change", event => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
 
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-
-      objectUrl = URL.createObjectURL(file);
-      loadPdf(objectUrl);
-    });
 
     document.addEventListener("keydown", event => {
       if (!pageFlip) return;
