@@ -353,9 +353,15 @@
   </div>
 
   <script>
-    // Get PDF from URL query parameter (?pdf=filename.pdf)
+    // For Google Drive-hosted PDFs, create a restricted browser API key and paste it here.
+    // Enable the Google Drive API and restrict the key to https://ijbkev.github.io/*.
+    const DRIVE_API_KEY = "AIzaSyAk-yHp3LAsi6sSUiO-buccVKOB2eolqcA";
+
+    // Get PDF from URL query parameter (?pdf=filename.pdf) or Drive ID (?drive=fileId)
     const urlParams = new URLSearchParams(window.location.search);
-    const DEFAULT_PDF_FILE = urlParams.get('pdf') || "book.pdf";
+    const driveFileId = urlParams.get('drive');
+    const fallbackPdfUrl = urlParams.get('fallback');
+    const DEFAULT_PDF_FILE = driveFileId ? `drive:${driveFileId}` : (urlParams.get('pdf') || "book.pdf");
     
     console.log('PDF Flipbook loaded');
     console.log('URL params:', window.location.search);
@@ -416,6 +422,45 @@
       [firstBtn, prevBtn, nextBtn, lastBtn, goBtn, zoomOutBtn, zoomInBtn, soundBtn].forEach(button => {
         button.disabled = disabled;
       });
+    }
+
+    function extractDriveFileId(source) {
+      if (!source) return "";
+      if (source.startsWith("drive:")) return source.slice(6);
+
+      try {
+        const url = new URL(source, window.location.href);
+        if (!url.hostname.includes("google.com")) return "";
+
+        const filePathMatch = url.pathname.match(/\/file\/d\/([^/]+)/);
+        if (filePathMatch) return filePathMatch[1];
+
+        return url.searchParams.get("id") || "";
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function getDriveApiKey() {
+      return urlParams.get("driveKey") || DRIVE_API_KEY;
+    }
+
+    function resolvePdfPath(source) {
+      const googleDriveFileId = extractDriveFileId(source);
+
+      if (googleDriveFileId) {
+        const apiKey = getDriveApiKey();
+        if (!apiKey) {
+          const error = new Error("Google Drive API key is missing for the flipbook.");
+          error.shouldOpenFallback = Boolean(fallbackPdfUrl);
+          throw error;
+        }
+
+        return `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(googleDriveFileId)}?alt=media&key=${encodeURIComponent(apiKey)}`;
+      }
+
+      if (source.startsWith('/') || source.startsWith('http')) return source;
+      return '/' + source;
     }
 
     function isMobilePortrait() {
@@ -704,28 +749,15 @@
       destroyCurrentBook();
       totalPages = 0;
 
-      // Ensure the path starts with / for absolute reference
-      let pdfPath = source;
-      if (!pdfPath.startsWith('/') && !pdfPath.startsWith('http')) {
-        pdfPath = '/' + pdfPath;
-      }
-
-      console.log('Loading PDF from path:', pdfPath);
-
       try {
-        // Fetch PDF as arraybuffer - simple and reliable
-        const response = await fetch(pdfPath);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('Fetched PDF successfully, size:', arrayBuffer.byteLength, 'bytes');
-        
-        // Load PDF from the fetched binary data
-        pdfDoc = await pdfjsLib.getDocument({ 
-          data: arrayBuffer
+        const pdfPath = resolvePdfPath(source);
+        console.log('Loading PDF from path:', pdfPath);
+
+        // Let PDF.js stream/range-load remote files instead of downloading the whole PDF first.
+        pdfDoc = await pdfjsLib.getDocument({
+          url: pdfPath,
+          withCredentials: false,
+          rangeChunkSize: 1024 * 1024
         }).promise;
         
         console.log('PDF parsed successfully, pages:', pdfDoc.numPages);
@@ -743,6 +775,14 @@
         showMessage("PDF loaded successfully.");
       } catch (error) {
         console.error('PDF loading error:', error);
+
+        if (error.shouldOpenFallback && fallbackPdfUrl) {
+          statusEl.textContent = "Opening Google Drive...";
+          showMessage("Opening the public Google Drive version.");
+          window.location.href = fallbackPdfUrl;
+          return;
+        }
+
         statusEl.textContent = "Could not load PDF";
         showMessage(
           `Error: ${error.message}`,
