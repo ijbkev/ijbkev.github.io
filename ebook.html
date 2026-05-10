@@ -377,6 +377,10 @@
     // Get PDF from URL query parameter (?pdf=filename.pdf)
     const urlParams = new URLSearchParams(window.location.search);
     const DEFAULT_PDF_FILE = urlParams.get('pdf') || "book.pdf";
+    
+    console.log('PDF Flipbook loaded');
+    console.log('URL params:', window.location.search);
+    console.log('PDF to load:', DEFAULT_PDF_FILE);
 
     // Faster rendering. Increase to 1.35 or 1.45 for sharper but slower pages.
     const RENDER_SCALE = 1.15;
@@ -708,8 +712,16 @@
       destroyCurrentBook();
       totalPages = 0;
 
+      // Ensure the path starts with / for absolute reference
+      let pdfPath = source;
+      if (!pdfPath.startsWith('/') && !pdfPath.startsWith('http')) {
+        pdfPath = '/' + pdfPath;
+      }
+
+      console.log('Loading PDF from path:', pdfPath);
+
       try {
-        pdfDoc = await pdfjsLib.getDocument(source).promise;
+        pdfDoc = await pdfjsLib.getDocument(pdfPath).promise;
         totalPages = pdfDoc.numPages;
 
         if (!totalPages) {
@@ -723,10 +735,11 @@
         await buildFlipbook(1);
         showMessage("PDF loaded successfully.");
       } catch (error) {
-        console.error(error);
+        console.error('PDF loading error:', error);
+        console.log('Failed to load PDF from:', pdfPath);
         statusEl.textContent = "Could not load PDF";
         showMessage(
-          "Could not load the PDF. Make sure this HTML file and book.pdf are in the same folder, and open it through: python3 -m http.server 8080",
+          `Could not load PDF: ${source}. Error: ${error.message}`,
           true
         );
       } finally {
