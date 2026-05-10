@@ -62,7 +62,7 @@ Users won't see any difference in your page links - they just work, and PDFs ope
 For large PDFs that should stay on Google Drive, use the Drive file ID:
 
 ```text
-ebook.html?drive=GOOGLE_DRIVE_FILE_ID
+ebook.html?drive=GOOGLE_DRIVE_FILE_ID&large=1
 ```
 
 Because the flipbook has to read the PDF bytes in the browser, Drive links need the Google Drive API media endpoint. Create a browser API key in Google Cloud, enable the Google Drive API, restrict the key to `https://ijbkev.github.io/*`, then paste it into `DRIVE_API_KEY` in `ebook.html`.
@@ -70,7 +70,9 @@ Because the flipbook has to read the PDF bytes in the browser, Drive links need 
 The Collective Booklet button already points to:
 
 ```text
-ebook.html?drive=1cwOC8g5UUEvrSmc2zo4HmHlJWT90QBpw
+ebook.html?drive=1cwOC8g5UUEvrSmc2zo4HmHlJWT90QBpw&large=1
 ```
 
 If `DRIVE_API_KEY` is empty or the API request is blocked, the page falls back to the public Google Drive preview link.
+
+The `large=1` option uses a lightweight reader for very large PDFs. It renders only the current page/spread and nearby pages instead of creating all pages up front, which keeps the 800-page collective booklet responsive.

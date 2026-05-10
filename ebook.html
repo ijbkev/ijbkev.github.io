@@ -171,10 +171,23 @@
       background: transparent;
     }
 
+    .book-mask.large-reader {
+      clip-path: none;
+      contain: layout paint;
+    }
+
     #book {
       position: relative;
       overflow: hidden;
       background: transparent;
+    }
+
+    #book.large-reader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      overflow: visible;
     }
 
     /* Keep PageFlip internal layers clipped, but do not rewrite their positions. */
@@ -217,6 +230,39 @@
       height: auto;
       object-fit: contain;
       background: white;
+    }
+
+    .large-page {
+      position: relative;
+      width: var(--page-width);
+      height: var(--page-height);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      background: var(--paper);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+    }
+
+    .large-page canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      background: white;
+    }
+
+    .large-page::after {
+      content: attr(data-page-label);
+      position: absolute;
+      right: 12px;
+      bottom: 9px;
+      color: rgba(0, 0, 0, 0.35);
+      font-size: 11px;
+      pointer-events: none;
+      z-index: 6;
     }
 
     .placeholder {
@@ -279,6 +325,78 @@
       background: rgba(130, 24, 24, 0.92);
     }
 
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.76);
+      backdrop-filter: blur(8px);
+    }
+
+    .loading-overlay[hidden] {
+      display: none;
+    }
+
+    .loading-panel {
+      width: min(440px, 100%);
+      padding: 22px;
+      border-radius: 18px;
+      color: white;
+      background: rgba(18, 18, 18, 0.94);
+      box-shadow: 0 24px 72px rgba(0, 0, 0, 0.46);
+      text-align: center;
+    }
+
+    .loading-spinner {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 14px;
+      border: 4px solid rgba(255, 255, 255, 0.24);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-title {
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 7px;
+    }
+
+    .loading-detail {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .loading-track {
+      height: 9px;
+      margin-top: 17px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .loading-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+
+    .loading-percent {
+      margin-top: 10px;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
     @media (max-width: 760px) {
       .toolbar {
         padding: 8px;
@@ -303,6 +421,10 @@
 
       .viewer {
         padding: 10px;
+      }
+
+      #book.large-reader {
+        flex-direction: column;
       }
     }
   </style>
@@ -348,6 +470,17 @@
           <div id="book"></div>
         </div>
       </div>
+      <div class="loading-overlay" id="loadingOverlay" hidden>
+        <div class="loading-panel">
+          <div class="loading-spinner"></div>
+          <div class="loading-title" id="loadingTitle">Loading PDF...</div>
+          <div class="loading-detail" id="loadingDetail">Preparing the booklet</div>
+          <div class="loading-track">
+            <div class="loading-bar" id="loadingBar"></div>
+          </div>
+          <div class="loading-percent" id="loadingPercent">0%</div>
+        </div>
+      </div>
       <div class="message" id="message"></div>
     </main>
   </div>
@@ -362,6 +495,9 @@
     const driveFileId = urlParams.get('drive');
     const fallbackPdfUrl = urlParams.get('fallback');
     const DEFAULT_PDF_FILE = driveFileId ? `drive:${driveFileId}` : (urlParams.get('pdf') || "book.pdf");
+    const forceLargeReader = urlParams.get("large") === "1" || Boolean(driveFileId);
+    const largeReaderDisabled = urlParams.get("large") === "0";
+    const LARGE_READER_PAGE_LIMIT = Number(urlParams.get("largeLimit")) || 180;
     
     console.log('PDF Flipbook loaded');
     console.log('URL params:', window.location.search);
@@ -385,6 +521,11 @@
     const statusEl = document.getElementById("status");
     const pageInput = document.getElementById("pageInput");
     const messageEl = document.getElementById("message");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingTitle = document.getElementById("loadingTitle");
+    const loadingDetail = document.getElementById("loadingDetail");
+    const loadingBar = document.getElementById("loadingBar");
+    const loadingPercent = document.getElementById("loadingPercent");
 
     const firstBtn = document.getElementById("firstBtn");
     const prevBtn = document.getElementById("prevBtn");
@@ -408,6 +549,10 @@
     let audioContext = null;
     let currentPdfSource = DEFAULT_PDF_FILE;
     let resizeTimer = null;
+    let largeReaderMode = false;
+    let largeReaderCurrentPage = 1;
+    let largeRenderToken = 0;
+    let activeLoadingTask = null;
 
     function showMessage(text, isError = false) {
       messageEl.textContent = text;
@@ -422,6 +567,29 @@
       [firstBtn, prevBtn, nextBtn, lastBtn, goBtn, zoomOutBtn, zoomInBtn, soundBtn].forEach(button => {
         button.disabled = disabled;
       });
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function showLoading(title, detail = "Preparing the PDF") {
+      loadingTitle.textContent = title;
+      loadingDetail.textContent = detail;
+      loadingOverlay.hidden = false;
+      setLoadingProgress(0);
+    }
+
+    function setLoadingProgress(percent, detail) {
+      const safePercent = Number.isFinite(percent) ? Math.min(Math.max(percent, 0), 100) : 0;
+      loadingBar.style.width = `${safePercent}%`;
+      loadingPercent.textContent = `${Math.round(safePercent)}%`;
+      if (detail) loadingDetail.textContent = detail;
+    }
+
+    function hideLoading() {
+      loadingOverlay.hidden = true;
     }
 
     function extractDriveFileId(source) {
@@ -524,6 +692,7 @@
     }
 
     function getCurrentPageNumber() {
+      if (largeReaderMode) return largeReaderCurrentPage;
       if (!pageFlip) return 1;
       return pageFlip.getCurrentPageIndex() + 1;
     }
@@ -604,27 +773,7 @@
       `;
 
       try {
-        const page = await pdfDoc.getPage(pageNumber);
-        const viewport = page.getViewport({ scale: RENDER_SCALE });
-        const deviceRatio = window.devicePixelRatio || 1;
-
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d", { alpha: false });
-
-        canvas.width = Math.floor(viewport.width * deviceRatio);
-        canvas.height = Math.floor(viewport.height * deviceRatio);
-        canvas.style.width = `${viewport.width}px`;
-        canvas.style.height = `${viewport.height}px`;
-
-        context.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
-
-        await page.render({
-          canvasContext: context,
-          viewport
-        }).promise;
-
-        pageDiv.innerHTML = "";
-        pageDiv.appendChild(canvas);
+        await paintPageInto(pageNumber, pageDiv);
         renderedPages.add(pageNumber);
       } catch (error) {
         console.error(error);
@@ -632,6 +781,30 @@
       } finally {
         renderingPages.delete(pageNumber);
       }
+    }
+
+    async function paintPageInto(pageNumber, pageDiv) {
+      const page = await pdfDoc.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      const deviceRatio = window.devicePixelRatio || 1;
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { alpha: false });
+
+      canvas.width = Math.floor(viewport.width * deviceRatio);
+      canvas.height = Math.floor(viewport.height * deviceRatio);
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
+
+      context.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
+
+      await page.render({
+        canvasContext: context,
+        viewport
+      }).promise;
+
+      pageDiv.innerHTML = "";
+      pageDiv.appendChild(canvas);
     }
 
     function clearFarPages(centerPage) {
@@ -659,6 +832,97 @@
       clearFarPages(current);
     }
 
+    function shouldUseLargeReader() {
+      if (largeReaderDisabled) return false;
+      return forceLargeReader || totalPages > LARGE_READER_PAGE_LIMIT;
+    }
+
+    function getLargeReaderPages(pageNumber) {
+      const current = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+
+      if (isMobilePortrait() || current === 1) return [current];
+
+      const leftPage = current % 2 === 0 ? current : current - 1;
+      const pages = [leftPage];
+
+      if (leftPage + 1 <= totalPages) {
+        pages.push(leftPage + 1);
+      }
+
+      return pages;
+    }
+
+    async function renderLargeReader(pageNumber) {
+      if (!pdfDoc) return;
+
+      const token = ++largeRenderToken;
+      const current = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+      largeReaderCurrentPage = current;
+      updateStatus(current);
+
+      const size = applyBookSize();
+      bookEl.style.setProperty("--page-width", `${size.pageWidth}px`);
+      bookEl.style.setProperty("--page-height", `${size.pageHeight}px`);
+      bookEl.innerHTML = "";
+
+      const pages = getLargeReaderPages(current);
+      const pageElements = pages.map(pageNumberToRender => {
+        const pageDiv = document.createElement("div");
+        pageDiv.className = "large-page";
+        pageDiv.dataset.pageNumber = pageNumberToRender;
+        pageDiv.dataset.pageLabel = pageNumberToRender;
+        pageDiv.innerHTML = `
+          <div class="placeholder">
+            <div class="spinner"></div>
+            <div>Rendering page ${pageNumberToRender}</div>
+          </div>
+        `;
+        bookEl.appendChild(pageDiv);
+        return { pageNumberToRender, pageDiv };
+      });
+
+      await Promise.all(pageElements.map(async ({ pageNumberToRender, pageDiv }) => {
+        try {
+          await paintPageInto(pageNumberToRender, pageDiv);
+        } catch (error) {
+          console.error(error);
+          pageDiv.innerHTML = makePlaceholder(pageNumberToRender, "Could not render this page");
+        }
+      }));
+
+      if (token !== largeRenderToken) return;
+
+      const preloadPages = [
+        current - 2,
+        current - 1,
+        current + 1,
+        current + 2
+      ].filter(pageNumberToPreload => pageNumberToPreload >= 1 && pageNumberToPreload <= totalPages);
+
+      preloadPages.forEach(pageNumberToPreload => {
+        pdfDoc.getPage(pageNumberToPreload).catch(() => {});
+      });
+    }
+
+    async function buildLargeReader(startPage = 1) {
+      destroyCurrentBook();
+      largeReaderMode = true;
+      bookMask.classList.add("large-reader");
+      bookEl.classList.add("large-reader");
+      await renderLargeReader(startPage);
+    }
+
+    function getLargeReaderStep(direction) {
+      if (isMobilePortrait()) return direction;
+      if (direction > 0) return largeReaderCurrentPage === 1 ? 1 : 2;
+      return largeReaderCurrentPage <= 2 ? -1 : -2;
+    }
+
+    function turnLargeReader(direction) {
+      const step = getLargeReaderStep(direction);
+      goToPage(largeReaderCurrentPage + step);
+    }
+
     function destroyCurrentBook() {
       if (pageFlip) {
         try {
@@ -669,8 +933,12 @@
       }
 
       pageFlip = null;
+      largeReaderMode = false;
+      largeRenderToken++;
       renderedPages = new Set();
       renderingPages = new Set();
+      bookMask.classList.remove("large-reader");
+      bookEl.classList.remove("large-reader");
       bookEl.innerHTML = "";
     }
 
@@ -746,6 +1014,7 @@
       setButtonsDisabled(true);
       currentPdfSource = source;
       statusEl.textContent = "Loading PDF...";
+      showLoading("Loading PDF...", "Connecting to the document");
       destroyCurrentBook();
       totalPages = 0;
 
@@ -754,11 +1023,22 @@
         console.log('Loading PDF from path:', pdfPath);
 
         // Let PDF.js stream/range-load remote files instead of downloading the whole PDF first.
-        pdfDoc = await pdfjsLib.getDocument({
+        activeLoadingTask = pdfjsLib.getDocument({
           url: pdfPath,
           withCredentials: false,
           rangeChunkSize: 1024 * 1024
-        }).promise;
+        });
+
+        activeLoadingTask.onProgress = ({ loaded, total }) => {
+          if (total) {
+            const percent = (loaded / total) * 100;
+            setLoadingProgress(percent, `${formatBytes(loaded)} of ${formatBytes(total)} loaded`);
+          } else {
+            setLoadingProgress(15, `${formatBytes(loaded)} loaded`);
+          }
+        };
+
+        pdfDoc = await activeLoadingTask.promise;
         
         console.log('PDF parsed successfully, pages:', pdfDoc.numPages);
         totalPages = pdfDoc.numPages;
@@ -771,12 +1051,22 @@
         const firstViewport = firstPage.getViewport({ scale: 1 });
         pageAspectRatio = firstViewport.width / firstViewport.height;
 
-        await buildFlipbook(1);
+        const largeMode = shouldUseLargeReader();
+        setLoadingProgress(100, largeMode ? "Opening first pages" : "Preparing page flip view");
+
+        if (largeMode) {
+          await buildLargeReader(1);
+        } else {
+          await buildFlipbook(1);
+        }
+
+        hideLoading();
         showMessage("PDF loaded successfully.");
       } catch (error) {
         console.error('PDF loading error:', error);
+        hideLoading();
 
-        if (error.shouldOpenFallback && fallbackPdfUrl) {
+        if ((error.shouldOpenFallback || extractDriveFileId(source)) && fallbackPdfUrl) {
           statusEl.textContent = "Opening Google Drive...";
           showMessage("Opening the public Google Drive version.");
           window.location.href = fallbackPdfUrl;
@@ -789,14 +1079,23 @@
           true
         );
       } finally {
+        activeLoadingTask = null;
         setButtonsDisabled(false);
       }
     }
 
     function goToPage(pageNumber) {
-      if (!pageFlip || !totalPages) return;
+      if (!totalPages) return;
       unlockAudio();
       const target = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+
+      if (largeReaderMode) {
+        renderLargeReader(target);
+        playFlipSound();
+        return;
+      }
+
+      if (!pageFlip) return;
       pageFlip.flip(target - 1);
       renderAround(target);
       playFlipSound();
@@ -805,15 +1104,23 @@
     firstBtn.addEventListener("click", () => goToPage(1));
 
     prevBtn.addEventListener("click", () => {
-      if (!pageFlip) return;
+      if (!pageFlip && !largeReaderMode) return;
       unlockAudio();
+      if (largeReaderMode) {
+        turnLargeReader(-1);
+        return;
+      }
       pageFlip.flipPrev();
       setTimeout(() => renderAround(getCurrentPageNumber()), 260);
     });
 
     nextBtn.addEventListener("click", () => {
-      if (!pageFlip) return;
+      if (!pageFlip && !largeReaderMode) return;
       unlockAudio();
+      if (largeReaderMode) {
+        turnLargeReader(1);
+        return;
+      }
       pageFlip.flipNext();
       setTimeout(() => renderAround(getCurrentPageNumber()), 260);
     });
@@ -829,6 +1136,10 @@
 
     zoomSelect.addEventListener("change", () => {
       zoom = Number(zoomSelect.value);
+      if (largeReaderMode) {
+        renderLargeReader(largeReaderCurrentPage);
+        return;
+      }
       applyBookSize();
     });
 
@@ -860,16 +1171,24 @@
 
 
     document.addEventListener("keydown", event => {
-      if (!pageFlip) return;
+      if (!pageFlip && !largeReaderMode) return;
 
       if (event.key === "ArrowLeft") {
         unlockAudio();
+        if (largeReaderMode) {
+          turnLargeReader(-1);
+          return;
+        }
         pageFlip.flipPrev();
         setTimeout(() => renderAround(getCurrentPageNumber()), 260);
       }
 
       if (event.key === "ArrowRight") {
         unlockAudio();
+        if (largeReaderMode) {
+          turnLargeReader(1);
+          return;
+        }
         pageFlip.flipNext();
         setTimeout(() => renderAround(getCurrentPageNumber()), 260);
       }
@@ -878,8 +1197,12 @@
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(async () => {
-        if (!pdfDoc || !pageFlip) return;
+        if (!pdfDoc || (!pageFlip && !largeReaderMode)) return;
         const current = getCurrentPageNumber();
+        if (largeReaderMode) {
+          await renderLargeReader(current);
+          return;
+        }
         await buildFlipbook(current);
       }, 180);
     });
