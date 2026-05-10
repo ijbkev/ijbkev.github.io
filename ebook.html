@@ -450,6 +450,7 @@
     const LARGE_READER_PAGE_LIMIT = Number(urlParams.get("largeLimit")) || 180;
     const INITIAL_FLIPBOOK_PAGES = Number(urlParams.get("initialPages")) || 32;
     const FLIPBOOK_PAGE_BATCH = Number(urlParams.get("pageBatch")) || 32;
+    const DEFAULT_DRIVE_PDF_SIZE_BYTES = 345 * 1024 * 1024;
     
     console.log('PDF Flipbook loaded');
     console.log('URL params:', window.location.search);
@@ -525,6 +526,15 @@
     function formatBytes(bytes) {
       if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function getEstimatedPdfSize(source) {
+      const explicitSizeMb = Number(urlParams.get("sizeMb"));
+      if (Number.isFinite(explicitSizeMb) && explicitSizeMb > 0) {
+        return explicitSizeMb * 1024 * 1024;
+      }
+
+      return extractDriveFileId(source) ? DEFAULT_DRIVE_PDF_SIZE_BYTES : 0;
     }
 
     function showLoading(title, detail = "Preparing the PDF") {
@@ -1029,12 +1039,17 @@
           rangeChunkSize: 1024 * 1024
         });
 
+        const estimatedPdfSize = getEstimatedPdfSize(source);
+
         activeLoadingTask.onProgress = ({ loaded, total }) => {
-          if (total) {
-            const percent = (loaded / total) * 100;
-            setLoadingProgress(percent, `${formatBytes(loaded)} of ${formatBytes(total)} loaded`);
+          const knownTotal = total || estimatedPdfSize;
+
+          if (knownTotal) {
+            const percent = Math.min((loaded / knownTotal) * 100, 99);
+            const totalLabel = total ? formatBytes(total) : `about ${formatBytes(knownTotal)}`;
+            setLoadingProgress(percent, `${formatBytes(loaded)} of ${totalLabel} loaded`);
           } else {
-            setLoadingProgress(15, `${formatBytes(loaded)} loaded`);
+            setLoadingProgress(8, `${formatBytes(loaded)} loaded`);
           }
         };
 
