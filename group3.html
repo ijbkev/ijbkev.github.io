@@ -514,8 +514,8 @@
       flex: 1;
       min-height: 0;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: stretch;
+      justify-content: stretch;
       overflow: hidden;
       background: #00121c;
     }
@@ -525,7 +525,9 @@
       height: 100%;
       border: 0;
       background: white;
-      flex-shrink: 0;
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
     }
 
     .modal-content img,

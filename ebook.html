@@ -262,10 +262,17 @@
       text-align: center;
       display: none;
       z-index: 60;
+      font-weight: 600;
     }
 
     .message.show {
       display: block;
+      animation: pulse 0.6s ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
 
     .message.error {
