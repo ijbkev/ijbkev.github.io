@@ -51,6 +51,7 @@
           const flipbookUrl = getFlipbookUrl(pdfPath);
           link.setAttribute('href', flipbookUrl);
           link.setAttribute('data-flipbook-intercepted', 'true');
+          link.setAttribute('target', '_self'); // Ensure it navigates in same tab
           count++;
           console.log('PDF Interceptor: Changed', href, '→', flipbookUrl);
         }
@@ -80,51 +81,61 @@
     }
   }, true); // Use capture phase
   
-  // Run on page load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', interceptPdfLinks);
-  } else {
+  // Wait for DOM to be ready, then intercept links
+  function setupInterceptor() {
     interceptPdfLinks();
-  }
-  
-  // Watch for dynamically added links
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.addedNodes.length) {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) { // Element node
-            if (node.tagName === 'A') {
-              const href = node.getAttribute('href');
-              if (href && href.toLowerCase().includes('.pdf')) {
-                const pdfPath = getPdfPath(href);
-                if (pdfPath) {
-                  const flipbookUrl = getFlipbookUrl(pdfPath);
-                  node.setAttribute('href', flipbookUrl);
-                  console.log('PDF Interceptor: Intercepted dynamic link', href);
+    
+    // Watch for dynamically added links
+    if (document.body) {
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.addedNodes.length) {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) { // Element node
+                if (node.tagName === 'A') {
+                  const href = node.getAttribute('href');
+                  if (href && href.toLowerCase().includes('.pdf')) {
+                    const pdfPath = getPdfPath(href);
+                    if (pdfPath) {
+                      const flipbookUrl = getFlipbookUrl(pdfPath);
+                      node.setAttribute('href', flipbookUrl);
+                      console.log('PDF Interceptor: Intercepted dynamic link', href);
+                    }
+                  }
                 }
-              }
-            }
-            // Also check children
-            node.querySelectorAll('a[href*=".pdf"], a[href*=".PDF"]').forEach(link => {
-              const href = link.getAttribute('href');
-              if (href) {
-                const pdfPath = getPdfPath(href);
-                if (pdfPath) {
-                  const flipbookUrl = getFlipbookUrl(pdfPath);
-                  link.setAttribute('href', flipbookUrl);
+                // Also check children
+                if (node.querySelectorAll) {
+                  node.querySelectorAll('a[href*=".pdf"], a[href*=".PDF"]').forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href) {
+                      const pdfPath = getPdfPath(href);
+                      if (pdfPath) {
+                        const flipbookUrl = getFlipbookUrl(pdfPath);
+                        link.setAttribute('href', flipbookUrl);
+                      }
+                    }
+                  });
                 }
               }
             });
           }
         });
-      }
-    });
-  });
+      });
+      
+      observer.observe(document.body, { 
+        childList: true, 
+        subtree: true 
+      });
+      console.log('PDF Interceptor: MutationObserver enabled');
+    }
+  }
   
-  observer.observe(document.body, { 
-    childList: true, 
-    subtree: true 
-  });
+  // Run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupInterceptor);
+  } else {
+    setupInterceptor();
+  }
   
   console.log('PDF Interceptor: Ready');
 })();
