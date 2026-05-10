@@ -75,4 +75,4 @@ ebook.html?drive=1cwOC8g5UUEvrSmc2zo4HmHlJWT90QBpw&large=1
 
 If `DRIVE_API_KEY` is empty or the API request is blocked, the page falls back to the public Google Drive preview link.
 
-The `large=1` option uses a lightweight reader for very large PDFs. It renders only the current page/spread and nearby pages instead of creating all pages up front, which keeps the 800-page collective booklet responsive.
+The `large=1` option uses progressive flipbook loading for very large PDFs. It opens the first pages quickly with the same page-flip effect, then keeps adding the rest of the booklet in batches in the background.

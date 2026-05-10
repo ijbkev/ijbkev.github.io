@@ -171,23 +171,10 @@
       background: transparent;
     }
 
-    .book-mask.large-reader {
-      clip-path: none;
-      contain: layout paint;
-    }
-
     #book {
       position: relative;
       overflow: hidden;
       background: transparent;
-    }
-
-    #book.large-reader {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      overflow: visible;
     }
 
     /* Keep PageFlip internal layers clipped, but do not rewrite their positions. */
@@ -230,39 +217,6 @@
       height: auto;
       object-fit: contain;
       background: white;
-    }
-
-    .large-page {
-      position: relative;
-      width: var(--page-width);
-      height: var(--page-height);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #333;
-      background: var(--paper);
-      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
-    }
-
-    .large-page canvas {
-      display: block;
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
-      background: white;
-    }
-
-    .large-page::after {
-      content: attr(data-page-label);
-      position: absolute;
-      right: 12px;
-      bottom: 9px;
-      color: rgba(0, 0, 0, 0.35);
-      font-size: 11px;
-      pointer-events: none;
-      z-index: 6;
     }
 
     .placeholder {
@@ -422,10 +376,6 @@
       .viewer {
         padding: 10px;
       }
-
-      #book.large-reader {
-        flex-direction: column;
-      }
     }
   </style>
 </head>
@@ -498,6 +448,8 @@
     const forceLargeReader = urlParams.get("large") === "1" || Boolean(driveFileId);
     const largeReaderDisabled = urlParams.get("large") === "0";
     const LARGE_READER_PAGE_LIMIT = Number(urlParams.get("largeLimit")) || 180;
+    const INITIAL_FLIPBOOK_PAGES = Number(urlParams.get("initialPages")) || 32;
+    const FLIPBOOK_PAGE_BATCH = Number(urlParams.get("pageBatch")) || 32;
     
     console.log('PDF Flipbook loaded');
     console.log('URL params:', window.location.search);
@@ -517,7 +469,7 @@
     const viewer = document.getElementById("viewer");
     const bookPositioner = document.getElementById("bookPositioner");
     const bookMask = document.getElementById("bookMask");
-    const bookEl = document.getElementById("book");
+    let bookEl = document.getElementById("book");
     const statusEl = document.getElementById("status");
     const pageInput = document.getElementById("pageInput");
     const messageEl = document.getElementById("message");
@@ -549,10 +501,11 @@
     let audioContext = null;
     let currentPdfSource = DEFAULT_PDF_FILE;
     let resizeTimer = null;
-    let largeReaderMode = false;
-    let largeReaderCurrentPage = 1;
-    let largeRenderToken = 0;
     let activeLoadingTask = null;
+    let progressiveFlipMode = false;
+    let loadedFlipPages = 0;
+    let progressiveLoadTimer = null;
+    let progressiveLoading = false;
 
     function showMessage(text, isError = false) {
       messageEl.textContent = text;
@@ -692,7 +645,6 @@
     }
 
     function getCurrentPageNumber() {
-      if (largeReaderMode) return largeReaderCurrentPage;
       if (!pageFlip) return 1;
       return pageFlip.getCurrentPageIndex() + 1;
     }
@@ -837,92 +789,6 @@
       return forceLargeReader || totalPages > LARGE_READER_PAGE_LIMIT;
     }
 
-    function getLargeReaderPages(pageNumber) {
-      const current = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
-
-      if (isMobilePortrait() || current === 1) return [current];
-
-      const leftPage = current % 2 === 0 ? current : current - 1;
-      const pages = [leftPage];
-
-      if (leftPage + 1 <= totalPages) {
-        pages.push(leftPage + 1);
-      }
-
-      return pages;
-    }
-
-    async function renderLargeReader(pageNumber) {
-      if (!pdfDoc) return;
-
-      const token = ++largeRenderToken;
-      const current = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
-      largeReaderCurrentPage = current;
-      updateStatus(current);
-
-      const size = applyBookSize();
-      bookEl.style.setProperty("--page-width", `${size.pageWidth}px`);
-      bookEl.style.setProperty("--page-height", `${size.pageHeight}px`);
-      bookEl.innerHTML = "";
-
-      const pages = getLargeReaderPages(current);
-      const pageElements = pages.map(pageNumberToRender => {
-        const pageDiv = document.createElement("div");
-        pageDiv.className = "large-page";
-        pageDiv.dataset.pageNumber = pageNumberToRender;
-        pageDiv.dataset.pageLabel = pageNumberToRender;
-        pageDiv.innerHTML = `
-          <div class="placeholder">
-            <div class="spinner"></div>
-            <div>Rendering page ${pageNumberToRender}</div>
-          </div>
-        `;
-        bookEl.appendChild(pageDiv);
-        return { pageNumberToRender, pageDiv };
-      });
-
-      await Promise.all(pageElements.map(async ({ pageNumberToRender, pageDiv }) => {
-        try {
-          await paintPageInto(pageNumberToRender, pageDiv);
-        } catch (error) {
-          console.error(error);
-          pageDiv.innerHTML = makePlaceholder(pageNumberToRender, "Could not render this page");
-        }
-      }));
-
-      if (token !== largeRenderToken) return;
-
-      const preloadPages = [
-        current - 2,
-        current - 1,
-        current + 1,
-        current + 2
-      ].filter(pageNumberToPreload => pageNumberToPreload >= 1 && pageNumberToPreload <= totalPages);
-
-      preloadPages.forEach(pageNumberToPreload => {
-        pdfDoc.getPage(pageNumberToPreload).catch(() => {});
-      });
-    }
-
-    async function buildLargeReader(startPage = 1) {
-      destroyCurrentBook();
-      largeReaderMode = true;
-      bookMask.classList.add("large-reader");
-      bookEl.classList.add("large-reader");
-      await renderLargeReader(startPage);
-    }
-
-    function getLargeReaderStep(direction) {
-      if (isMobilePortrait()) return direction;
-      if (direction > 0) return largeReaderCurrentPage === 1 ? 1 : 2;
-      return largeReaderCurrentPage <= 2 ? -1 : -2;
-    }
-
-    function turnLargeReader(direction) {
-      const step = getLargeReaderStep(direction);
-      goToPage(largeReaderCurrentPage + step);
-    }
-
     function destroyCurrentBook() {
       if (pageFlip) {
         try {
@@ -933,44 +799,42 @@
       }
 
       pageFlip = null;
-      largeReaderMode = false;
-      largeRenderToken++;
+      progressiveFlipMode = false;
+      loadedFlipPages = 0;
+      progressiveLoading = false;
+      clearTimeout(progressiveLoadTimer);
       renderedPages = new Set();
       renderingPages = new Set();
-      bookMask.classList.remove("large-reader");
-      bookEl.classList.remove("large-reader");
+      ensureBookElement();
       bookEl.innerHTML = "";
     }
 
-    function createPagePlaceholders() {
-      const fragment = document.createDocumentFragment();
-
-      for (let i = 1; i <= totalPages; i++) {
-        const pageDiv = document.createElement("div");
-        pageDiv.className = "page";
-        pageDiv.dataset.pageNumber = i;
-        pageDiv.dataset.pageLabel = i;
-        pageDiv.innerHTML = makePlaceholder(i);
-        fragment.appendChild(pageDiv);
-      }
-
-      bookEl.appendChild(fragment);
+    function createPageElement(pageNumber) {
+      const pageDiv = document.createElement("div");
+      pageDiv.className = "page";
+      pageDiv.dataset.pageNumber = pageNumber;
+      pageDiv.dataset.pageLabel = pageNumber;
+      pageDiv.innerHTML = makePlaceholder(pageNumber);
+      return pageDiv;
     }
 
-    async function buildFlipbook(startPage = 1) {
-      destroyCurrentBook();
-      const size = applyBookSize();
-      createPagePlaceholders();
-
-      // Set explicit dimensions on page elements for PageFlip
+    function setPageElementSizes(size) {
       document.querySelectorAll("#book .page").forEach(pageEl => {
         pageEl.style.width = size.pageWidth + "px";
         pageEl.style.height = size.pageHeight + "px";
       });
+    }
 
-      // Force layout calculation before PageFlip initialization
-      await new Promise(resolve => requestAnimationFrame(resolve));
+    function ensureBookElement() {
+      if (bookEl && bookEl.isConnected) return;
+      bookEl = document.createElement("div");
+      bookEl.id = "book";
+      bookMask.innerHTML = "";
+      bookMask.appendChild(bookEl);
+    }
 
+    function createPageFlip(size) {
+      ensureBookElement();
       pageFlip = new St.PageFlip(bookEl, {
         width: size.pageWidth,
         height: size.pageHeight,
@@ -990,6 +854,38 @@
         disableFlipByClick: false
       });
 
+      pageFlip.on("flip", event => {
+        playFlipSound();
+        renderAround(event.data + 1);
+      });
+
+      return pageFlip;
+    }
+
+    function createPagePlaceholders(count = totalPages) {
+      const fragment = document.createDocumentFragment();
+      const safeCount = Math.min(Math.max(count, 1), totalPages);
+
+      for (let i = 1; i <= safeCount; i++) {
+        fragment.appendChild(createPageElement(i));
+      }
+
+      bookEl.appendChild(fragment);
+      loadedFlipPages = safeCount;
+    }
+
+    async function buildFlipbook(startPage = 1, options = {}) {
+      destroyCurrentBook();
+      const size = applyBookSize();
+      progressiveFlipMode = Boolean(options.progressive);
+      createPagePlaceholders(progressiveFlipMode ? INITIAL_FLIPBOOK_PAGES : totalPages);
+      setPageElementSizes(size);
+
+      // Force layout calculation before PageFlip initialization
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      createPageFlip(size);
+
       try {
         pageFlip.loadFromHTML(document.querySelectorAll("#book .page"));
       } catch (error) {
@@ -998,16 +894,120 @@
         return;
       }
 
-      pageFlip.on("flip", event => {
-        playFlipSound();
-        renderAround(event.data + 1);
-      });
-
       const safeStart = Math.min(Math.max(startPage, 1), totalPages);
       if (safeStart > 1) {
         pageFlip.turnToPage(safeStart - 1);
       }
       renderAround(safeStart);
+
+      if (progressiveFlipMode) {
+        scheduleProgressivePageLoad();
+      }
+    }
+
+    async function updatePageFlipFromCurrentHtml(currentPage = getCurrentPageNumber()) {
+      if (!pageFlip) return;
+
+      if (progressiveFlipMode) {
+        await rebuildPageFlipFromLoadedPages(currentPage);
+        return;
+      }
+
+      const pages = document.querySelectorAll("#book .page");
+
+      if (typeof pageFlip.updateFromHtml === "function") {
+        pageFlip.updateFromHtml(pages);
+      } else if (typeof pageFlip.updateFromHTML === "function") {
+        pageFlip.updateFromHTML(pages);
+      } else {
+        await rebuildPageFlipFromLoadedPages(currentPage);
+        return;
+      }
+
+      const safePage = Math.min(Math.max(currentPage, 1), loadedFlipPages);
+      if (safePage > 1) {
+        try {
+          pageFlip.turnToPage(safePage - 1);
+        } catch (error) {
+          console.warn("Could not restore flipbook page after update", error);
+        }
+      }
+
+      renderAround(safePage);
+    }
+
+    async function rebuildPageFlipFromLoadedPages(currentPage = 1) {
+      const size = applyBookSize();
+
+      if (pageFlip) {
+        try {
+          pageFlip.destroy();
+        } catch (error) {
+          console.warn("Could not rebuild flipbook instance", error);
+        }
+      }
+
+      pageFlip = null;
+      ensureBookElement();
+      bookEl.innerHTML = "";
+      const fragment = document.createDocumentFragment();
+      for (let pageNumber = 1; pageNumber <= loadedFlipPages; pageNumber++) {
+        fragment.appendChild(createPageElement(pageNumber));
+      }
+      bookEl.appendChild(fragment);
+      setPageElementSizes(size);
+      createPageFlip(size);
+      pageFlip.loadFromHTML(document.querySelectorAll("#book .page"));
+
+      const safePage = Math.min(Math.max(Number(currentPage) || 1, 1), loadedFlipPages);
+      if (safePage > 1) {
+        pageFlip.turnToPage(safePage - 1);
+      }
+      renderAround(safePage);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+
+    async function appendFlipbookPages(count = FLIPBOOK_PAGE_BATCH) {
+      if (!progressiveFlipMode || progressiveLoading || loadedFlipPages >= totalPages) return;
+      progressiveLoading = true;
+
+      const currentPage = getCurrentPageNumber();
+      const start = loadedFlipPages + 1;
+      const end = Math.min(loadedFlipPages + count, totalPages);
+      const size = applyBookSize();
+      const fragment = document.createDocumentFragment();
+
+      for (let pageNumber = start; pageNumber <= end; pageNumber++) {
+        const pageEl = createPageElement(pageNumber);
+        pageEl.style.width = size.pageWidth + "px";
+        pageEl.style.height = size.pageHeight + "px";
+        fragment.appendChild(pageEl);
+      }
+
+      bookEl.appendChild(fragment);
+      loadedFlipPages = end;
+      await updatePageFlipFromCurrentHtml(currentPage);
+      statusEl.textContent = `Page ${Math.min(currentPage, totalPages)} / ${totalPages} · loading ${loadedFlipPages}/${totalPages}`;
+      progressiveLoading = false;
+      scheduleProgressivePageLoad();
+    }
+
+    function scheduleProgressivePageLoad() {
+      clearTimeout(progressiveLoadTimer);
+      if (!progressiveFlipMode || loadedFlipPages >= totalPages) return;
+      progressiveLoadTimer = setTimeout(() => {
+        appendFlipbookPages();
+      }, loadedFlipPages <= INITIAL_FLIPBOOK_PAGES ? 350 : 1100);
+    }
+
+    async function ensureFlipbookPageLoaded(pageNumber) {
+      if (!progressiveFlipMode) return;
+      const target = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+
+      while (loadedFlipPages < target) {
+        await appendFlipbookPages(Math.max(FLIPBOOK_PAGE_BATCH, target - loadedFlipPages));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+      }
     }
 
     async function loadPdf(source) {
@@ -1055,7 +1055,7 @@
         setLoadingProgress(100, largeMode ? "Opening first pages" : "Preparing page flip view");
 
         if (largeMode) {
-          await buildLargeReader(1);
+          await buildFlipbook(1, { progressive: true });
         } else {
           await buildFlipbook(1);
         }
@@ -1084,19 +1084,18 @@
       }
     }
 
-    function goToPage(pageNumber) {
+    async function goToPage(pageNumber) {
       if (!totalPages) return;
       unlockAudio();
       const target = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
 
-      if (largeReaderMode) {
-        renderLargeReader(target);
-        playFlipSound();
-        return;
-      }
-
       if (!pageFlip) return;
-      pageFlip.flip(target - 1);
+      await ensureFlipbookPageLoaded(target);
+      if (progressiveFlipMode && Math.abs(target - getCurrentPageNumber()) > 2) {
+        pageFlip.turnToPage(target - 1);
+      } else {
+        pageFlip.flip(target - 1);
+      }
       renderAround(target);
       playFlipSound();
     }
@@ -1104,22 +1103,17 @@
     firstBtn.addEventListener("click", () => goToPage(1));
 
     prevBtn.addEventListener("click", () => {
-      if (!pageFlip && !largeReaderMode) return;
+      if (!pageFlip) return;
       unlockAudio();
-      if (largeReaderMode) {
-        turnLargeReader(-1);
-        return;
-      }
       pageFlip.flipPrev();
       setTimeout(() => renderAround(getCurrentPageNumber()), 260);
     });
 
-    nextBtn.addEventListener("click", () => {
-      if (!pageFlip && !largeReaderMode) return;
+    nextBtn.addEventListener("click", async () => {
+      if (!pageFlip) return;
       unlockAudio();
-      if (largeReaderMode) {
-        turnLargeReader(1);
-        return;
+      if (progressiveFlipMode) {
+        await ensureFlipbookPageLoaded(getCurrentPageNumber() + 2);
       }
       pageFlip.flipNext();
       setTimeout(() => renderAround(getCurrentPageNumber()), 260);
@@ -1136,10 +1130,6 @@
 
     zoomSelect.addEventListener("change", () => {
       zoom = Number(zoomSelect.value);
-      if (largeReaderMode) {
-        renderLargeReader(largeReaderCurrentPage);
-        return;
-      }
       applyBookSize();
     });
 
@@ -1171,22 +1161,21 @@
 
 
     document.addEventListener("keydown", event => {
-      if (!pageFlip && !largeReaderMode) return;
+      if (!pageFlip) return;
 
       if (event.key === "ArrowLeft") {
         unlockAudio();
-        if (largeReaderMode) {
-          turnLargeReader(-1);
-          return;
-        }
         pageFlip.flipPrev();
         setTimeout(() => renderAround(getCurrentPageNumber()), 260);
       }
 
       if (event.key === "ArrowRight") {
         unlockAudio();
-        if (largeReaderMode) {
-          turnLargeReader(1);
+        if (progressiveFlipMode) {
+          ensureFlipbookPageLoaded(getCurrentPageNumber() + 2).then(() => {
+            pageFlip.flipNext();
+            setTimeout(() => renderAround(getCurrentPageNumber()), 260);
+          });
           return;
         }
         pageFlip.flipNext();
@@ -1197,13 +1186,10 @@
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(async () => {
-        if (!pdfDoc || (!pageFlip && !largeReaderMode)) return;
+        if (!pdfDoc || !pageFlip) return;
         const current = getCurrentPageNumber();
-        if (largeReaderMode) {
-          await renderLargeReader(current);
-          return;
-        }
-        await buildFlipbook(current);
+        const wasProgressive = progressiveFlipMode;
+        await buildFlipbook(current, { progressive: wasProgressive });
       }, 180);
     });
 
