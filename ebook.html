@@ -50,15 +50,7 @@
       overflow: hidden;
     }
 
-    /* Fullscreen mode styling */
-    .viewer:fullscreen {
-      width: 100vw;
-      height: 100vh;
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 9999;
-    }
+
 
     .toolbar {
       display: flex;
@@ -340,7 +332,6 @@
 
       <div class="toolbar-group">
         <button id="soundBtn" title="Sound on/off">Sound: On</button>
-        <button id="fullscreenBtn" class="primary">Fullscreen</button>
       </div>
     </div>
 
@@ -390,7 +381,6 @@
     const zoomOutBtn = document.getElementById("zoomOutBtn");
     const zoomInBtn = document.getElementById("zoomInBtn");
     const zoomSelect = document.getElementById("zoomSelect");
-    const fullscreenBtn = document.getElementById("fullscreenBtn");
     const soundBtn = document.getElementById("soundBtn");
 
     let pdfDoc = null;
@@ -416,7 +406,7 @@
     }
 
     function setButtonsDisabled(disabled) {
-      [firstBtn, prevBtn, nextBtn, lastBtn, goBtn, zoomOutBtn, zoomInBtn, fullscreenBtn, soundBtn].forEach(button => {
+      [firstBtn, prevBtn, nextBtn, lastBtn, goBtn, zoomOutBtn, zoomInBtn, soundBtn].forEach(button => {
         button.disabled = disabled;
       });
     }
@@ -818,27 +808,7 @@
       if (soundEnabled) playFlipSound();
     });
 
-    fullscreenBtn.addEventListener("click", async () => {
-      try {
-        if (!document.fullscreenElement) {
-          // Request fullscreen on the viewer element, not document
-          await viewer.requestFullscreen().catch(err => {
-            console.error("Fullscreen request failed:", err);
-            showMessage("Fullscreen is not available.", true);
-          });
-          fullscreenBtn.textContent = "Exit Fullscreen";
-        } else {
-          await document.exitFullscreen();
-          fullscreenBtn.textContent = "Fullscreen";
-        }
-      } catch (error) {
-        showMessage("Fullscreen error: " + error.message, true);
-      }
-    });
 
-    document.addEventListener("fullscreenchange", () => {
-      fullscreenBtn.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
-    });
 
 
 
