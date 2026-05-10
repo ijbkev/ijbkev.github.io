@@ -727,24 +727,39 @@
         // Always fetch as ArrayBuffer first - this is the most reliable method
         console.log('Fetching PDF...');
         const response = await fetch(pdfPath, {
-          headers: { 'Cache-Control': 'no-cache' }
+          headers: { 
+            'Cache-Control': 'no-cache',
+            'Accept-Encoding': 'identity' // Request uncompressed
+          }
         });
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('Fetched PDF successfully, size:', arrayBuffer.byteLength, 'bytes');
+        // Get the response as blob first to check content-type
+        const blob = await response.blob();
+        console.log('Fetched blob, type:', blob.type, 'size:', blob.size, 'bytes');
+        
+        // Convert blob to ArrayBuffer
+        const arrayBuffer = await blob.arrayBuffer();
+        console.log('Converted to ArrayBuffer');
         
         // Convert to Uint8Array for PDF.js
         const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Verify PDF header
+        const header = new TextDecoder().decode(uint8Array.slice(0, 4));
+        if (!header.startsWith('%PDF')) {
+          console.warn('Warning: PDF header not found, first 20 bytes:', new TextDecoder().decode(uint8Array.slice(0, 20)));
+        }
         
         // Load PDF from binary data
         pdfDoc = await pdfjsLib.getDocument({ 
           data: uint8Array,
           cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-          cMapPacked: true
+          cMapPacked: true,
+          rangeChunkSize: 65536 // Increase chunk size for stability
         }).promise;
         
         console.log('PDF parsed successfully');
