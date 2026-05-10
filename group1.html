@@ -514,8 +514,9 @@
     .modal-content {
       flex: 1;
       min-height: 0;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
       background: #00160f;
     }
@@ -525,6 +526,7 @@
       height: 100%;
       border: 0;
       background: white;
+      flex-shrink: 0;
     }
 
     .modal-content img,
