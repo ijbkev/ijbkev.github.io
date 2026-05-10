@@ -61,7 +61,6 @@
             setTimeout(() => {
               const iframe = document.querySelector('iframe');
               if (iframe) {
-                iframe.setAttribute('allowfullscreen', 'true');
                 iframe.setAttribute('allow', 'fullscreen');
                 console.log('PDF Interceptor: Added fullscreen permissions to iframe');
                 

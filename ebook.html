@@ -652,6 +652,9 @@
       const size = applyBookSize();
       createPagePlaceholders();
 
+      // Force layout calculation before PageFlip initialization
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
       pageFlip = new St.PageFlip(bookEl, {
         width: size.pageWidth,
         height: size.pageHeight,
@@ -671,7 +674,13 @@
         disableFlipByClick: false
       });
 
-      pageFlip.loadFromHTML(document.querySelectorAll("#book .page"));
+      try {
+        pageFlip.loadFromHTML(document.querySelectorAll("#book .page"));
+      } catch (error) {
+        console.error("Error loading pages into PageFlip:", error);
+        showMessage("Error initializing flipbook: " + error.message, true);
+        return;
+      }
 
       pageFlip.on("flip", event => {
         playFlipSound();
