@@ -37,6 +37,35 @@
     return `${baseUrl}/ebook.html?pdf=${encodeURIComponent(pdfPath)}`;
   }
   
+  // Intercept the global openModal function if it exists
+  function interceptOpenModal() {
+    // Wait a bit for the page's openModal to be defined
+    if (typeof window.openModal === 'function') {
+      const originalOpenModal = window.openModal;
+      window.openModal = function(type, item) {
+        console.log('PDF Interceptor: Intercepted openModal call, type:', type);
+        
+        // If it's a PDF, redirect to flipbook instead
+        if (type === 'pdf' && item && item.file) {
+          const pdfPath = getPdfPath(item.file);
+          if (pdfPath) {
+            const flipbookUrl = getFlipbookUrl(pdfPath);
+            console.log('PDF Interceptor: Redirecting PDF to flipbook:', flipbookUrl);
+            window.location.href = flipbookUrl;
+            return; // Don't call original function
+          }
+        }
+        
+        // For non-PDF items, call the original function
+        return originalOpenModal.call(this, type, item);
+      };
+      console.log('PDF Interceptor: openModal function intercepted');
+    } else {
+      // If openModal doesn't exist yet, try again later
+      setTimeout(interceptOpenModal, 100);
+    }
+  }
+  
   // Intercept all links on page load and update their href
   function interceptPdfLinks() {
     let count = 0;
@@ -53,7 +82,7 @@
           link.setAttribute('data-flipbook-intercepted', 'true');
           link.setAttribute('target', '_self'); // Ensure it navigates in same tab
           count++;
-          console.log('PDF Interceptor: Changed', href, '→', flipbookUrl);
+          console.log('PDF Interceptor: Changed link', href, '→', flipbookUrl);
         }
       }
     });
@@ -62,7 +91,7 @@
     }
   }
   
-  // Also intercept clicks directly as backup
+  // Also intercept clicks directly as backup for dynamic content
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[href*=".pdf"], a[href*=".PDF"]');
     if (!link) return;
@@ -84,6 +113,7 @@
   // Wait for DOM to be ready, then intercept links
   function setupInterceptor() {
     interceptPdfLinks();
+    interceptOpenModal();
     
     // Watch for dynamically added links
     if (document.body) {
