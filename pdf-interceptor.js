@@ -45,13 +45,14 @@
       window.openModal = function(type, item) {
         console.log('PDF Interceptor: Intercepted openModal call, type:', type);
         
-        // If it's a PDF, redirect to flipbook instead
+        // If it's a PDF, open in flipbook popup instead
         if (type === 'pdf' && item && item.file) {
           const pdfPath = getPdfPath(item.file);
           if (pdfPath) {
             const flipbookUrl = getFlipbookUrl(pdfPath);
-            console.log('PDF Interceptor: Redirecting PDF to flipbook:', flipbookUrl);
-            window.location.href = flipbookUrl;
+            console.log('PDF Interceptor: Opening PDF in popup:', flipbookUrl);
+            // Open in a popup window with reasonable dimensions
+            window.open(flipbookUrl, 'flipbook_' + Math.random(), 'width=1400,height=900,scrollbars=yes,resizable=yes');
             return; // Don't call original function
           }
         }
