@@ -4,6 +4,11 @@
 (function() {
   'use strict';
   
+  console.log('PDF Interceptor: Loading');
+  
+  // Get the base URL for the flipbook
+  const baseUrl = window.location.origin;
+  
   // Function to convert PDF path to flipbook URL
   function getPdfPath(href) {
     let pdfPath = href;
@@ -11,9 +16,12 @@
     // Skip if already points to flipbook
     if (pdfPath.includes('ebook.html')) return null;
     
-    // Handle absolute URLs (skip them - only intercept relative/site PDFs)
+    // Skip if it's a full HTTP URL to another domain
     if (pdfPath.startsWith('http://') || pdfPath.startsWith('https://')) {
-      return null;
+      // Only process if it's our domain
+      if (!pdfPath.startsWith(baseUrl)) return null;
+      // Extract just the path part
+      pdfPath = new URL(pdfPath).pathname.substring(1);
     }
     
     // Handle relative paths
@@ -24,13 +32,14 @@
     return pdfPath;
   }
   
-  // Function to get flipbook URL
+  // Function to get absolute flipbook URL
   function getFlipbookUrl(pdfPath) {
-    return `ebook.html?pdf=${encodeURIComponent(pdfPath)}`;
+    return `${baseUrl}/ebook.html?pdf=${encodeURIComponent(pdfPath)}`;
   }
   
   // Intercept all links on page load and update their href
   function interceptPdfLinks() {
+    let count = 0;
     document.querySelectorAll('a').forEach(link => {
       const href = link.getAttribute('href');
       if (!href) return;
@@ -39,15 +48,20 @@
       if (href.toLowerCase().includes('.pdf')) {
         const pdfPath = getPdfPath(href);
         if (pdfPath) {
-          link.setAttribute('href', getFlipbookUrl(pdfPath));
+          const flipbookUrl = getFlipbookUrl(pdfPath);
+          link.setAttribute('href', flipbookUrl);
           link.setAttribute('data-flipbook-intercepted', 'true');
-          console.log('Intercepted PDF link:', href, '->', getFlipbookUrl(pdfPath));
+          count++;
+          console.log('PDF Interceptor: Changed', href, '→', flipbookUrl);
         }
       }
     });
+    if (count > 0) {
+      console.log(`PDF Interceptor: Found and intercepted ${count} PDF links`);
+    }
   }
   
-  // Also intercept clicks directly (in case href modification doesn't work)
+  // Also intercept clicks directly as backup
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[href*=".pdf"], a[href*=".PDF"]');
     if (!link) return;
@@ -59,12 +73,12 @@
         e.preventDefault();
         e.stopPropagation();
         const flipbookUrl = getFlipbookUrl(pdfPath);
-        console.log('Intercepted PDF click:', href, '->', flipbookUrl);
+        console.log('PDF Interceptor: Click intercepted, navigating to', flipbookUrl);
         window.location.href = flipbookUrl;
         return false;
       }
     }
-  }, true); // Use capture phase to catch events before they bubble
+  }, true); // Use capture phase
   
   // Run on page load
   if (document.readyState === 'loading') {
@@ -77,7 +91,6 @@
   const observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       if (mutation.addedNodes.length) {
-        // Check newly added links
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === 1) { // Element node
             if (node.tagName === 'A') {
@@ -85,7 +98,9 @@
               if (href && href.toLowerCase().includes('.pdf')) {
                 const pdfPath = getPdfPath(href);
                 if (pdfPath) {
-                  node.setAttribute('href', getFlipbookUrl(pdfPath));
+                  const flipbookUrl = getFlipbookUrl(pdfPath);
+                  node.setAttribute('href', flipbookUrl);
+                  console.log('PDF Interceptor: Intercepted dynamic link', href);
                 }
               }
             }
@@ -95,7 +110,8 @@
               if (href) {
                 const pdfPath = getPdfPath(href);
                 if (pdfPath) {
-                  link.setAttribute('href', getFlipbookUrl(pdfPath));
+                  const flipbookUrl = getFlipbookUrl(pdfPath);
+                  link.setAttribute('href', flipbookUrl);
                 }
               }
             });
@@ -110,5 +126,5 @@
     subtree: true 
   });
   
-  console.log('PDF interceptor loaded - all PDF links will open in flipbook');
+  console.log('PDF Interceptor: Ready');
 })();
