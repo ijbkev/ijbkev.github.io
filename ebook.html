@@ -809,12 +809,10 @@
 
     document.addEventListener("fullscreenchange", () => {
       fullscreenBtn.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
-      // Force immediate resize and rebuild when entering/exiting fullscreen
+      // Trigger the existing resize handler which safely rebuilds the flipbook
       setTimeout(() => {
-        if (!pdfDoc || !pageFlip) return;
-        const current = getCurrentPageNumber();
-        buildFlipbook(current);
-      }, 50);
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
     });
 
 
