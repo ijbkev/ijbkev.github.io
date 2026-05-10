@@ -845,10 +845,12 @@
 
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(async () => {
+      resizeTimer = setTimeout(() => {
         if (!pdfDoc || !pageFlip) return;
-        const current = getCurrentPageNumber();
-        await buildFlipbook(current);
+        applyBookSize();
+        if (typeof pageFlip.update === "function") {
+          pageFlip.update();
+        }
       }, 180);
     });
 
