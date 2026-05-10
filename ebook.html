@@ -51,10 +51,13 @@
     }
 
     /* Fullscreen mode styling */
-    :fullscreen .app {
+    .viewer:fullscreen {
       width: 100vw;
       height: 100vh;
-      height: 100dvh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
     }
 
     .toolbar {
@@ -803,14 +806,18 @@
     fullscreenBtn.addEventListener("click", async () => {
       try {
         if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
+          // Request fullscreen on the viewer element, not document
+          await viewer.requestFullscreen().catch(err => {
+            console.error("Fullscreen request failed:", err);
+            showMessage("Fullscreen is not available.", true);
+          });
           fullscreenBtn.textContent = "Exit Fullscreen";
         } else {
           await document.exitFullscreen();
           fullscreenBtn.textContent = "Fullscreen";
         }
       } catch (error) {
-        showMessage("Fullscreen is not available in this browser.", true);
+        showMessage("Fullscreen error: " + error.message, true);
       }
     });
 
