@@ -51,17 +51,13 @@
     }
 
     /* Fullscreen mode styling */
-    .app:fullscreen {
+    .viewer:fullscreen {
       width: 100vw;
       height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(243, 201, 105, 0.12), transparent 34%),
-        linear-gradient(135deg, #0c0c0c, #191919);
-      overflow: hidden;
-    }
-
-    .app:fullscreen .toolbar {
-      z-index: 60;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
     }
 
     .toolbar {
@@ -378,7 +374,6 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-    const app = document.querySelector(".app");
     const viewer = document.getElementById("viewer");
     const bookPositioner = document.getElementById("bookPositioner");
     const bookMask = document.getElementById("bookMask");
@@ -811,8 +806,8 @@
     fullscreenBtn.addEventListener("click", async () => {
       try {
         if (!document.fullscreenElement) {
-          // Request fullscreen on the app so the toolbar stays visible
-          await app.requestFullscreen().catch(err => {
+          // Request fullscreen on the viewer element, not document
+          await viewer.requestFullscreen().catch(err => {
             console.error("Fullscreen request failed:", err);
             showMessage("Fullscreen is not available.", true);
           });
@@ -850,12 +845,10 @@
 
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
+      resizeTimer = setTimeout(async () => {
         if (!pdfDoc || !pageFlip) return;
-        applyBookSize();
-        if (typeof pageFlip.update === "function") {
-          pageFlip.update();
-        }
+        const current = getCurrentPageNumber();
+        await buildFlipbook(current);
       }, 180);
     });
 
