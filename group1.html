@@ -514,11 +514,9 @@
     .modal-content {
       flex: 1;
       min-height: 0;
-      display: flex;
-      align-items: stretch;
-      justify-content: stretch;
-      overflow: hidden;
       background: #00160f;
+      display: grid;
+      place-items: center;
     }
 
     .modal-content iframe {
@@ -526,9 +524,6 @@
       height: 100%;
       border: 0;
       background: white;
-      flex: 1;
-      min-height: 0;
-      min-width: 0;
     }
 
     .modal-content img,
