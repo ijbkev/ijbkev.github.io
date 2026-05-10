@@ -652,6 +652,12 @@
       const size = applyBookSize();
       createPagePlaceholders();
 
+      // Set explicit dimensions on page elements for PageFlip
+      document.querySelectorAll("#book .page").forEach(pageEl => {
+        pageEl.style.width = size.pageWidth + "px";
+        pageEl.style.height = size.pageHeight + "px";
+      });
+
       // Force layout calculation before PageFlip initialization
       await new Promise(resolve => requestAnimationFrame(resolve));
 
