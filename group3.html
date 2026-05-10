@@ -459,6 +459,10 @@
 
     .modal.open { display: flex; }
 
+    .modal.pdf-open {
+      padding: 8px;
+    }
+
     .modal-box {
       width: min(1160px, 96vw);
       height: min(860px, 92vh);
@@ -469,6 +473,12 @@
       background: white;
       border-radius: 20px;
       box-shadow: 0 28px 100px rgba(0,0,0,0.45);
+    }
+
+    .modal.pdf-open .modal-box {
+      width: 100%;
+      height: 94vh;
+      height: 94dvh;
     }
 
     .modal-head {
@@ -586,7 +596,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.95);
+      flex-direction: column;
+      gap: 14px;
+      color: white;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.78);
       z-index: 10;
       pointer-events: none;
       opacity: 1;
@@ -601,10 +615,16 @@
     .pdf-loading-spinner {
       width: 48px;
       height: 48px;
-      border: 4px solid #e7eef1;
-      border-top-color: #355b98;
+      border: 4px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #f3c969;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
+    }
+
+    .pdf-loading-text {
+      font-size: 17px;
+      font-weight: 850;
+      letter-spacing: 0.01em;
     }
 
     @keyframes spin {
@@ -636,6 +656,8 @@
       .stats { padding-inline: 16px; }
       .modal { padding: 10px; }
       .modal-box { width: 100%; height: 94vh; border-radius: 16px; }
+      .modal.pdf-open { padding: 8px; }
+      .modal.pdf-open .modal-box { width: 100%; height: 94vh; height: 94dvh; }
     }
 
     @keyframes fadeUp {
@@ -1120,12 +1142,14 @@
       modalDesc.style.display = item.description ? "block" : "none";
       modalContent.innerHTML = "";
       modalContent.className = type === "image" || type === "video" ? "modal-content media-modal" : "modal-content";
+      modal.classList.toggle("pdf-open", type === "pdf");
 
       if (type === "pdf") {
         // Add loading indicator for PDF
         const loadingDiv = document.createElement("div");
         loadingDiv.className = "pdf-loading";
-        loadingDiv.innerHTML = '<div class="pdf-loading-spinner"></div>';
+        loadingDiv.setAttribute("aria-live", "polite");
+        loadingDiv.innerHTML = '<div class="pdf-loading-spinner"></div><div class="pdf-loading-text">Loading PDF...</div>';
         modalContent.appendChild(loadingDiv);
 
         const iframe = document.createElement("iframe");
@@ -1173,7 +1197,7 @@
     }
 
     function closeModal() {
-      modal.classList.remove("open");
+      modal.classList.remove("open", "pdf-open");
       modal.setAttribute("aria-hidden", "true");
       modalContent.innerHTML = "";
       document.body.style.overflow = "";
