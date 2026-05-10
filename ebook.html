@@ -50,6 +50,13 @@
       overflow: hidden;
     }
 
+    /* Fullscreen mode styling */
+    :fullscreen .app {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+    }
+
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -809,10 +816,6 @@
 
     document.addEventListener("fullscreenchange", () => {
       fullscreenBtn.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
-      // Trigger the existing resize handler which safely rebuilds the flipbook
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 100);
     });
 
 
