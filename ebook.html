@@ -162,6 +162,14 @@
       filter: drop-shadow(0 28px 42px rgba(0, 0, 0, 0.5));
     }
 
+    .book-positioner.cover-mode .book-mask,
+    .book-positioner.cover-mode #book {
+      overflow: visible;
+      clip-path: none;
+      contain: layout style;
+      perspective: 1800px;
+    }
+
     /*
       This is the important fix.
       The previous white block was an internal animated page layer escaping below.
@@ -206,6 +214,27 @@
       box-shadow:
         inset -18px 0 34px rgba(0, 0, 0, 0.08),
         inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+      transform-origin: left center;
+      will-change: transform, opacity;
+    }
+
+    .cover-page.cover-flipping {
+      animation: coverFlipAway 680ms cubic-bezier(0.2, 0.72, 0.18, 1) forwards;
+    }
+
+    @keyframes coverFlipAway {
+      0% {
+        transform: rotateY(0deg) translateX(0);
+        opacity: 1;
+      }
+      45% {
+        transform: rotateY(-58deg) translateX(-2%);
+        opacity: 0.96;
+      }
+      100% {
+        transform: rotateY(-112deg) translateX(-8%);
+        opacity: 0;
+      }
     }
 
     .page::after {
@@ -519,6 +548,8 @@
     let progressiveLoadTimer = null;
     let progressiveLoading = false;
     let coverMode = false;
+    let coverOpening = false;
+    let coverFlipOptions = {};
 
     function showMessage(text, isError = false) {
       messageEl.textContent = text;
@@ -825,6 +856,8 @@
 
       pageFlip = null;
       coverMode = false;
+      coverOpening = false;
+      coverFlipOptions = {};
       progressiveFlipMode = false;
       flipbookFirstPage = 1;
       loadedFlipPages = 0;
@@ -846,9 +879,12 @@
       return pageDiv;
     }
 
-    async function showCenteredCover() {
+    async function showCenteredCover(options = {}) {
       destroyCurrentBook();
       coverMode = true;
+      coverFlipOptions = {
+        progressive: Boolean(options.progressive)
+      };
       bookPositioner.classList.add("cover-mode");
 
       const size = applyBookSize({ singlePage: true });
@@ -863,10 +899,21 @@
     }
 
     async function openBookFromCover(startPage = 2) {
-      if (!coverMode || totalPages <= 1) return;
+      if (!coverMode || coverOpening || totalPages <= 1) return;
+      coverOpening = true;
       const target = Math.min(Math.max(startPage, 2), totalPages);
-      await buildFlipbook(target, { firstPageNumber: 2 });
       playFlipSound();
+
+      const coverPage = document.querySelector("#book .cover-page");
+      if (coverPage) {
+        coverPage.classList.add("cover-flipping");
+        await new Promise(resolve => setTimeout(resolve, 520));
+      }
+
+      await buildFlipbook(target, {
+        firstPageNumber: 2,
+        progressive: Boolean(coverFlipOptions.progressive)
+      });
     }
 
     function setPageElementSizes(size) {
@@ -1124,7 +1171,7 @@
         setLoadingProgress(100, largeMode ? "Opening first pages" : "Preparing page flip view");
 
         if (largeMode) {
-          await buildFlipbook(1, { progressive: true });
+          await showCenteredCover({ progressive: true });
         } else {
           await showCenteredCover();
         }
@@ -1165,7 +1212,7 @@
       }
 
       if (target === 1) {
-        await showCenteredCover();
+        await showCenteredCover({ progressive: progressiveFlipMode });
         playFlipSound();
         return;
       }
@@ -1188,8 +1235,8 @@
       if (coverMode) return;
       if (!pageFlip) return;
       unlockAudio();
-      if (!progressiveFlipMode && getCurrentPageNumber() <= 2) {
-        await showCenteredCover();
+      if (getCurrentPageNumber() <= 2) {
+        await showCenteredCover({ progressive: progressiveFlipMode });
         playFlipSound();
         return;
       }
@@ -1260,8 +1307,8 @@
         if (coverMode) return;
         if (!pageFlip) return;
         unlockAudio();
-        if (!progressiveFlipMode && getCurrentPageNumber() <= 2) {
-          showCenteredCover().then(() => playFlipSound());
+        if (getCurrentPageNumber() <= 2) {
+          showCenteredCover({ progressive: progressiveFlipMode }).then(() => playFlipSound());
           return;
         }
         pageFlip.flipPrev();
