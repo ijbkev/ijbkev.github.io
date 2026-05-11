@@ -158,6 +158,10 @@
       filter: drop-shadow(0 24px 34px rgba(0, 0, 0, 0.42));
     }
 
+    .book-positioner.cover-mode {
+      filter: drop-shadow(0 28px 42px rgba(0, 0, 0, 0.5));
+    }
+
     /*
       This is the important fix.
       The previous white block was an internal animated page layer escaping below.
@@ -196,6 +200,12 @@
       align-items: center;
       justify-content: center;
       backface-visibility: hidden;
+    }
+
+    .cover-page {
+      box-shadow:
+        inset -18px 0 34px rgba(0, 0, 0, 0.08),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.06);
     }
 
     .page::after {
@@ -507,6 +517,7 @@
     let loadedFlipPages = 0;
     let progressiveLoadTimer = null;
     let progressiveLoading = false;
+    let coverMode = false;
 
     function showMessage(text, isError = false) {
       messageEl.textContent = text;
@@ -633,12 +644,14 @@
       };
     }
 
-    function applyBookSize() {
+    function applyBookSize(options = {}) {
       const size = calculateBookSize();
+      const singlePage = Boolean(options.singlePage);
+      const bookWidth = singlePage ? size.pageWidth : size.bookWidth;
 
-      bookMask.style.width = `${size.bookWidth}px`;
+      bookMask.style.width = `${bookWidth}px`;
       bookMask.style.height = `${size.bookHeight}px`;
-      bookEl.style.width = `${size.bookWidth}px`;
+      bookEl.style.width = `${bookWidth}px`;
       bookEl.style.height = `${size.bookHeight}px`;
       bookPositioner.style.transform = `scale(${zoom})`;
 
@@ -655,6 +668,7 @@
     }
 
     function getCurrentPageNumber() {
+      if (coverMode) return 1;
       if (!pageFlip) return 1;
       return pageFlip.getCurrentPageIndex() + 1;
     }
@@ -809,6 +823,7 @@
       }
 
       pageFlip = null;
+      coverMode = false;
       progressiveFlipMode = false;
       loadedFlipPages = 0;
       progressiveLoading = false;
@@ -816,6 +831,7 @@
       renderedPages = new Set();
       renderingPages = new Set();
       ensureBookElement();
+      bookPositioner.classList.remove("cover-mode");
       bookEl.innerHTML = "";
     }
 
@@ -826,6 +842,29 @@
       pageDiv.dataset.pageLabel = pageNumber;
       pageDiv.innerHTML = makePlaceholder(pageNumber);
       return pageDiv;
+    }
+
+    async function showCenteredCover() {
+      destroyCurrentBook();
+      coverMode = true;
+      bookPositioner.classList.add("cover-mode");
+
+      const size = applyBookSize({ singlePage: true });
+      const coverPage = createPageElement(1);
+      coverPage.classList.add("cover-page");
+      bookEl.appendChild(coverPage);
+      loadedFlipPages = 1;
+      setPageElementSizes(size);
+      updateStatus(1);
+
+      await renderPage(1);
+    }
+
+    async function openBookFromCover(startPage = 2) {
+      if (!coverMode || totalPages <= 1) return;
+      const target = Math.min(Math.max(startPage, 2), totalPages);
+      await buildFlipbook(target);
+      playFlipSound();
     }
 
     function setPageElementSizes(size) {
@@ -865,8 +904,13 @@
       });
 
       pageFlip.on("flip", event => {
+        const pageNumber = event.data + 1;
+        if (!progressiveFlipMode && pageNumber === 1) {
+          showCenteredCover().then(() => playFlipSound());
+          return;
+        }
         playFlipSound();
-        renderAround(event.data + 1);
+        renderAround(pageNumber);
       });
 
       return pageFlip;
@@ -1072,7 +1116,7 @@
         if (largeMode) {
           await buildFlipbook(1, { progressive: true });
         } else {
-          await buildFlipbook(1);
+          await showCenteredCover();
         }
 
         hideLoading();
@@ -1104,6 +1148,18 @@
       unlockAudio();
       const target = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
 
+      if (coverMode) {
+        if (target === 1) return;
+        await openBookFromCover(target);
+        return;
+      }
+
+      if (target === 1) {
+        await showCenteredCover();
+        playFlipSound();
+        return;
+      }
+
       if (!pageFlip) return;
       await ensureFlipbookPageLoaded(target);
       if (progressiveFlipMode && Math.abs(target - getCurrentPageNumber()) > 2) {
@@ -1117,16 +1173,26 @@
 
     firstBtn.addEventListener("click", () => goToPage(1));
 
-    prevBtn.addEventListener("click", () => {
+    prevBtn.addEventListener("click", async () => {
+      if (coverMode) return;
       if (!pageFlip) return;
       unlockAudio();
+      if (!progressiveFlipMode && getCurrentPageNumber() <= 2) {
+        await showCenteredCover();
+        playFlipSound();
+        return;
+      }
       pageFlip.flipPrev();
       setTimeout(() => renderAround(getCurrentPageNumber()), 260);
     });
 
     nextBtn.addEventListener("click", async () => {
-      if (!pageFlip) return;
       unlockAudio();
+      if (coverMode) {
+        await openBookFromCover(2);
+        return;
+      }
+      if (!pageFlip) return;
       if (progressiveFlipMode) {
         await ensureFlipbookPageLoaded(getCurrentPageNumber() + 2);
       }
@@ -1145,7 +1211,10 @@
 
     zoomSelect.addEventListener("change", () => {
       zoom = Number(zoomSelect.value);
-      applyBookSize();
+      const size = applyBookSize({ singlePage: coverMode });
+      if (coverMode) {
+        setPageElementSizes(size);
+      }
     });
 
     zoomInBtn.addEventListener("click", () => {
@@ -1176,16 +1245,25 @@
 
 
     document.addEventListener("keydown", event => {
-      if (!pageFlip) return;
-
       if (event.key === "ArrowLeft") {
+        if (coverMode) return;
+        if (!pageFlip) return;
         unlockAudio();
+        if (!progressiveFlipMode && getCurrentPageNumber() <= 2) {
+          showCenteredCover().then(() => playFlipSound());
+          return;
+        }
         pageFlip.flipPrev();
         setTimeout(() => renderAround(getCurrentPageNumber()), 260);
       }
 
       if (event.key === "ArrowRight") {
         unlockAudio();
+        if (coverMode) {
+          openBookFromCover(2);
+          return;
+        }
+        if (!pageFlip) return;
         if (progressiveFlipMode) {
           ensureFlipbookPageLoaded(getCurrentPageNumber() + 2).then(() => {
             pageFlip.flipNext();
@@ -1201,7 +1279,12 @@
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(async () => {
-        if (!pdfDoc || !pageFlip) return;
+        if (!pdfDoc) return;
+        if (coverMode) {
+          await showCenteredCover();
+          return;
+        }
+        if (!pageFlip) return;
         const current = getCurrentPageNumber();
         const wasProgressive = progressiveFlipMode;
         await buildFlipbook(current, { progressive: wasProgressive });

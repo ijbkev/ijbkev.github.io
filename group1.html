@@ -7,24 +7,24 @@
   <script src="pdf-interceptor.js"></script>
   <style>
     :root {
-      --bg-green: #3b4a8f;
-      --bg-light-green: #3e8fa8;
-      --bg-yellow: #7cc7ad;
+      --bg-green: #24443f;
+      --bg-light-green: #768f4c;
+      --bg-yellow: #efb563;
       --text: #1f1724;
       --muted: #6f5f75;
       --accent: #d8ff22;
-      --section: rgba(58, 128, 155, 0.94);
-      --card-bg-top: #f4f8fb;
-      --card-bg-bottom: #e8f2f3;
+      --section: rgba(116, 136, 70, 0.94);
+      --card-bg-top: #faf8f0;
+      --card-bg-bottom: #f0ead8;
       --card-border: rgba(255,255,255,0.5);
-      --card-shadow: 0 14px 34px rgba(22, 42, 73, 0.24);
-      --card-hover-border: rgba(207, 235, 239, 0.94);
-      --card-hover-ring: rgba(125, 194, 201, 0.32);
-      --thumb-bg-start: #edf5f8;
-      --thumb-bg-end: #e2eef4;
-      --thumb-border: rgba(50, 92, 124, 0.16);
-      --caption-bg: rgba(225, 239, 242, 0.86);
-      --caption-text: #243746;
+      --card-shadow: 0 14px 34px rgba(55, 58, 31, 0.24);
+      --card-hover-border: rgba(244, 221, 174, 0.94);
+      --card-hover-ring: rgba(224, 166, 92, 0.3);
+      --thumb-bg-start: #f5f1e5;
+      --thumb-bg-end: #ece6d3;
+      --thumb-border: rgba(112, 94, 52, 0.16);
+      --caption-bg: rgba(241, 232, 204, 0.86);
+      --caption-text: #3d3a25;
       --space-1: 8px;
       --space-2: 12px;
       --space-3: 16px;
@@ -42,9 +42,9 @@
       font-family: var(--font);
       color: white;
       background:
-        radial-gradient(circle at 35% 16%, rgba(124, 199, 173, 0.62), transparent 25%),
-        radial-gradient(circle at 22% 50%, rgba(62, 143, 168, 0.68), transparent 34%),
-        radial-gradient(circle at 76% 35%, rgba(167, 74, 148, 0.44), transparent 32%),
+        radial-gradient(circle at 34% 18%, rgba(239, 181, 99, 0.64), transparent 25%),
+        radial-gradient(circle at 22% 52%, rgba(118, 143, 76, 0.66), transparent 35%),
+        radial-gradient(circle at 76% 36%, rgba(226, 123, 91, 0.44), transparent 32%),
         linear-gradient(125deg, var(--bg-green), var(--bg-light-green) 42%, var(--bg-yellow));
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
@@ -64,7 +64,7 @@
     header {
       z-index: 10;
       padding: 18px 28px 14px;
-      background: linear-gradient(180deg, rgba(50, 71, 126, 0.9), rgba(50, 118, 139, 0.26));
+      background: linear-gradient(180deg, rgba(39, 67, 51, 0.92), rgba(84, 99, 50, 0.28));
       backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
@@ -145,7 +145,7 @@
       justify-content: space-between;
       gap: 14px;
       padding: 14px 28px;
-      background: linear-gradient(180deg, rgba(45, 101, 137, 0.56), rgba(45, 101, 137, 0.16));
+      background: linear-gradient(180deg, rgba(113, 110, 52, 0.56), rgba(113, 110, 52, 0.16));
       backdrop-filter: blur(14px);
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
@@ -676,7 +676,7 @@
       margin-top: 42px;
       padding: 24px clamp(18px, 3vw, 32px);
       border-radius: 28px;
-      background: rgba(60, 120, 150, 0.24);
+      background: rgba(134, 120, 56, 0.24);
       border: 1px solid rgba(255,255,255,0.15);
       box-shadow: 0 20px 58px rgba(0,0,0,0.18);
       backdrop-filter: blur(16px);
