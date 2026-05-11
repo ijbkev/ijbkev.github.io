@@ -515,6 +515,7 @@
     let activeLoadingTask = null;
     let progressiveFlipMode = false;
     let loadedFlipPages = 0;
+    let flipbookFirstPage = 1;
     let progressiveLoadTimer = null;
     let progressiveLoading = false;
     let coverMode = false;
@@ -670,7 +671,7 @@
     function getCurrentPageNumber() {
       if (coverMode) return 1;
       if (!pageFlip) return 1;
-      return pageFlip.getCurrentPageIndex() + 1;
+      return flipbookFirstPage + pageFlip.getCurrentPageIndex();
     }
 
     function updateStatus(currentPage) {
@@ -825,6 +826,7 @@
       pageFlip = null;
       coverMode = false;
       progressiveFlipMode = false;
+      flipbookFirstPage = 1;
       loadedFlipPages = 0;
       progressiveLoading = false;
       clearTimeout(progressiveLoadTimer);
@@ -863,7 +865,7 @@
     async function openBookFromCover(startPage = 2) {
       if (!coverMode || totalPages <= 1) return;
       const target = Math.min(Math.max(startPage, 2), totalPages);
-      await buildFlipbook(target);
+      await buildFlipbook(target, { firstPageNumber: 2 });
       playFlipSound();
     }
 
@@ -882,7 +884,7 @@
       bookMask.appendChild(bookEl);
     }
 
-    function createPageFlip(size) {
+    function createPageFlip(size, options = {}) {
       ensureBookElement();
       pageFlip = new St.PageFlip(bookEl, {
         width: size.pageWidth,
@@ -896,7 +898,7 @@
         startZIndex: 0,
         autoSize: false,
         maxShadowOpacity: 0.35,
-        showCover: true,
+        showCover: options.showCover !== false,
         mobileScrollSupport: false,
         swipeDistance: 28,
         clickEventForward: true,
@@ -904,7 +906,7 @@
       });
 
       pageFlip.on("flip", event => {
-        const pageNumber = event.data + 1;
+        const pageNumber = flipbookFirstPage + event.data;
         if (!progressiveFlipMode && pageNumber === 1) {
           showCenteredCover().then(() => playFlipSound());
           return;
@@ -916,29 +918,34 @@
       return pageFlip;
     }
 
-    function createPagePlaceholders(count = totalPages) {
+    function createPagePlaceholders(count = totalPages, firstPageNumber = 1) {
       const fragment = document.createDocumentFragment();
-      const safeCount = Math.min(Math.max(count, 1), totalPages);
+      const availableCount = Math.max(totalPages - firstPageNumber + 1, 1);
+      const safeCount = Math.min(Math.max(count, 1), availableCount);
 
-      for (let i = 1; i <= safeCount; i++) {
+      for (let i = firstPageNumber; i < firstPageNumber + safeCount; i++) {
         fragment.appendChild(createPageElement(i));
       }
 
       bookEl.appendChild(fragment);
-      loadedFlipPages = safeCount;
+      loadedFlipPages = firstPageNumber + safeCount - 1;
     }
 
     async function buildFlipbook(startPage = 1, options = {}) {
       destroyCurrentBook();
       const size = applyBookSize();
       progressiveFlipMode = Boolean(options.progressive);
-      createPagePlaceholders(progressiveFlipMode ? INITIAL_FLIPBOOK_PAGES : totalPages);
+      flipbookFirstPage = Math.min(Math.max(Number(options.firstPageNumber) || 1, 1), totalPages);
+      createPagePlaceholders(
+        progressiveFlipMode ? INITIAL_FLIPBOOK_PAGES : totalPages,
+        flipbookFirstPage
+      );
       setPageElementSizes(size);
 
       // Force layout calculation before PageFlip initialization
       await new Promise(resolve => requestAnimationFrame(resolve));
 
-      createPageFlip(size);
+      createPageFlip(size, { showCover: flipbookFirstPage === 1 });
 
       try {
         pageFlip.loadFromHTML(document.querySelectorAll("#book .page"));
@@ -949,8 +956,9 @@
       }
 
       const safeStart = Math.min(Math.max(startPage, 1), totalPages);
-      if (safeStart > 1) {
-        pageFlip.turnToPage(safeStart - 1);
+      const startIndex = Math.max(safeStart - flipbookFirstPage, 0);
+      if (startIndex > 0) {
+        pageFlip.turnToPage(startIndex);
       }
       renderAround(safeStart);
 
@@ -978,10 +986,11 @@
         return;
       }
 
-      const safePage = Math.min(Math.max(currentPage, 1), loadedFlipPages);
-      if (safePage > 1) {
+      const safePage = Math.min(Math.max(currentPage, flipbookFirstPage), loadedFlipPages);
+      const safeIndex = safePage - flipbookFirstPage;
+      if (safeIndex > 0) {
         try {
-          pageFlip.turnToPage(safePage - 1);
+          pageFlip.turnToPage(safeIndex);
         } catch (error) {
           console.warn("Could not restore flipbook page after update", error);
         }
@@ -1005,17 +1014,18 @@
       ensureBookElement();
       bookEl.innerHTML = "";
       const fragment = document.createDocumentFragment();
-      for (let pageNumber = 1; pageNumber <= loadedFlipPages; pageNumber++) {
+      for (let pageNumber = flipbookFirstPage; pageNumber <= loadedFlipPages; pageNumber++) {
         fragment.appendChild(createPageElement(pageNumber));
       }
       bookEl.appendChild(fragment);
       setPageElementSizes(size);
-      createPageFlip(size);
+      createPageFlip(size, { showCover: flipbookFirstPage === 1 });
       pageFlip.loadFromHTML(document.querySelectorAll("#book .page"));
 
-      const safePage = Math.min(Math.max(Number(currentPage) || 1, 1), loadedFlipPages);
-      if (safePage > 1) {
-        pageFlip.turnToPage(safePage - 1);
+      const safePage = Math.min(Math.max(Number(currentPage) || flipbookFirstPage, flipbookFirstPage), loadedFlipPages);
+      const safeIndex = safePage - flipbookFirstPage;
+      if (safeIndex > 0) {
+        pageFlip.turnToPage(safeIndex);
       }
       renderAround(safePage);
       await new Promise(resolve => requestAnimationFrame(resolve));
@@ -1162,10 +1172,11 @@
 
       if (!pageFlip) return;
       await ensureFlipbookPageLoaded(target);
+      const targetIndex = Math.max(target - flipbookFirstPage, 0);
       if (progressiveFlipMode && Math.abs(target - getCurrentPageNumber()) > 2) {
-        pageFlip.turnToPage(target - 1);
+        pageFlip.turnToPage(targetIndex);
       } else {
-        pageFlip.flip(target - 1);
+        pageFlip.flip(targetIndex);
       }
       renderAround(target);
       playFlipSound();
@@ -1287,7 +1298,11 @@
         if (!pageFlip) return;
         const current = getCurrentPageNumber();
         const wasProgressive = progressiveFlipMode;
-        await buildFlipbook(current, { progressive: wasProgressive });
+        const currentFirstPage = flipbookFirstPage;
+        await buildFlipbook(current, {
+          progressive: wasProgressive,
+          firstPageNumber: currentFirstPage
+        });
       }, 180);
     });
 
