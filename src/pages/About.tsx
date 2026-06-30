@@ -38,8 +38,8 @@ const About = () => {
     <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.18),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_32%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-6">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">Registered Non-Profit e.V.</Badge>
           <h1 className="text-4xl md:text-5xl font-semibold">Who we are</h1>
@@ -54,9 +54,9 @@ const About = () => {
               { label: "Legal form", value: "eingetragener Verein" },
               { label: "Partners", value: "Europe-wide" },
             ].map((stat) => (
-              <div key={stat.label} className="glass rounded-2xl border-white/15 p-4 text-left">
-                <p className="text-sm uppercase tracking-[0.14em] text-white/70">{stat.label}</p>
-                <p className="text-lg font-semibold">{stat.value}</p>
+              <div key={stat.label} className="bg-white/15 backdrop-blur-lg rounded-2xl border border-white/30 p-5 text-left">
+                <p className="text-xs uppercase tracking-[0.15em] text-white/80 font-semibold">{stat.label}</p>
+                <p className="text-base font-semibold text-white mt-2">{stat.value}</p>
               </div>
             ))}
           </div>
@@ -75,27 +75,55 @@ const About = () => {
               we design experiences where young people from every background learn, travel, and build purposeful projects together.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Badge variant="outline" className="text-primary border-primary">Erasmus+ certified partner</Badge>
-              <Badge variant="outline" className="text-primary border-primary">Inclusive selection</Badge>
+              <Badge className="bg-white/20 text-white border-white/40">Erasmus+ certified partner</Badge>
+              <Badge className="bg-white/20 text-white border-white/40">Inclusive selection</Badge>
             </div>
           </div>
-          <Card className="panel-strong holo-card hover-lift">
+          <Card className="bg-white/10 backdrop-blur-lg border border-white/20 hover:bg-white/15 transition-colors">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <Sparkles className="text-primary" />
+                <Sparkles className="text-blue-600" />
                 <h3 className="text-xl font-semibold text-foreground">What this means in practice</h3>
               </div>
-              <ul className="space-y-3 text-muted-foreground">
+              <ul className="space-y-3 text-foreground">
                 <li>• Transparent recruitment and safeguarding aligned with EU standards.</li>
                 <li>• Learning experiences co-designed with youth for relevance and belonging.</li>
                 <li>• Agile teams that balance academic rigor with creative facilitation.</li>
                 <li>• Reporting that tracks impact, inclusion, and sustainability outcomes.</li>
               </ul>
-              <Link to="/projects" className="inline-flex items-center gap-2 text-primary font-semibold">
+              <Link to="/projects" className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700">
                 See our track record <ArrowRight className="w-4 h-4" />
               </Link>
             </CardContent>
           </Card>
+        </div>
+      </section>
+
+      <section className="py-16 md:py-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 scroll-fade section-chrome">
+        <div className="page-shell space-y-12">
+          <div className="text-center space-y-4">
+            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Financial accessibility first</p>
+            <h2 className="text-3xl md:text-4xl font-semibold">Our motto</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Access to international learning should never depend on the ability to pay. Too often, young people face participation fees for Erasmus+ projects — even when these projects claim to be inclusive. We have seen fees as high as €120 become a barrier for talented participants, turning opportunity into privilege.
+            </p>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed font-semibold">
+              We ask a simple question: how many capable and deserving young people are excluded because they cannot afford to pay? Having experienced this firsthand, we founded IJBK e.V. to build Erasmus+ opportunities that are truly accessible, inclusive, and free of financial barriers. Erasmus+ should remain what it was meant to be — learning, connection, and growth — not a privilege limited by cost.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { icon: "€0", label: "Participation fees" },
+              { icon: "🎓", label: "Scholarships over paywalls" },
+              { icon: "🌍", label: "Inclusive recruitment" },
+            ].map((item) => (
+              <div key={item.label} className="text-center">
+                <div className="text-4xl font-bold text-primary mb-2">{item.icon}</div>
+                <p className="font-semibold text-foreground">{item.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

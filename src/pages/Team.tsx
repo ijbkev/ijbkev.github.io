@@ -34,11 +34,11 @@ const Team = () => {
       skills: ["Data Science", "Sustainability", "Social Justice", "Communications"],
     },
     {
-      name: "Alex Conrad",
-      email: "alex.conrad@ijbk-de.org",
+      name: "Rishibha Goyal",
+      email: "rishibha@ijbk-de.org",
       role: "Team Member",
       expertise: "Participant Selection",
-      country: "Germany",
+      country: "India",
       bio: "Designs inclusive participant selection, coordinates with partners, and safeguards diverse cohorts.",
       skills: ["Selection", "Application Review", "Partner Coordination", "Program Management"],
     },
@@ -92,7 +92,9 @@ const Team = () => {
     if (name === "Yeliena Bemeshchuk") return <img src="/lovable-uploads/lenochka.png" alt={name} {...commonProps} />;
     if (name === "Rohit Singh Negi") return <img src="/lovable-uploads/baba.png" alt={name} {...commonProps} />;
     if (name === "Prateek Kumar Sharma") return <img src="/lovable-uploads/prateek.png" alt={name} {...commonProps} />;
-    if (name === "Alex C." || name === "Alex Conrad") return <img src="/lovable-uploads/alex.png" alt={name} {...commonProps} />;
+    if (name === "Rishibha Goyal") return <img src="/lovable-uploads/rishibha.jpeg" alt={name} {...commonProps} />;
+    if (name === "Marta Rudzate") return <img src="/lovable-uploads/marta.jpeg" alt={name} {...commonProps} />;
+    if (name === "Tamara Suniarová") return <img src="/lovable-uploads/tamara.jpeg" alt={name} {...commonProps} />;
     return (
       <div className="w-full h-full bg-gradient-hero text-white grid place-items-center text-xl font-semibold">
         {name
@@ -107,8 +109,8 @@ const Team = () => {
     <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-5">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">The humans behind IJBK</Badge>
           <h1 className="text-4xl md:text-5xl font-semibold">Meet the team</h1>

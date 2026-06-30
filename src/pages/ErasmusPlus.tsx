@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Users, GraduationCap, Train, Target, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Globe, Users, GraduationCap, Train, Target, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 
@@ -13,7 +13,8 @@ const ErasmusPlus = () => {
       keyPoints: [
         "Young people from different countries + group leaders",
         "Interactive, practical, peer-learning (not lectures)",
-        "New skills, confidence, intercultural experience, Youthpass certificate"
+        "New skills, confidence, intercultural experience, Youthpass certificate",
+        "Flight, accommodation & meals covered for you"
       ]
     },
     {
@@ -23,7 +24,8 @@ const ErasmusPlus = () => {
       keyPoints: [
         "Usually 18+ (youth workers, NGO members, facilitators, volunteers)",
         "Practical tools, facilitation methods, case studies, simulations",
-        "Stronger competences and tools to use back home"
+        "Stronger competences and tools to use back home",
+        "Flight, accommodation & meals covered for you"
       ]
     },
     {
@@ -32,7 +34,19 @@ const ErasmusPlus = () => {
       description: "DiscoverEU gives young people the opportunity to explore Europe mainly by train. It is travel, but with a learning purpose: cultural discovery, independence, and intercultural understanding. In many cases, it is combined with group travel, reflection, and learning activities.",
       keyPoints: [
         "Learn Europe by experiencing it",
-        "Often includes: group travel, shared activities, reflection and learning"
+        "Often includes: group travel, shared activities, reflection and learning",
+        "Flight, accommodation & meals covered for you"
+      ]
+    },
+    {
+      icon: <Target className="w-8 h-8 text-orange-500" />,
+      title: "European Solidarity Corps (ESC)",
+      description: "The European Solidarity Corps gives young people the chance to volunteer or work on solidarity projects in Europe. It combines practical contribution to communities with personal development, intercultural learning, and civic engagement.",
+      keyPoints: [
+        "18–30 years old, flexible duration (2 weeks to 12 months)",
+        "Contribute to real projects: social work, environmental, cultural, or community initiatives",
+        "Personal growth, language skills, and European citizenship experience",
+        "Accommodation & meals covered + pocket money provided"
       ]
     }
   ];
@@ -64,8 +78,8 @@ const ErasmusPlus = () => {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-950 to-slate-900 text-white scroll-fade section-chrome">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.18),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.16),transparent_32%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-4">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">
             <Globe className="w-4 h-4 mr-2 inline" />
@@ -82,11 +96,11 @@ const ErasmusPlus = () => {
       <section className="py-16 md:py-20 page-shell">
         <div className="space-y-8">
           <div className="text-center space-y-3">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Three formats</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Four formats</p>
             <h2 className="text-3xl md:text-4xl font-semibold">Programme Types</h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-4 gap-6">
             {programTypes.map((program, index) => (
               <Card key={index} className="panel-strong holo-card hover-lift transition-transform">
                 <CardContent className="p-6 space-y-4">

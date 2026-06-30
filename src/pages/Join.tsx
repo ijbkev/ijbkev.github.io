@@ -28,8 +28,8 @@ const Join = () => {
     <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
 
         <div className="page-shell relative py-16 md:py-20 text-center space-y-6">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">
@@ -83,7 +83,7 @@ const Join = () => {
             </p>
 
             <a
-              href="https://drive.google.com/file/d/1rLm0rNJaEvnCWRtcNXElIktl0NKYhZZA/view?usp=sharing"
+              href="https://docs.google.com/document/d/1Cv544_mi0AVQsFhjGvPIrFd1nGeRkaHs/edit?usp=sharing&ouid=111431115553739998032&rtpof=true&sd=true"
               target="_blank"
               rel="noopener noreferrer"
             >

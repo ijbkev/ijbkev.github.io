@@ -152,8 +152,8 @@
       linear-gradient(135deg, hsla(var(--eu-blue) / 0.28), hsla(var(--eu-yellow) / 0.18));
     filter: blur(22px);
     border-radius: 9999px;
-    opacity: 0.75;
-    mix-blend-mode: screen;
+    opacity: 0.2;
+    mix-blend-mode: normal;
     animation: aurora-wave 18s ease-in-out infinite alternate;
   }
 
@@ -182,8 +182,8 @@
     position: absolute;
     border-radius: 9999px;
     filter: blur(60px);
-    opacity: 0.6;
-    mix-blend-mode: screen;
+    opacity: 0.15;
+    mix-blend-mode: normal;
     animation: drift 16s ease-in-out infinite alternate;
   }
 
@@ -214,10 +214,10 @@
       rgba(56, 189, 248, 0)
     );
     transform: rotate(-16deg);
-    opacity: 0.32;
-    mix-blend-mode: screen;
+    opacity: 0.12;
+    mix-blend-mode: normal;
     filter: blur(1px);
-    box-shadow: 0 0 8px rgba(56, 189, 248, 0.45), 0 0 20px rgba(59, 130, 246, 0.22);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.2), 0 0 20px rgba(59, 130, 246, 0.1);
     animation: saber-sweep 9s ease-in-out infinite alternate, saber-flicker 1.8s steps(3, end) infinite;
   }
 
@@ -281,28 +281,23 @@
     isolation: isolate;
   }
 
-  .scroll-fade::before,
+  .scroll-fade::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background: none;
+  }
+
   .scroll-fade::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: -1;
-    background: radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.12), transparent 35%),
-      radial-gradient(circle at 70% 70%, rgba(234, 179, 8, 0.1), transparent 40%);
-    filter: blur(22px);
-  }
-
-  .scroll-fade::after {
-    background: conic-gradient(
-      from 120deg,
-      rgba(96, 165, 250, 0.1),
-      rgba(234, 179, 8, 0.05),
-      rgba(96, 165, 250, 0.15)
-    );
-    opacity: 0.35;
-    mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.7), transparent 55%);
-    mix-blend-mode: screen;
+    background: none;
+    display: none;
   }
 
   /* Enhanced Visual Elements */

@@ -96,13 +96,13 @@ const StatTile = ({ stat, start }: { stat: StatConfig; start: boolean }) => {
   });
 
   return (
-    <div className="glass rounded-2xl border-white/15 px-4 py-3 text-center">
-      <p className="text-2xl font-semibold text-white tabular-nums">
+    <div className="bg-white/15 backdrop-blur-lg rounded-2xl border border-white/30 px-5 py-4 text-center">
+      <p className="text-3xl font-bold text-white tabular-nums">
         {stat.prefix ?? ""}
         {formatted}
         {stat.suffix ?? ""}
       </p>
-      <p className="text-xs text-white/70">{stat.label}</p>
+      <p className="text-xs text-white/80 uppercase tracking-[0.1em] font-semibold mt-2">{stat.label}</p>
     </div>
   );
 };
@@ -119,13 +119,13 @@ const StaticStatTile = ({
   suffix?: string;
 }) => {
   return (
-    <div className="glass rounded-2xl border-white/15 px-4 py-3 text-center">
-      <p className="text-2xl font-semibold text-white tabular-nums">
+    <div className="bg-white/15 backdrop-blur-lg rounded-2xl border border-white/30 px-5 py-4 text-center">
+      <p className="text-3xl font-bold text-white tabular-nums">
         {prefix ?? ""}
         {value}
         {suffix ?? ""}
       </p>
-      <p className="text-xs text-white/70">{label}</p>
+      <p className="text-xs text-white/80 uppercase tracking-[0.1em] font-semibold mt-2">{label}</p>
     </div>
   );
 };
@@ -237,23 +237,8 @@ const Homepage = () => {
 
       <main className="overflow-hidden relative z-10">
         {/* HERO */}
-        <section className="relative isolate scroll-fade">
-          <div
-            className="absolute inset-0 opacity-45"
-            style={{
-              backgroundImage: `url(/lovable-uploads/hero-background.jpg)`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/82 to-slate-950" />
-          <div
-            className="absolute inset-0 mix-blend-overlay"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 20% 20%, rgba(96,165,250,0.3), transparent 35%), radial-gradient(circle at 80% 10%, rgba(234,179,8,0.25), transparent 30%)",
-            }}
-          />
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
             <div className="saber-trail" />
@@ -399,7 +384,7 @@ const Homepage = () => {
                           Right now
                         </h4>
                         <p className="text-muted-foreground">
-                          Stay tuned for the next Erasmus+ opportunity and check Projects for updates.
+                          Opportunities in Svalbard, Martinique, Italy, Bulgaria, Germany, Austria, and Tunisia in the coming months. Stay updated!
                         </p>
                       </div>
                     </div>
@@ -562,7 +547,7 @@ const Homepage = () => {
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-xl border bg-muted/40 p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Current stage</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">Concept to partners</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">Project acceptance has been received</p>
                     </div>
                     <div className="rounded-xl border bg-muted/40 p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Funding mode</p>

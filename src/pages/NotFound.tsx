@@ -9,7 +9,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white flex items-center justify-center px-4 scroll-fade section-chrome">
+    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white flex items-center justify-center px-4 scroll-fade section-chrome">
       <div className="text-center space-y-4 max-w-md">
         <p className="uppercase tracking-[0.2em] text-sm text-white/70">Page missing</p>
         <h1 className="text-5xl font-semibold">404</h1>

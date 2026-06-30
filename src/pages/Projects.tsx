@@ -17,6 +17,7 @@ type Project = {
   description: string;
   highlights: string[];
   applicationLink?: string;
+  applicationLabel?: string;
 };
 
 const Projects = () => {
@@ -25,7 +26,7 @@ const Projects = () => {
       id: "green-stage-sustainable-future",
       title: "Green Stage for Sustainable Future",
       category: "Erasmus+ Youth Exchange",
-      status: "Closed",
+      status: "Ongoing",
       statusTone: "warning",
       date: "22–31 May 2026",
       location: "Norway",
@@ -38,7 +39,7 @@ const Projects = () => {
       id: "discover-eu",
       title: "Fully funded travel across Europe with DiscoverEU",
       category: "EU Travel Initiative",
-      status: "Applications Closed",
+      status: "Ongoing",
       statusTone: "info",
       date: "1 April 2026",
       location: "Europe",
@@ -46,6 +47,8 @@ const Projects = () => {
       description:
         "DiscoverEU opens Europe by train. Three curated routes with leaders, Interrail passes, accommodation, food, and local transport fully covered — no participation fee.",
       highlights: ["FREE Interrail Pass", "Daily pocket money", "Cultural exchange stops", "Leaders per route"],
+      applicationLink: "https://ijbkev.github.io",
+      applicationLabel: "View the project results",
     },
     {
       id: "ai-social-impact",
@@ -124,8 +127,8 @@ const Projects = () => {
     <div className="min-h-screen bg-background text-foreground relative">
       <Navigation />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white scroll-fade section-chrome">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(234,179,8,0.16),transparent_34%)]" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 space-y-6">
           <div className="flex items-center gap-3">
             <Sparkles className="text-amber-200" />
@@ -145,9 +148,9 @@ const Projects = () => {
               { label: "Countries engaged", value: "20+" },
               { label: "Youth reached", value: "4000+" },
             ].map((stat) => (
-              <div key={stat.label} className="glass rounded-2xl border-white/15 p-4">
-                <p className="text-2xl font-semibold">{stat.value}</p>
-                <p className="text-sm text-white/70">{stat.label}</p>
+              <div key={stat.label} className="bg-white/15 backdrop-blur-lg rounded-2xl border border-white/30 px-5 py-4 text-center">
+                <p className="text-3xl font-bold text-white tabular-nums">{stat.value}</p>
+                <p className="text-xs text-white/80 uppercase tracking-[0.1em] font-semibold mt-2">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -233,7 +236,7 @@ const Projects = () => {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2 font-semibold hover:-translate-y-0.5 transition-transform"
                     >
-                      Apply now
+                      {project.applicationLabel ?? "Apply now"}
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
