@@ -13,7 +13,7 @@ const Navigation = () => {
     { name: "What is Erasmus+", path: "/erasmus-plus" },
     { name: "Blog", path: "/blog" },
     { name: "Team", path: "/team" },
-    { name: "Partnership", path: "/join" },
+    { name: "Partnership", path: "/partnership" },
   ];
 
   const isActive = (path: string) => location.pathname === path;

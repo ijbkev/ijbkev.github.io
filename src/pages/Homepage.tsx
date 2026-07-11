@@ -350,7 +350,7 @@ const Homepage = () => {
                     variant="ghost"
                     className="text-white hover:bg-white/10"
                   >
-                    <Link to="/join">
+                    <Link to="/partnership">
                       Partner with us
                       <ArrowUpRight className="ml-2 h-4 w-4" />
                     </Link>

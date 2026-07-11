@@ -9,44 +9,44 @@ const ErasmusPlus = () => {
     {
       icon: <Users className="w-8 h-8 text-blue-500" />,
       title: "Youth Exchange",
-      description: "A Youth Exchange brings young people from different countries together for a themed programme (usually 5–14 days) with workshops, teamwork, activities, reflection, and intercultural learning.",
+      description: "Young people from different countries join a themed programme, usually for 5–14 days, combining workshops, teamwork, reflection, and intercultural learning.",
       keyPoints: [
         "Young people from different countries + group leaders",
-        "Interactive, practical, peer-learning (not lectures)",
-        "New skills, confidence, intercultural experience, Youthpass certificate",
-        "Flight, accommodation & meals covered for you"
+        "Interactive, practical, peer-learning, not lectures",
+        "New skills, confidence, intercultural experience, Youthpass",
+        "Flight, accommodation, and meals are usually covered"
       ]
     },
     {
       icon: <GraduationCap className="w-8 h-8 text-purple-500" />,
       title: "Training Course",
-      description: "A Training Course is for youth workers, volunteers, and people active in youth organisations. It focuses on building professional skills and methods that participants can use in their own work with young people.",
+      description: "For youth workers, volunteers, and people active in youth organisations. It builds practical skills and methods you can use in your own work.",
       keyPoints: [
         "Usually 18+ (youth workers, NGO members, facilitators, volunteers)",
-        "Practical tools, facilitation methods, case studies, simulations",
+        "Practical tools, facilitation methods, case studies, and simulations",
         "Stronger competences and tools to use back home",
-        "Flight, accommodation & meals covered for you"
+        "Flight, accommodation, and meals are usually covered"
       ]
     },
     {
       icon: <Train className="w-8 h-8 text-green-500" />,
       title: "DiscoverEU",
-      description: "DiscoverEU gives young people the opportunity to explore Europe mainly by train. It is travel, but with a learning purpose: cultural discovery, independence, and intercultural understanding. In many cases, it is combined with group travel, reflection, and learning activities.",
+      description: "DiscoverEU lets young people explore Europe mainly by train, with a learning purpose focused on cultural discovery, independence, and intercultural understanding.",
       keyPoints: [
         "Learn Europe by experiencing it",
-        "Often includes: group travel, shared activities, reflection and learning",
-        "Flight, accommodation & meals covered for you"
+        "Often includes group travel, shared activities, reflection, and learning",
+        "Flight, accommodation, and meals are usually covered"
       ]
     },
     {
       icon: <Target className="w-8 h-8 text-orange-500" />,
       title: "European Solidarity Corps (ESC)",
-      description: "The European Solidarity Corps gives young people the chance to volunteer or work on solidarity projects in Europe. It combines practical contribution to communities with personal development, intercultural learning, and civic engagement.",
+      description: "The European Solidarity Corps gives young people the chance to volunteer or work on solidarity projects across Europe, combining community contribution with personal development and intercultural learning.",
       keyPoints: [
         "18–30 years old, flexible duration (2 weeks to 12 months)",
         "Contribute to real projects: social work, environmental, cultural, or community initiatives",
         "Personal growth, language skills, and European citizenship experience",
-        "Accommodation & meals covered + pocket money provided"
+        "Accommodation, meals, and pocket money are usually provided"
       ]
     }
   ];
@@ -87,7 +87,7 @@ const ErasmusPlus = () => {
           </Badge>
           <h1 className="text-4xl md:text-5xl font-semibold">What is Erasmus Plus Programme?</h1>
           <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto">
-            Erasmus+ is a European Union programme that funds learning experiences across countries — not by putting people in a classroom, but by letting them learn through real activities with international participants. The goal is simple: build skills, meet people from different cultures, and bring what you learned back to your community.
+            Erasmus+ funds cross-border learning through real activities, international teamwork, and practical experiences that help participants build skills and bring ideas back home.
           </p>
         </div>
       </section>
@@ -98,6 +98,9 @@ const ErasmusPlus = () => {
           <div className="text-center space-y-3">
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Four formats</p>
             <h2 className="text-3xl md:text-4xl font-semibold">Programme Types</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Four common Erasmus+ formats, each with a different audience and learning purpose.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-6">
@@ -108,7 +111,7 @@ const ErasmusPlus = () => {
                     {program.icon}
                     <h3 className="text-xl font-semibold">{program.title}</h3>
                   </div>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
+                  <p className="text-muted-foreground text-sm leading-relaxed min-h-[4.5rem]">
                     {program.description}
                   </p>
                   <div className="space-y-2">
@@ -142,7 +145,7 @@ const ErasmusPlus = () => {
                 </h2>
               </div>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Erasmus+ projects take place in interesting locations and include cultural activities, but they are structured educational programmes. Each project is built around learning objectives with a full schedule of workshops, teamwork, and reflection sessions. Participants are expected to engage actively and contribute meaningfully.
+                Erasmus+ projects include cultural activities, but they are structured educational programmes built around clear learning goals, workshops, teamwork, and reflection.
               </p>
             </div>
             <Card className="panel-strong holo-card hover-lift">
@@ -180,7 +183,7 @@ const ErasmusPlus = () => {
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Investment in people</p>
             <h2 className="text-3xl md:text-4xl font-semibold">Why does the EU fund this?</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              The European Union invests in people. When young Europeans meet, cooperate, and learn together, they become more skilled, more open-minded, and more able to work across cultures. Erasmus+ supports youth participation, inclusion, and quality learning, and it strengthens communities when participants return home and share what they gained.
+              The EU invests in people: Erasmus+ supports youth participation, inclusion, and quality learning so participants become more skilled, more open-minded, and better able to work across cultures.
             </p>
           </div>
           <Card className="panel-strong holo-card hover-lift">
@@ -231,8 +234,8 @@ const ErasmusPlus = () => {
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <h2 className="text-3xl md:text-4xl font-semibold">Ready to apply?</h2>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Erasmus+ is for people who are curious, open-minded, and willing to learn — not just to travel.
-            If you want to grow, meet people from across Europe, and be part of something meaningful, these projects are for you.
+            Erasmus+ is for people who are curious, open-minded, and willing to learn, not just to travel.
+            If you want to grow, meet people from across Europe, and do something meaningful, these projects are for you.
           </p>
         </div>
       </section>

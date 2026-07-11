@@ -92,7 +92,7 @@ const Contact = () => {
           ))}
         </div>
         <div className="text-center mt-10">
-          <Link to="/join" className="inline-flex items-center gap-2 text-primary font-semibold">
+          <Link to="/partnership" className="inline-flex items-center gap-2 text-primary font-semibold">
             See partnership options
             <ArrowRight className="w-4 h-4" />
           </Link>

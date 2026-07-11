@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Globe, Lightbulb, ArrowRight, UserPlus, Sparkles } from "lucide-react";
 
-const Join = () => {
+const Partnership = () => {
   const opportunities = [
     {
       icon: <Users className="w-7 h-7" />,
@@ -36,7 +36,6 @@ const Join = () => {
             Co-create with us
           </Badge>
 
-          {/* moved here */}
           <p className="text-sm uppercase tracking-[0.2em] text-white/70">
             Partnership opportunities
           </p>
@@ -102,4 +101,4 @@ const Join = () => {
   );
 };
 
-export default Join;
+export default Partnership;
