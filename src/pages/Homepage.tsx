@@ -350,8 +350,8 @@ const Homepage = () => {
                     variant="ghost"
                     className="text-white hover:bg-white/10"
                   >
-                    <Link to="/partnership">
-                      Partner with us
+                    <Link to="/contact">
+                      Let’s talk
                       <ArrowUpRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>

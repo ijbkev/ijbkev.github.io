@@ -304,7 +304,7 @@ const Projects = () => {
             ))}
           </div>
           <div className="flex justify-center">
-            <ButtonLink to="/partnership" />
+            <ButtonLink to="/contact" />
           </div>
         </div>
       </section>

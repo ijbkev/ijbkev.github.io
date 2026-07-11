@@ -9,7 +9,6 @@ import About from "./pages/About";
 import Blog from "./pages/Blog";
 import Projects from "./pages/Projects";
 import Team from "./pages/Team";
-import Partnership from "./pages/Partnership";
 import Contact from "./pages/Contact";
 import ErasmusPlus from "./pages/ErasmusPlus";
 import NotFound from "./pages/NotFound";
@@ -46,7 +45,6 @@ const App = () => (
               <Route path="/blog" element={<Blog />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/team" element={<Team />} />
-              <Route path="/partnership" element={<Partnership />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/erasmus-plus" element={<ErasmusPlus />} />
               <Route path="*" element={<NotFound />} />
