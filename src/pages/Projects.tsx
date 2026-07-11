@@ -16,6 +16,8 @@ type Project = {
   participants: string;
   description: string;
   highlights: string[];
+  coverImage: string;
+  coverAlt: string;
   applicationLink?: string;
   applicationLabel?: string;
 };
@@ -26,21 +28,23 @@ const Projects = () => {
       id: "green-stage-sustainable-future",
       title: "Green Stage for Sustainable Future",
       category: "Erasmus+ Youth Exchange",
-      status: "Ongoing",
-      statusTone: "warning",
+      status: "Completed",
+      statusTone: "success",
       date: "22–31 May 2026",
       location: "Norway",
       participants: "37",
       description:
         "Climate action meets theatre: sustainability, creativity, and nature-based learning with a public showcase.",
       highlights: ["Theatre & storytelling", "Sustainability workshops", "Hikes + eco-farm visit"],
+      coverImage: "https://flagcdn.com/w640/no.png",
+      coverAlt: "Norwegian flag",
     },
     {
       id: "discover-eu",
       title: "Fully funded travel across Europe with DiscoverEU",
       category: "EU Travel Initiative",
-      status: "Ongoing",
-      statusTone: "info",
+      status: "Completed",
+      statusTone: "success",
       date: "1 April 2026",
       location: "Europe",
       participants: "15",
@@ -49,6 +53,8 @@ const Projects = () => {
       highlights: ["FREE Interrail Pass", "Daily pocket money", "Cultural exchange stops", "Leaders per route"],
       applicationLink: "https://ijbkev.github.io",
       applicationLabel: "View the project results",
+      coverImage: "https://flagcdn.com/w640/eu.png",
+      coverAlt: "European Union flag",
     },
     {
       id: "ai-social-impact",
@@ -62,6 +68,8 @@ const Projects = () => {
       description:
         "A co-creative exchange on ethical AI, prototyping solutions for social challenges while building cross-country friendships.",
       highlights: ["Ethical AI labs", "Solution design", "Cross-country teams", "Showcase day"],
+      coverImage: "https://flagcdn.com/w640/ee.png",
+      coverAlt: "Estonian flag",
     },
     {
       id: "KA152",
@@ -75,6 +83,8 @@ const Projects = () => {
       description:
         "A digital literacy sprint covering AI tools, online safety, and collaboration to strengthen European youth skills.",
       highlights: ["Digital skills workshops", "AI tools training", "Cross-cultural teams", "Project-based learning"],
+      coverImage: "https://flagcdn.com/w640/de.png",
+      coverAlt: "German flag",
     },
     {
       id: "KA153",
@@ -88,6 +98,8 @@ const Projects = () => {
       description:
         "Upskilling youth workers with practical AI ethics, toolkits, and facilitation techniques for local programs.",
       highlights: ["AI ethics", "Practical toolkits", "Youth worker capacity building", "Open resources"],
+      coverImage: "https://flagcdn.com/w640/mk.png",
+      coverAlt: "North Macedonian flag",
     },
     {
       id: "ai-culinary",
@@ -101,6 +113,8 @@ const Projects = () => {
       description:
         "Combining culinary arts with AI in the food industry — exploring culture through kitchens and code.",
       highlights: ["Cultural immersion", "AI in food", "Traditional cooking", "Tech integration"],
+      coverImage: "https://flagcdn.com/w640/tr.png",
+      coverAlt: "Turkish flag",
     },
     {
       id: "hiking-tours",
@@ -114,6 +128,8 @@ const Projects = () => {
       description:
         "Sustainability-focused hikes mixing outdoor activity, environmental education, and community building.",
       highlights: ["Environmental education", "Sustainable tourism", "Local partnerships", "Outdoor learning"],
+      coverImage: "https://flagcdn.com/w640/de.png",
+      coverAlt: "German flag",
     },
   ];
 
@@ -185,32 +201,47 @@ const Projects = () => {
           {projects.map((project) => (
             <Card
               key={project.id}
-              className="panel-strong h-full holo-card hover-lift"
+              className="panel-strong h-full overflow-hidden holo-card hover-lift flex flex-col"
             >
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-semibold text-foreground">{project.title}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="text-primary border-primary">
-                        {project.category}
-                      </Badge>
-                      <Badge className={statusStyles[project.statusTone]}>{project.status}</Badge>
-                    </div>
+              <div className="relative h-40 sm:h-44 shrink-0">
+                <img
+                  src={project.coverImage}
+                  alt={project.coverAlt}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/80 via-blue-950/70 to-cyan-950/25" />
+                <div className="absolute inset-0 bg-black/18" />
+                <div className="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-3 text-white z-10">
+                  <div className="space-y-1 min-w-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                    <p className="text-[0.7rem] uppercase tracking-[0.22em] text-white/85">{project.location}</p>
+                    <h3 className="text-lg font-semibold leading-tight line-clamp-2 text-white">{project.title}</h3>
                   </div>
-                  <div className="text-right text-muted-foreground text-sm">
-                    <div className="flex items-center gap-2 justify-end">
-                      <Calendar size={16} />
-                      <span className="whitespace-nowrap">{project.date}</span>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <MapPin size={16} />
-                      <span className="whitespace-nowrap">{project.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <Users size={16} />
-                      <span>{project.participants}</span>
-                    </div>
+                  <div className="rounded-full bg-black/35 backdrop-blur-md border border-white/25 px-3 py-1 text-xs font-semibold whitespace-nowrap shadow-sm">
+                    {project.status}
+                  </div>
+                </div>
+              </div>
+
+              <CardContent className="p-6 space-y-4 flex-1 flex flex-col">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="text-primary border-primary">
+                    {project.category}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} />
+                    <span>{project.date}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={16} />
+                    <span>{project.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users size={16} />
+                    <span>{project.participants}</span>
                   </div>
                 </div>
 
@@ -229,7 +260,7 @@ const Projects = () => {
                 </div>
 
                 {project.applicationLink && (
-                  <div className="pt-3 border-t border-border">
+                  <div className="pt-3 border-t border-border mt-auto">
                     <a
                       href={project.applicationLink}
                       target="_blank"
