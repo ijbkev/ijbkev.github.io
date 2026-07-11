@@ -237,12 +237,19 @@ const Homepage = () => {
 
       <main className="overflow-hidden relative z-10">
         {/* HERO */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
+        <section className="relative overflow-hidden text-white scroll-fade section-chrome min-h-[92vh]">
+          <video
+            className="absolute inset-0 h-full w-full object-cover opacity-60"
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-hidden
+          >
+            <source src="/lovable-uploads/banner.mp4" type="video/mp4" />
+          </video>
 
-          <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-            <div className="saber-trail" />
-          </div>
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,51,153,0.72),rgba(6,13,31,0.9)),radial-gradient(circle_at_20%_20%,rgba(0,51,153,0.28),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.12),transparent_32%)]" />
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
@@ -287,7 +294,7 @@ const Homepage = () => {
             />
           </div>
 
-          <div className="page-shell relative pt-20 pb-16 md:pb-24">
+          <div className="page-shell relative z-10 pt-20 pb-16 md:pb-24">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
               <div
                 className="text-white space-y-8 relative"
