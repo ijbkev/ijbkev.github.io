@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, ExternalLink, Sparkles, ArrowRight } from "lucide-react";
+import { Calendar, Users, ExternalLink, Sparkles, ArrowRight } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Link } from "react-router-dom";
@@ -13,7 +13,6 @@ type Project = {
   statusTone: string;
   date: string;
   location: string;
-  participants: string;
   description: string;
   highlights: string[];
   coverImage: string;
@@ -25,6 +24,38 @@ type Project = {
 const Projects = () => {
   const projects: Project[] = [
     {
+      id: "who-am-ai",
+      title: "WHO AM AI?",
+      category: "Erasmus+ Youth Exchange",
+      status: "Upcoming",
+      statusTone: "warning",
+      date: "2–10 October 2026",
+      location: "Austria",
+      description:
+        "Exploring artificial intelligence, critical thinking, and digital responsibility together through a youth exchange focused on reflection and co-creation.",
+      highlights: ["AI literacy", "Critical thinking", "Digital responsibility", "5 partner countries"],
+      applicationLink: "https://canva.link/whoamai",
+      applicationLabel: "View infopack",
+      coverImage: "https://flagcdn.com/w640/at.png",
+      coverAlt: "Austrian flag",
+    },
+    {
+      id: "connected-not-consumed",
+      title: "Connected, Not Consumed",
+      category: "Erasmus+ Youth Exchange",
+      status: "Upcoming",
+      statusTone: "warning",
+      date: "1–10 December 2026",
+      location: "Germany",
+      description:
+        "Exploring digital well-being, media literacy, and conscious online participation together across Europe.",
+      highlights: ["Digital well-being", "Media literacy", "Online participation", "7 partner countries"],
+      applicationLink: "https://canva.link/ijbk-cnc",
+      applicationLabel: "View infopack",
+      coverImage: "https://flagcdn.com/w640/de.png",
+      coverAlt: "German flag",
+    },
+    {
       id: "green-stage-sustainable-future",
       title: "Green Stage for Sustainable Future",
       category: "Erasmus+ Youth Exchange",
@@ -32,7 +63,6 @@ const Projects = () => {
       statusTone: "success",
       date: "22–31 May 2026",
       location: "Norway",
-      participants: "37",
       description:
         "Climate action meets theatre: sustainability, creativity, and nature-based learning with a public showcase.",
       highlights: ["Theatre & storytelling", "Sustainability workshops", "Hikes + eco-farm visit"],
@@ -47,7 +77,6 @@ const Projects = () => {
       statusTone: "success",
       date: "1 April 2026",
       location: "Europe",
-      participants: "15",
       description:
         "DiscoverEU opens Europe by train. Three curated routes with leaders, Interrail passes, accommodation, food, and local transport fully covered — no participation fee.",
       highlights: ["FREE Interrail Pass", "Daily pocket money", "Cultural exchange stops", "Leaders per route"],
@@ -64,7 +93,6 @@ const Projects = () => {
       statusTone: "success",
       date: "5 – 12 December 2025",
       location: "Tallinn, Estonia",
-      participants: "EE, LT, DE & PL",
       description:
         "A co-creative exchange on ethical AI, prototyping solutions for social challenges while building cross-country friendships.",
       highlights: ["Ethical AI labs", "Solution design", "Cross-country teams", "Showcase day"],
@@ -79,7 +107,6 @@ const Projects = () => {
       statusTone: "success",
       date: "2024",
       location: "Germany",
-      participants: "30+",
       description:
         "A digital literacy sprint covering AI tools, online safety, and collaboration to strengthen European youth skills.",
       highlights: ["Digital skills workshops", "AI tools training", "Cross-cultural teams", "Project-based learning"],
@@ -94,7 +121,6 @@ const Projects = () => {
       statusTone: "success",
       date: "2024",
       location: "North Macedonia",
-      participants: "25",
       description:
         "Upskilling youth workers with practical AI ethics, toolkits, and facilitation techniques for local programs.",
       highlights: ["AI ethics", "Practical toolkits", "Youth worker capacity building", "Open resources"],
@@ -109,7 +135,6 @@ const Projects = () => {
       statusTone: "success",
       date: "2025",
       location: "Türkiye",
-      participants: "20",
       description:
         "Combining culinary arts with AI in the food industry — exploring culture through kitchens and code.",
       highlights: ["Cultural immersion", "AI in food", "Traditional cooking", "Tech integration"],
@@ -124,7 +149,6 @@ const Projects = () => {
       statusTone: "info",
       date: "2025",
       location: "Kaiserslautern Region",
-      participants: "ESN Kaiserslautern Partnership",
       description:
         "Sustainability-focused hikes mixing outdoor activity, environmental education, and community building.",
       highlights: ["Environmental education", "Sustainable tourism", "Local partnerships", "Outdoor learning"],
@@ -217,9 +241,11 @@ const Projects = () => {
                     <p className="text-[0.7rem] uppercase tracking-[0.22em] text-white/85">{project.location}</p>
                     <h3 className="text-lg font-semibold leading-tight line-clamp-2 text-white">{project.title}</h3>
                   </div>
-                  <div className="rounded-full bg-black/35 backdrop-blur-md border border-white/25 px-3 py-1 text-xs font-semibold whitespace-nowrap shadow-sm">
+                  <Badge
+                    className={`rounded-full border-0 px-3 py-1 text-xs font-semibold whitespace-nowrap shadow-sm text-white ${statusStyles[project.statusTone] ?? "bg-slate-100 text-slate-800"}`}
+                  >
                     {project.status}
-                  </div>
+                  </Badge>
                 </div>
               </div>
 
@@ -230,18 +256,13 @@ const Projects = () => {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} />
-                    <span>{project.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={16} />
-                    <span>{project.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users size={16} />
-                    <span>{project.participants}</span>
+                <div className="space-y-2 rounded-2xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3">
+                    <Calendar size={16} className="mt-0.5 shrink-0 text-primary" />
+                    <div className="min-w-0">
+                      <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-foreground/70">Date</p>
+                      <p className="text-foreground leading-snug break-words">{project.date}</p>
+                    </div>
                   </div>
                 </div>
 

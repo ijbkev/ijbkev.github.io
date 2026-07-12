@@ -391,7 +391,7 @@ const Homepage = () => {
                           Right now
                         </h4>
                         <p className="text-muted-foreground">
-                          Opportunities in Svalbard, Martinique, Italy, Bulgaria, Germany, Austria, and Tunisia in the coming months. Stay updated!
+                          New projects are available. Head on to the Projects page for the latest opportunities.
                         </p>
                       </div>
                     </div>
@@ -527,10 +527,10 @@ const Homepage = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                        What we are preparing
+                        New projects available
                       </p>
                       <h3 className="mt-2 text-xl md:text-2xl font-semibold text-foreground leading-tight">
-                        Next Erasmus+ calls are in design phase
+                        Head on to the Projects page
                       </h3>
                     </div>
                     <div className="flex flex-col items-end gap-3">
@@ -540,7 +540,7 @@ const Homepage = () => {
                       </span>
                       <Button asChild className="shrink-0">
                         <Link to="/projects" className="inline-flex items-center">
-                          Explore Projects
+                          Go to Projects
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
@@ -548,7 +548,7 @@ const Homepage = () => {
                   </div>
 
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl">
-                    We are shaping the next wave of inclusive, zero-fee mobility projects. Final topics, destinations, and partner confirmations are being aligned before publication.
+                    The latest project opportunities are published on the Projects page, where you can check dates, locations, and infopacks.
                   </p>
 
                   <div className="grid gap-3 sm:grid-cols-3">

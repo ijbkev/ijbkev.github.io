@@ -40,7 +40,7 @@ const Footer = () => {
                 <div className="flex items-center gap-2">
                   <MapPin size={16} />
                   <span>
-                    Gerhart-Hauptmann-Str. 24, 216A • 67663 Kaiserslautern
+                    67663 Kaiserslautern
                   </span>
                 </div>
 
