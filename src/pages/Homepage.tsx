@@ -13,8 +13,6 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
 
 
 type StatConfig = {
@@ -232,8 +230,6 @@ const Homepage = () => {
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         <div className="holo-grid" />
       </div>
-
-      <Navigation />
 
       <main className="overflow-hidden relative z-10">
         {/* HERO */}
@@ -604,7 +600,6 @@ const Homepage = () => {
 
       </main>
 
-      <Footer />
     </div>
   );
 };

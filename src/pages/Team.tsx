@@ -1,6 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
 import type { SyntheticEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 
@@ -107,8 +105,6 @@ const Team = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
-      <Navigation />
-
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-5">
@@ -193,7 +189,6 @@ const Team = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

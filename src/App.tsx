@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import Layout from "./components/Layout";
 import Homepage from "./pages/Homepage";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
@@ -40,13 +41,15 @@ const App = () => (
             <BrowserRouter>
               <ScrollToTop />
             <Routes>
-              <Route path="/" element={<Homepage />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/team" element={<Team />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/erasmus-plus" element={<ErasmusPlus />} />
+              <Route element={<Layout />}>
+                <Route path="/" element={<Homepage />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/team" element={<Team />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/erasmus-plus" element={<ErasmusPlus />} />
+              </Route>
               <Route path="*" element={<NotFound />} />
               </Routes>
               <WhatsAppWidget />

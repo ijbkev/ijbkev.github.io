@@ -68,12 +68,13 @@ const Navigation = () => {
           <div className="md:hidden">
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={() => setIsOpen(!isOpen)}
-              className="rounded-xl border-border"
+              className="rounded-xl border-border gap-2"
               aria-label="Toggle navigation"
             >
-              {isOpen ? <X size={20} /> : <Menu size={20} />}
+              {isOpen ? <X size={18} /> : <Menu size={18} />}
+              <span className="font-semibold">{isOpen ? "Close" : "Menu"}</span>
             </Button>
           </div>
         </nav>
