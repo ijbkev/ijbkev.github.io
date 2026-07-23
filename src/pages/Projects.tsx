@@ -1,6 +1,8 @@
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, ExternalLink, Sparkles, ArrowRight } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, ExternalLink, Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type Project = {
@@ -21,6 +23,22 @@ type Project = {
 
 const Projects = () => {
   const projects: Project[] = [
+    {
+      id: "oasis",
+      title: "🌴 OASIS",
+      category: "Erasmus+ Youth Exchange",
+      status: "Upcoming",
+      statusTone: "warning",
+      date: "31 October–8 November 2026",
+      location: "Hammamet, Tunisia",
+      description:
+        "Youth exchange exploring online safety, scams, misinformation, manipulation techniques, verification tools, digital resilience, and responsible online behaviour.",
+      highlights: ["Online safety & scams", "Digital resilience", "Anti-Scam Escape Room", "5 partner countries", "NO participation fees"],
+      applicationLink: "https://canva.link/ijbk-oasis",
+      applicationLabel: "View infopack",
+      coverImage: "https://flagcdn.com/w640/tn.png",
+      coverAlt: "Tunisian flag",
+    },
     {
       id: "who-am-ai",
       title: "WHO AM AI?",
@@ -161,6 +179,23 @@ const Projects = () => {
     info: "bg-blue-100 text-blue-800",
   };
 
+  const statusTabs = ["Upcoming", "Completed", "Ongoing"] as const;
+  const [activeStatus, setActiveStatus] = useState<(typeof statusTabs)[number]>("Upcoming");
+
+  const projectCounts = useMemo(
+    () =>
+      statusTabs.reduce<Record<string, number>>((acc, status) => {
+        acc[status] = projects.filter((project) => project.status === status).length;
+        return acc;
+      }, {}),
+    [projects],
+  );
+
+  const filteredProjects = useMemo(
+    () => projects.filter((project) => project.status === activeStatus),
+    [projects, activeStatus],
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground relative">
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
@@ -180,7 +215,7 @@ const Projects = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl">
             {[
               { label: "Completed", value: "4" },
-              { label: "In motion", value: "2" },
+              { label: "In motion", value: "3" },
               { label: "Countries engaged", value: "20+" },
               { label: "Youth reached", value: "4000+" },
             ].map((stat) => (
@@ -217,8 +252,22 @@ const Projects = () => {
           </CardContent>
         </Card>
 
+        <Tabs
+          value={activeStatus}
+          onValueChange={(value) => setActiveStatus(value as (typeof statusTabs)[number])}
+        >
+          <TabsList>
+            {statusTabs.map((status) => (
+              <TabsTrigger key={status} value={status}>
+                {status}
+                <span className="ml-1.5 text-xs text-muted-foreground">({projectCounts[status] ?? 0})</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <Card
               key={project.id}
               className="panel-strong h-full overflow-hidden holo-card hover-lift flex flex-col"
@@ -252,28 +301,22 @@ const Projects = () => {
                   </Badge>
                 </div>
 
-                <div className="space-y-2 rounded-2xl border border-border/70 bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
-                  <div className="flex items-start gap-3">
-                    <Calendar size={16} className="mt-0.5 shrink-0 text-primary" />
-                    <div className="min-w-0">
-                      <p className="text-[0.7rem] uppercase tracking-[0.18em] font-semibold text-foreground/70">Date</p>
-                      <p className="text-foreground leading-snug break-words">{project.date}</p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar size={15} className="shrink-0 text-primary" />
+                  <span className="text-foreground">{project.date}</span>
                 </div>
 
                 <p className="text-muted-foreground leading-relaxed">{project.description}</p>
 
-                <div className="space-y-2">
-                  <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Highlights</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {project.highlights.map((highlight) => (
-                      <div key={highlight} className="flex items-center gap-2 text-sm text-foreground">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        <span>{highlight}</span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {project.highlights.map((highlight) => (
+                    <span
+                      key={highlight}
+                      className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-medium"
+                    >
+                      {highlight}
+                    </span>
+                  ))}
                 </div>
 
                 {project.applicationLink && (
