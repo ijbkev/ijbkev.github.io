@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
   ArrowUpRight,
+  Palette,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -128,6 +129,24 @@ const StaticStatTile = ({
   );
 };
 
+type FieldMoment = { title: string; location: string; image: string };
+
+const FieldMomentTile = ({ item }: { item: FieldMoment }) => (
+  <div className="relative w-64 sm:w-72 aspect-[4/3] shrink-0 overflow-hidden rounded-2xl shadow-medium group holo-card">
+    <img
+      src={item.image}
+      alt={`${item.title} — ${item.location}`}
+      loading="lazy"
+      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+    />
+    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+    <div className="absolute inset-x-0 bottom-0 p-4">
+      <h3 className="text-white font-semibold leading-tight drop-shadow-sm">{item.title}</h3>
+      <p className="text-white/80 text-sm">{item.location}</p>
+    </div>
+  </div>
+);
+
 const Homepage = () => {
   const [heroScroll, setHeroScroll] = useState(0);
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
@@ -161,59 +180,132 @@ const Homepage = () => {
         title: "Digital Skills & AI",
         description:
           "Immersive training, ethical AI literacy, and hands-on tech for future-ready youth.",
+        iconClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+        barClass: "bg-blue-500",
       },
       {
         icon: <Users className="w-7 h-7" />,
         title: "Social Entrepreneurship",
         description:
           "Building ventures that tackle real community challenges with measurable impact.",
+        iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+        barClass: "bg-amber-500",
       },
       {
         icon: <Globe className="w-7 h-7" />,
         title: "Intercultural Learning",
         description:
           "Erasmus+ exchanges that spark cultural fluency, co-creation, and lifelong networks.",
+        iconClass: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+        barClass: "bg-cyan-500",
       },
       {
         icon: <Leaf className="w-7 h-7" />,
         title: "Sustainability",
         description:
           "Outdoor learning, climate literacy, and daily habits that protect our planet.",
+        iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+        barClass: "bg-emerald-500",
+      },
+      {
+        icon: <Palette className="w-7 h-7" />,
+        title: "Dance & Cultural Arts",
+        description:
+          "Dance, theatre, and cultural arts — a new creative frontier we're just beginning to explore with young people.",
+        iconClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+        barClass: "bg-rose-500",
       },
     ],
     []
   );
 
-  const gallery = useMemo(
-    () => [
+  const fieldMoments = useMemo(() => {
+    const projectPhotos = [
       {
-        title: "Be a Leader",
-        location: "Targoviste, Romania",
-        image: "/lovable-uploads/49b61ef9-3596-4028-bfde-d476a7bea249.png",
+        title: "Green Stage for Sustainable Future",
+        location: "Steinsholt, Norway",
+        images: Array.from({ length: 12 }, (_, i) => `/lovable-uploads/gogreen/${i + 1}.jpg`),
+      },
+      {
+        title: "DiscoverEU Memories",
+        location: "Across Europe",
+        images: [
+          "1000167767",
+          "1000167768",
+          "1000167769",
+          "1000167770",
+          "1000167771",
+          "1000167772",
+          "1000167773",
+          "1000167774",
+          "1000167801",
+          "1000167802",
+          "1000167803",
+        ].map((name) => `/lovable-uploads/discoverEU/${name}.jpg`),
+      },
+      {
+        title: "Digitalisation Matters",
+        location: "Euskirchen, Germany",
+        images: [
+          ...Array.from({ length: 5 }, (_, i) => `/lovable-uploads/digimat/${i + 1}.jpg`),
+          "/lovable-uploads/94060860-f177-45f6-8e5f-4455f97eb693.png",
+        ],
       },
       {
         title: "Act it Out!",
         location: "Debrecen, Hungary",
-        image: "/lovable-uploads/c4c1f046-ccc5-4e93-852a-0da78fda170b.png",
+        images: [
+          "/lovable-uploads/c4c1f046-ccc5-4e93-852a-0da78fda170b.png",
+          "/lovable-uploads/act-it-out.jpg",
+        ],
+      },
+      {
+        title: "Be a Leader",
+        location: "Targoviste, Romania",
+        images: ["/lovable-uploads/49b61ef9-3596-4028-bfde-d476a7bea249.png"],
       },
       {
         title: "AI Tools 4 Youth Work",
         location: "North Macedonia",
-        image: "/lovable-uploads/14025e70-2537-4558-9ecb-3bde034b333f.png",
+        images: ["/lovable-uploads/14025e70-2537-4558-9ecb-3bde034b333f.png"],
       },
-      {
-        title: "Digitalization Matters",
-        location: "Germany",
-        image: "/lovable-uploads/94060860-f177-45f6-8e5f-4455f97eb693.png",
-      },
-    ],
-    []
+    ];
+
+    // Interleave projects round-robin so consecutive tiles rarely share the same trip.
+    const queues = projectPhotos.map((project) => [...project.images]);
+    const interleaved: { title: string; location: string; image: string }[] = [];
+    let remaining = queues.reduce((sum, q) => sum + q.length, 0);
+    let cursor = 0;
+    while (remaining > 0) {
+      const projectIndex = cursor % queues.length;
+      const image = queues[projectIndex].shift();
+      if (image) {
+        interleaved.push({
+          title: projectPhotos[projectIndex].title,
+          location: projectPhotos[projectIndex].location,
+          image,
+        });
+        remaining -= 1;
+      }
+      cursor += 1;
+    }
+
+    return interleaved;
+  }, []);
+
+  const galleryRowTop = useMemo(
+    () => fieldMoments.filter((_, i) => i % 2 === 0),
+    [fieldMoments]
+  );
+  const galleryRowBottom = useMemo(
+    () => fieldMoments.filter((_, i) => i % 2 === 1),
+    [fieldMoments]
   );
 
   // These animate
   const stats: StatConfig[] = useMemo(
     () => [
-      { label: "Mission areas", value: 4 },
+      { label: "Mission areas", value: 5 },
       { label: "Countries reached", value: 20, suffix: "+" },
       { label: "Non-profit", value: 100, suffix: "%" },
     ],
@@ -425,7 +517,7 @@ const Homepage = () => {
                   What matters to us
                 </p>
                 <h2 className="text-3xl md:text-4xl font-semibold leading-tight mt-2">
-                  Four mission areas, one bold youth agenda
+                  Five mission areas, one bold youth agenda
                 </h2>
               </div>
               <Link
@@ -436,14 +528,22 @@ const Homepage = () => {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {missionAreas.map((area) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              {missionAreas.map((area, index) => (
                 <Card
                   key={area.title}
-                  className="panel-strong group h-full holo-card hover-lift"
+                  className="panel-strong group relative h-full overflow-hidden holo-card hover-lift"
                 >
+                  <span
+                    className="absolute -top-2 right-3 text-6xl font-bold text-foreground/[0.06] select-none pointer-events-none"
+                    aria-hidden
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                   <CardContent className="p-6 space-y-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary grid place-items-center group-hover:scale-105 transition-transform">
+                    <div
+                      className={`w-14 h-14 rounded-2xl grid place-items-center transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${area.iconClass}`}
+                    >
                       {area.icon}
                     </div>
                     <div className="space-y-2">
@@ -454,7 +554,9 @@ const Homepage = () => {
                         {area.description}
                       </p>
                     </div>
-                    <div className="h-1 rounded-full bg-gradient-hero opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div
+                      className={`h-1 w-10 rounded-full transition-all duration-300 group-hover:w-full ${area.barClass}`}
+                    />
                   </CardContent>
                 </Card>
               ))}
@@ -464,7 +566,7 @@ const Homepage = () => {
 
         {/* GALLERY */}
         <section className="pt-6 pb-16 md:pt-8 md:pb-20 bg-muted scroll-fade">
-          <div className="page-shell space-y-10">
+          <div className="page-shell">
             <div className="text-center space-y-3">
               <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
                 Field moments
@@ -477,93 +579,51 @@ const Homepage = () => {
                 Europe — captured in motion.
               </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {gallery.map((item) => (
-                <Card
-                  key={item.title}
-                  className="overflow-hidden group shadow-medium hover:shadow-strong transition-shadow duration-300 holo-card hover-lift"
-                >
-                  <div className="aspect-square overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-foreground">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground">{item.location}</p>
-                  </CardContent>
-                  <div className="absolute top-4 right-4 flex gap-2" aria-hidden>
-                    <span className="pulse-dot" />
-                    <span className="pulse-dot secondary" />
-                  </div>
-                </Card>
-              ))}
+          <div className="mt-10 space-y-4 w-screen relative left-1/2 -translate-x-1/2">
+            <div className="marquee-track">
+              <div
+                className="marquee-row marquee-left gap-4 px-2"
+                style={{ "--marquee-duration": "70s" } as CSSProperties}
+              >
+                {[...galleryRowTop, ...galleryRowTop].map((item, i) => (
+                  <FieldMomentTile key={`top-${i}-${item.image}`} item={item} />
+                ))}
+              </div>
+            </div>
+            <div className="marquee-track">
+              <div
+                className="marquee-row marquee-right gap-4 px-2"
+                style={{ "--marquee-duration": "62s" } as CSSProperties}
+              >
+                {[...galleryRowBottom, ...galleryRowBottom].map((item, i) => (
+                  <FieldMomentTile key={`bottom-${i}-${item.image}`} item={item} />
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         {/* PROGRAMS */}
-        <section className="py-14 md:py-16 relative scroll-fade">
-          <div className="page-shell space-y-7">
-            <div className="flex flex-col items-start gap-3">
-              <p className="text-base md:text-lg uppercase tracking-[0.2em] text-muted-foreground">
-                Live & upcoming
-              </p>
-              <span className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-                Project radar
-              </span>
-            </div>
-
-            <div className="grid gap-4">
-              <Card className="border bg-background shadow-soft hover-lift">
-                <CardContent className="p-5 md:p-6 space-y-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                        New projects available
-                      </p>
-                      <h3 className="mt-2 text-xl md:text-2xl font-semibold text-foreground leading-tight">
-                        Head on to the Projects page
-                      </h3>
-                    </div>
-                    <div className="flex flex-col items-end gap-3">
-                      <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        In progress
-                      </span>
-                      <Button asChild className="shrink-0">
-                        <Link to="/projects" className="inline-flex items-center">
-                          Go to Projects
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-
-                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl">
-                    The latest project opportunities are published on the Projects page, where you can check dates, locations, and infopacks.
-                  </p>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl border bg-muted/40 p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Current stage</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">Project acceptance has been received</p>
-                    </div>
-                    <div className="rounded-xl border bg-muted/40 p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Funding mode</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">Erasmus+ supported</p>
-                    </div>
-                    <div className="rounded-xl border bg-muted/40 p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Participation</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">Zero participant fee</p>
-                    </div>
-                  </div>
-
-                </CardContent>
-              </Card>
+        <section className="py-8 md:py-10 relative scroll-fade">
+          <div className="page-shell">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border bg-background px-5 py-4 shadow-soft hover-lift">
+              <div className="flex items-center gap-3 text-center sm:text-left">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <p className="text-sm md:text-base text-foreground">
+                  <span className="font-semibold">New Erasmus+ projects are open</span>
+                  <span className="text-muted-foreground"> — zero participation fees, check dates & infopacks.</span>
+                </p>
+              </div>
+              <Button asChild className="shrink-0">
+                <Link to="/projects" className="inline-flex items-center">
+                  Go to Projects
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>

@@ -1,27 +1,34 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Target, Sparkles, ArrowRight } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Sparkles, ArrowRight, Lightbulb, Globe, Leaf, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const About = () => {
   const missionAreas = [
     {
       title: "Digital Skills & AI",
-      description:
-        "Comprehensive digital literacy, AI ethics, and hands-on prototyping sessions that unlock employability and confidence.",
+      icon: <Lightbulb className="w-4 h-4" />,
+      iconClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     },
     {
       title: "Social Entrepreneurship",
-      description: "Incubating youth-led solutions with measurable impact, mentoring, and investor-ready storytelling.",
+      icon: <Users className="w-4 h-4" />,
+      iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
     },
     {
       title: "Intercultural Learning",
-      description:
-        "Immersive Erasmus+ exchanges that weave together languages, food, art, and collaborative project delivery.",
+      icon: <Globe className="w-4 h-4" />,
+      iconClass: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
     },
     {
       title: "Sustainability",
-      description: "From climate literacy to low-waste events and outdoor learning labs across Kaiserslautern’s forests.",
+      icon: <Leaf className="w-4 h-4" />,
+      iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    },
+    {
+      title: "Dance & Cultural Arts",
+      icon: <Palette className="w-4 h-4" />,
+      iconClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
     },
   ];
 
@@ -64,7 +71,7 @@ const About = () => {
           <div className="space-y-4">
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Our origin story</p>
             <h2 className="text-3xl md:text-4xl font-semibold leading-tight">
-              Born from a student network, scaled into a European youth powerhouse.
+              Born from a Student Network, scaled into a European Youth powerhouse.
             </h2>
             <p className="text-lg text-muted-foreground">
               IJBK e.V. evolved from the Studentisches Netzwerk der RPTU to a registered non-profit on 8 July 2025. Today,
@@ -93,63 +100,73 @@ const About = () => {
             </CardContent>
           </Card>
         </div>
-      </section>
 
-      <section className="py-16 md:py-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 scroll-fade section-chrome">
-        <div className="page-shell space-y-12">
-          <div className="text-center space-y-4">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Financial accessibility first</p>
-            <h2 className="text-3xl md:text-4xl font-semibold">Our motto</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Access to international learning should never depend on the ability to pay. Too often, young people face participation fees for Erasmus+ projects — even when these projects claim to be inclusive. We have seen fees as high as €120 become a barrier for talented participants, turning opportunity into privilege.
-            </p>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed font-semibold">
-              We ask a simple question: how many capable and deserving young people are excluded because they cannot afford to pay? Having experienced this firsthand, we founded IJBK e.V. to build Erasmus+ opportunities that are truly accessible, inclusive, and free of financial barriers. Erasmus+ should remain what it was meant to be — learning, connection, and growth — not a privilege limited by cost.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { icon: "€0", label: "Participation fees" },
-              { icon: "🎓", label: "Scholarships over paywalls" },
-              { icon: "🌍", label: "Inclusive recruitment" },
-            ].map((item) => (
-              <div key={item.label} className="text-center">
-                <div className="text-4xl font-bold text-primary mb-2">{item.icon}</div>
-                <p className="font-semibold text-foreground">{item.label}</p>
+        <div className="pt-8 border-t border-border space-y-4">
+          <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Our focus pillars</p>
+          <div className="flex flex-wrap gap-3">
+            {missionAreas.map((area) => (
+              <div
+                key={area.title}
+                className="inline-flex items-center gap-2 rounded-full border bg-background px-4 py-2 shadow-soft hover-lift"
+              >
+                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${area.iconClass}`}>
+                  {area.icon}
+                </span>
+                <span className="text-sm font-semibold text-foreground">{area.title}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-16 md:py-20 bg-muted scroll-fade section-chrome">
-        <div className="page-shell space-y-10">
-          <div className="text-center space-y-3">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Mission areas</p>
-            <h2 className="text-3xl md:text-4xl font-semibold">Our focus pillars</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Four interconnected arenas where we combine technology, culture, and sustainability for ambitious youth.
-            </p>
-          </div>
+      <section className="py-16 md:py-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 scroll-fade section-chrome">
+        <div className="page-shell">
+          <div className="max-w-3xl mx-auto space-y-6">
+            <div className="space-y-2">
+              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Financial accessibility first</p>
+              <h2 className="text-3xl md:text-4xl font-semibold">Our motto</h2>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {missionAreas.map((area) => (
-              <Card key={area.title} className="panel-strong holo-card hover-lift transition-transform">
-                <CardContent className="p-6 space-y-3">
-                  <h3 className="text-xl font-semibold text-foreground">{area.title}</h3>
-                  <p className="text-muted-foreground">{area.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+            <div className="relative border-l-4 border-primary/60 pl-6 md:pl-8 space-y-6">
+              <span
+                className="absolute -left-2 -top-6 text-8xl font-serif text-primary/15 select-none"
+                aria-hidden
+              >
+                &ldquo;
+              </span>
+
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Access to international learning should never depend on the ability to pay. Too often, young people face participation fees for Erasmus+ projects — even when these projects claim to be inclusive. We have seen fees as high as €120 become a barrier for talented participants, turning opportunity into privilege.
+              </p>
+
+              <div className="flex flex-wrap gap-3 py-1">
+                {[
+                  { icon: "€0", label: "Participation fees" },
+                  { icon: "🎓", label: "Scholarships over paywalls" },
+                  { icon: "🌍", label: "Inclusive recruitment" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-4 py-2"
+                  >
+                    <span className="text-lg font-bold text-primary">{item.icon}</span>
+                    <span className="text-sm font-semibold text-foreground">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-lg text-muted-foreground leading-relaxed font-semibold">
+                We ask a simple question: how many capable and deserving young people are excluded because they cannot afford to pay? Having experienced this firsthand, we founded IJBK e.V. to build Erasmus+ opportunities that are truly accessible, inclusive, and free of financial barriers. Erasmus+ should remain what it was meant to be — learning, connection, and growth — not a privilege limited by cost.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="py-16 md:py-20 scroll-fade section-chrome">
         <div className="page-shell space-y-10">
-          <div className="grid lg:grid-cols-2 gap-10">
-            <div className="space-y-4">
+          <div className="grid lg:grid-cols-5 gap-10 items-start">
+            <div className="lg:col-span-2 space-y-4">
               <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Vision</p>
               <h2 className="text-3xl md:text-4xl font-semibold">A generation equipped to tackle global challenges.</h2>
               <p className="text-lg text-muted-foreground">
@@ -157,13 +174,13 @@ const About = () => {
                 intercultural fluency to create sustainable change.
               </p>
             </div>
-            <Card className="panel-strong holo-card hover-lift">
+            <Card className="lg:col-span-3 panel-strong holo-card hover-lift">
               <CardContent className="p-6 space-y-4">
                 <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">How we behave</p>
-                <div className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
                   {values.map((value) => (
                     <div key={value.title} className="flex gap-3">
-                      <span className="w-2 h-2 rounded-full bg-primary mt-2" />
+                      <span className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
                       <div>
                         <h4 className="font-semibold text-foreground">{value.title}</h4>
                         <p className="text-muted-foreground">{value.text}</p>
