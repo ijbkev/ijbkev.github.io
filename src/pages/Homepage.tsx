@@ -332,6 +332,9 @@ const Homepage = () => {
             muted
             loop
             playsInline
+            preload="auto"
+            fetchPriority="high"
+            poster="/lovable-uploads/banner-poster.jpg"
             aria-hidden
           >
             <source src="/lovable-uploads/banner.mp4" type="video/mp4" />
