@@ -1,6 +1,41 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Users, GraduationCap, Train, Target, CheckCircle } from "lucide-react";
+import { Globe, Users, GraduationCap, Train, Target, Calendar, ShieldCheck, BedDouble, UtensilsCrossed } from "lucide-react";
+import type { ReactNode } from "react";
+
+type ProgramType = {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  keyPoints: string[];
+};
+
+const ProgramTypeCard = ({ program }: { program: ProgramType }) => (
+  <Card className="panel-strong holo-card hover-lift transition-transform h-full flex flex-col">
+    <CardContent className="p-6 space-y-4 flex flex-col h-full">
+      <div className="flex items-center gap-3">
+        {program.icon}
+        <h3 className="text-xl font-semibold">{program.title}</h3>
+      </div>
+      <p className="text-muted-foreground text-sm leading-relaxed min-h-[4.5rem] line-clamp-4">
+        {program.description}
+      </p>
+      <div className="space-y-2">
+        <h4 className="font-semibold text-xs uppercase tracking-wide text-primary">
+          Key Points
+        </h4>
+        <ul className="space-y-1.5">
+          {program.keyPoints.map((point, idx) => (
+            <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+              <span className="w-1 h-1 rounded-full bg-primary mt-2 flex-shrink-0" />
+              <span className="line-clamp-2">{point}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const ErasmusPlus = () => {
   const programTypes = [
@@ -33,27 +68,39 @@ const ErasmusPlus = () => {
       keyPoints: [
         "Learn Europe by experiencing it",
         "Often includes group travel, shared activities, reflection, and learning",
-        "Flight, accommodation, and meals are usually covered"
+        "Interrail pass, accommodation, and meals are usually covered"
       ]
     },
     {
       icon: <Target className="w-8 h-8 text-orange-500" />,
       title: "European Solidarity Corps (ESC)",
-      description: "The European Solidarity Corps gives young people the chance to volunteer or work on solidarity projects across Europe, combining community contribution with personal development and intercultural learning.",
+      description: "Young people volunteer or work on solidarity projects across Europe, combining community contribution with personal development.",
       keyPoints: [
         "18–30 years old, flexible duration (2 weeks to 12 months)",
-        "Contribute to real projects: social work, environmental, cultural, or community initiatives",
-        "Personal growth, language skills, and European citizenship experience",
-        "Accommodation, meals, and pocket money are usually provided"
+        "Social, environmental, cultural, or community projects",
+        "Personal growth, language skills, European citizenship",
+        "Accommodation, meals, and pocket money usually provided"
       ]
     }
   ];
 
   const coveredCosts = [
-    "Accommodation (usually shared rooms)",
-    "Food (typically three meals per day)",
-    "Programme costs (trainers, materials, venues)",
-    "Travel reimbursement (according to distance rules and project conditions)"
+    {
+      icon: <BedDouble className="w-6 h-6 text-blue-500" />,
+      label: "Accommodation (usually shared rooms)",
+    },
+    {
+      icon: <UtensilsCrossed className="w-6 h-6 text-amber-500" />,
+      label: "Food (typically three meals per day)",
+    },
+    {
+      icon: <GraduationCap className="w-6 h-6 text-purple-500" />,
+      label: "Programme costs (trainers, materials, venues)",
+    },
+    {
+      icon: <Train className="w-6 h-6 text-green-500" />,
+      label: "Travel reimbursement (according to distance rules and project conditions)",
+    },
   ];
 
   const faqs = [
@@ -99,32 +146,19 @@ const ErasmusPlus = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
+          {/* Mobile/tablet: swipeable snap carousel */}
+          <div className="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-4 -mx-4 px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {programTypes.map((program, index) => (
-              <Card key={index} className="panel-strong holo-card hover-lift transition-transform">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-3">
-                    {program.icon}
-                    <h3 className="text-xl font-semibold">{program.title}</h3>
-                  </div>
-                  <p className="text-muted-foreground text-sm leading-relaxed min-h-[4.5rem]">
-                    {program.description}
-                  </p>
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-xs uppercase tracking-wide text-primary">
-                      Key Points
-                    </h4>
-                    <ul className="space-y-1.5">
-                      {program.keyPoints.map((point, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <span className="w-1 h-1 rounded-full bg-primary mt-2 flex-shrink-0" />
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
+              <div key={index} className="w-[80%] sm:w-[45%] flex-shrink-0 snap-start">
+                <ProgramTypeCard program={program} />
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: grid */}
+          <div className="hidden md:grid md:grid-cols-4 gap-6">
+            {programTypes.map((program, index) => (
+              <ProgramTypeCard key={index} program={program} />
             ))}
           </div>
         </div>
@@ -147,17 +181,17 @@ const ErasmusPlus = () => {
             <Card className="panel-strong holo-card hover-lift">
               <CardContent className="p-6 space-y-4">
                 <h4 className="font-semibold text-foreground">What to expect:</h4>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                     <span className="text-muted-foreground">Daily programme with workshops, activities, and reflection</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                  <li className="flex items-start gap-3">
+                    <Users className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                     <span className="text-muted-foreground">You represent your group, organisation, and country</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                  <li className="flex items-start gap-3">
+                    <ShieldCheck className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                     <span className="text-muted-foreground">Respect, safety, inclusion, and active participation are essential</span>
                   </li>
                 </ul>
@@ -173,31 +207,33 @@ const ErasmusPlus = () => {
       </section>
 
       {/* Why EU Funds This */}
-      <section className="py-16 md:py-20 page-shell scroll-fade section-chrome">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
-          <div className="space-y-4">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Investment in people</p>
-            <h2 className="text-3xl md:text-4xl font-semibold">Why does the EU fund this?</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              The EU invests in people: Erasmus+ supports youth participation, inclusion, and quality learning so participants become more skilled, more open-minded, and better able to work across cultures.
-            </p>
-          </div>
-          <Card className="panel-strong holo-card hover-lift">
-            <CardContent className="p-6 space-y-4">
-              <h3 className="text-lg font-semibold">What's usually covered</h3>
-              <ul className="space-y-2">
-                {coveredCosts.map((cost, index) => (
-                  <li key={index} className="flex items-start gap-2 text-muted-foreground">
-                    <CheckCircle className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
-                    <span className="text-sm">{cost}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-muted-foreground italic">
-                Exact conditions depend on the specific project and your sending organisation.
+      <section className="py-16 md:py-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 scroll-fade section-chrome">
+        <div className="page-shell">
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <Card className="panel-strong holo-card hover-lift order-2 lg:order-1">
+              <CardContent className="p-6 space-y-4">
+                <h3 className="font-semibold text-foreground">What's usually covered</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {coveredCosts.map((cost, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-background/70"
+                    >
+                      <span className="[&>svg]:w-5 [&>svg]:h-5 flex-shrink-0">{cost.icon}</span>
+                      <span className="text-sm text-muted-foreground leading-snug line-clamp-2">{cost.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <div className="space-y-4 order-1 lg:order-2">
+              <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Investment in people</p>
+              <h2 className="text-3xl md:text-4xl font-semibold">Why does the EU fund this?</h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                The EU invests in people: Erasmus+ supports youth participation, inclusion, and quality learning so participants become more skilled, more open-minded, and better able to work across cultures.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </section>
 

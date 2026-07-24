@@ -2,6 +2,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { SyntheticEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 
+const countryFlags: Record<string, string> = {
+  India: "🇮🇳",
+  Latvia: "🇱🇻",
+  Slovakia: "🇸🇰",
+  Ukraine: "🇺🇦",
+};
+
 const Team = () => {
   const teamMembers = [
     {
@@ -128,7 +135,14 @@ const Team = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-foreground">{member.name}</h3>
-                      <Badge variant="outline" className="text-primary border-primary">{member.country}</Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-primary border-primary text-base leading-none"
+                        title={member.country}
+                        aria-label={member.country}
+                      >
+                        {countryFlags[member.country] ?? member.country}
+                      </Badge>
                     </div>
                     <p className="text-primary font-semibold">{member.role}</p>
                     <p className="text-sm text-muted-foreground">{member.expertise}</p>

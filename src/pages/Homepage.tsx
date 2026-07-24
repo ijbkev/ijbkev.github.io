@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -128,6 +128,39 @@ const StaticStatTile = ({
     </div>
   );
 };
+
+type MissionArea = {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  iconClass: string;
+  barClass: string;
+};
+
+const MissionAreaCard = ({ area, index }: { area: MissionArea; index: number }) => (
+  <Card className="panel-strong group relative h-full overflow-hidden holo-card hover-lift">
+    <span
+      className="absolute -top-2 right-3 text-6xl font-bold text-foreground/[0.06] select-none pointer-events-none"
+      aria-hidden
+    >
+      {String(index + 1).padStart(2, "0")}
+    </span>
+    <CardContent className="p-6 space-y-4">
+      <div
+        className={`w-14 h-14 rounded-2xl grid place-items-center transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${area.iconClass}`}
+      >
+        {area.icon}
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">{area.title}</h3>
+        <p className="text-muted-foreground leading-relaxed">{area.description}</p>
+      </div>
+      <div
+        className={`h-1 w-10 rounded-full transition-all duration-300 group-hover:w-full ${area.barClass}`}
+      />
+    </CardContent>
+  </Card>
+);
 
 type FieldMoment = { title: string; location: string; image: string };
 
@@ -431,7 +464,7 @@ const Homepage = () => {
                     asChild
                     size="lg"
                     variant="outline"
-                    className="border-white/60 text-white bg-transparent hover:bg-white/10"
+                    className="border-white/80 text-white bg-white/10 backdrop-blur-sm shadow-sm hover:bg-white/20 hover:border-white"
                   >
                     <Link to="/projects">See projects</Link>
                   </Button>
@@ -439,7 +472,7 @@ const Homepage = () => {
                     asChild
                     size="lg"
                     variant="ghost"
-                    className="text-white hover:bg-white/10"
+                    className="text-white bg-white/10 border border-white/40 backdrop-blur-sm hover:bg-white/20 hover:border-white/70"
                   >
                     <Link to="/contact">
                       Let’s talk
@@ -531,37 +564,21 @@ const Homepage = () => {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {/* Mobile: swipeable snap carousel */}
+            <div
+              className="flex sm:hidden overflow-x-auto snap-x snap-mandatory gap-4 -mx-4 px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {missionAreas.map((area, index) => (
-                <Card
-                  key={area.title}
-                  className="panel-strong group relative h-full overflow-hidden holo-card hover-lift"
-                >
-                  <span
-                    className="absolute -top-2 right-3 text-6xl font-bold text-foreground/[0.06] select-none pointer-events-none"
-                    aria-hidden
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <CardContent className="p-6 space-y-4">
-                    <div
-                      className={`w-14 h-14 rounded-2xl grid place-items-center transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${area.iconClass}`}
-                    >
-                      {area.icon}
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {area.title}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {area.description}
-                      </p>
-                    </div>
-                    <div
-                      className={`h-1 w-10 rounded-full transition-all duration-300 group-hover:w-full ${area.barClass}`}
-                    />
-                  </CardContent>
-                </Card>
+                <div key={area.title} className="w-[78%] flex-shrink-0 snap-start">
+                  <MissionAreaCard area={area} index={index} />
+                </div>
+              ))}
+            </div>
+
+            {/* Tablet/desktop: grid */}
+            <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              {missionAreas.map((area, index) => (
+                <MissionAreaCard key={area.title} area={area} index={index} />
               ))}
             </div>
           </div>

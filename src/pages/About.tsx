@@ -101,7 +101,7 @@ const About = () => {
           </Card>
         </div>
 
-        <div className="pt-8 border-t border-border space-y-4">
+        <div className="pt-8 space-y-4">
           <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Our focus pillars</p>
           <div className="flex flex-wrap gap-3">
             {missionAreas.map((area) => (
