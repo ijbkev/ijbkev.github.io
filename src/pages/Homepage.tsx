@@ -165,7 +165,7 @@ const MissionAreaCard = ({ area, index }: { area: MissionArea; index: number }) 
 type FieldMoment = { title: string; location: string; image: string };
 
 const FieldMomentTile = ({ item }: { item: FieldMoment }) => (
-  <div className="relative w-64 sm:w-72 aspect-[4/3] shrink-0 overflow-hidden rounded-2xl shadow-medium group holo-card">
+  <div className="relative w-64 sm:w-72 h-56 sm:h-64 shrink-0 overflow-hidden rounded-2xl shadow-medium group holo-card">
     <img
       src={item.image}
       alt={`${item.title} — ${item.location}`}
