@@ -2,10 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, mkdir, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PDFArray, PDFDict, PDFName, PDFDocument } from 'pdf-lib';
+import { expandPdfObjects } from '../shared/pdf-compatibility';
 import { hashPassword } from '../server/auth';
 
 test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeout: 60000 }, async () => {
@@ -32,7 +33,7 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     response = await req('/projects/oasis/unlock', 'POST', { code: settings.accessCode }); const participantCookie = response.headers.get('set-cookie')!.split(';')[0];
     const participant = { firstName: 'Tugay', lastName: 'Özkan', citizenship: 'Turkish', team: 'Germany', residenceCountry: 'Germany', city: 'Berlin', role: 'Facilitator', arrivalDate: '2026-09-20', departureDate: '2026-09-27', dateOfBirth: '2000-03-22', email: 'participant@example.test', phone: '+49 123456789', address: 'Example Street 12', accountHolder: 'Tugay Özkan', bankName: 'Test Bank', bankAccount: 'DE89370400440532013000', bic: 'COBADEFFXXX', bankAddress: 'Berlin', signaturePlace: 'Berlin', notes: 'Test notes', sendingOrganisation: 'Test youth organisation', greenTravel: true };
     const claim = { requestId: crypto.randomUUID(), participant, declaration: true, signature: `data:image/png;base64,${(await readFile('tests/fixtures/signature.png')).toString('base64')}`, tickets: [{ purchaseDate: '2026-09-04', travelDate: '2026-09-20', from: 'Berlin', to: 'Vienna', mode: 'Train', ticketType: 'Paper ticket', currency: 'EUR', amount: 349 }], extraCents: 90000, countryLimitCents: 90000, destinationCity: 'Forged destination' };
-    function form(input = claim) { const f = new FormData(); f.append('claim', JSON.stringify(input)); f.append('ticket-0', new Blob([ticket], { type: 'image/jpeg' }), 'train.jpg'); return f; }
+    function form(input = claim, file: Uint8Array = ticket, type = 'image/jpeg', filename = 'train.jpg') { const f = new FormData(); f.append('claim', JSON.stringify(input)); f.append('ticket-0', new Blob([file], { type }), filename); return f; }
     const ticket = await readFile('tests/fixtures/ticket.jpg');
     response = await req('/projects/oasis/submissions', 'POST', form(), participantCookie); const receipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(receipt) + log); assert.equal(receipt.finalCents, 30900); assert.match(receipt.reference, /^OASIS_DE_TUGAY_ÖZKAN_\d{4}_\d{2}_\d{2}$/);
     response = await req('/projects/oasis/submissions', 'POST', form(), participantCookie); assert.equal((await response.json()).reference, receipt.reference);
@@ -67,6 +68,61 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     response = await req(`/admin/submissions/${id}`, 'DELETE', undefined, admin); assert.equal(response.status, 200);
     assert.equal((await req(`/admin/submissions/${id}/pdf`, 'GET', undefined, admin)).status, 404);
     assert.equal((await (await req('/admin/projects/oasis/submissions', 'GET', undefined, admin)).json()).length, 0);
+
+    const modernDocument = await PDFDocument.create(); modernDocument.addPage([595, 842]);
+    const modernPdf = await modernDocument.save();
+    assert.match(Buffer.from(modernPdf).toString('latin1'), /\/ObjStm/, 'fixture uses compressed PDF object streams');
+    const modernClaim = { ...claim, requestId: crypto.randomUUID() };
+    response = await req('/projects/oasis/unlock', 'POST', { code: settings.accessCode }); const modernParticipantCookie = response.headers.get('set-cookie')!.split(';')[0];
+    response = await req('/projects/oasis/submissions', 'POST', form(modernClaim, modernPdf, 'application/pdf', 'modern-ticket.pdf'), modernParticipantCookie);
+    const modernReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(modernReceipt) + log);
+    assert.deepEqual(await readdir(path.join(dir, 'claims', 'oasis', modernReceipt.id)), ['ticket-1.pdf'], 'submission defers PDF generation until administrator download');
+    const originalModernPdf = await req(`/admin/submissions/${modernReceipt.id}/tickets/1`, 'GET', undefined, admin);
+    assert.equal(originalModernPdf.status, 200); assert.deepEqual(new Uint8Array(await originalModernPdf.arrayBuffer()), modernPdf, 'normalization does not replace the stored original');
+    response = await req(`/admin/submissions/${modernReceipt.id}/pdf`, 'GET', undefined, admin);
+    assert.equal(response.status, 200, log); assert.ok((await PDFDocument.load(await response.arrayBuffer())).getPageCount() >= 3);
+    assert.equal((await req(`/admin/submissions/${modernReceipt.id}`, 'DELETE', undefined, admin)).status, 200);
+    // One invoice, separate outbound and return passes, missing/corrupt files non-blocking.
+    const flight = { ...claim, requestId: crypto.randomUUID(), tickets: [{ ...claim.tickets[0], mode: 'Flight', journeyType: 'round-trip', connections: true, from: 'FRA', to: 'TLL', boardingPasses: [
+      { journey: 'outbound', from: 'FRA', to: 'MUC' }, { journey: 'outbound', from: 'MUC', to: 'TLL' }, { journey: 'return', from: 'TLL', to: 'FRA' },
+    ] }] };
+    const flightForm = form(flight, modernPdf, 'application/pdf', 'invoice.pdf');
+    flightForm.append('boarding-0-0', new Blob([modernPdf], { type: 'application/pdf' }), 'outbound.pdf');
+    flightForm.append('boarding-0-2', new Blob(['%PDF-1.7 broken content'], { type: 'application/pdf' }), 'return-unreadable.pdf');
+    response = await req('/projects/oasis/submissions', 'POST', flightForm, modernParticipantCookie);
+    const flightReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(flightReceipt) + log);
+    assert.equal(flightReceipt.totalCents, 34900, 'boarding passes never add cost');
+    const flightSaved = await (await req(`/admin/submissions/${flightReceipt.id}`, 'GET', undefined, admin)).json();
+    assert.equal(flightSaved.tickets.length, 1); assert.equal(flightSaved.tickets[0].boardingPasses.length, 3);
+    const flightManifest = await (await req(`/admin/submissions/${flightReceipt.id}/pdf-tickets`, 'GET', undefined, admin)).json();
+    assert.equal(flightManifest.documents.length, 4); assert.equal(flightManifest.documents[2].key, 'boarding-1-2'); assert.match(flightManifest.documents[2].error, /missing/);
+    assert.equal(flightManifest.documents[3].amount, 0);
+    assert.equal((await req(`/admin/submissions/${flightReceipt.id}/documents/boarding-1-1`, 'GET', undefined, participantCookie)).status, 401);
+    response = await req(`/admin/submissions/${flightReceipt.id}/pdf`, 'GET', undefined, admin); assert.equal(response.status, 200, log);
+    const flightBytes = new Uint8Array(await response.arrayBuffer());
+    await PDFDocument.load(flightBytes); await writeFile('tmp/pdfs/flight-php-qa.pdf', flightBytes);
+
+    // Optional real-world regressions stay outside the repository (personal documents).
+    for (const [label, inputPath] of [['db', process.env.IJBK_TEST_DB_PDF], ['aliisa', process.env.IJBK_TEST_ALIISA_PDF]]) {
+      if (!inputPath) continue;
+      const original = await readFile(inputPath);
+      const sample = { ...claim, requestId: crypto.randomUUID() };
+      response = await req('/projects/oasis/submissions', 'POST', form(sample, original, 'application/pdf', `${label}.pdf`), modernParticipantCookie);
+      const sampleReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(sampleReceipt) + log);
+      response = await req(`/admin/submissions/${sampleReceipt.id}/pdf`, 'GET', undefined, admin); assert.equal(response.status, 200, log);
+      const result = new Uint8Array(await response.arrayBuffer()); await PDFDocument.load(result); await writeFile(`tmp/pdfs/${label}-php-qa.pdf`, result);
+      // Browser normalization works even when qpdf is unavailable on the deployed host.
+      const compatible = await expandPdfObjects(original);
+      const prepared = new FormData(); prepared.append('ticket-1', new Blob([compatible], { type: 'application/pdf' }), 'compatible.pdf');
+      response = await req(`/admin/submissions/${sampleReceipt.id}/pdf`, 'POST', prepared, admin); assert.equal(response.status, 200, log);
+      await writeFile(`tmp/pdfs/${label}-compatible-php-qa.pdf`, new Uint8Array(await response.arrayBuffer()));
+      const stored = new Uint8Array(await (await req(`/admin/submissions/${sampleReceipt.id}/tickets/1`, 'GET', undefined, admin)).arrayBuffer());
+      assert.deepEqual(stored, new Uint8Array(original), 'compatibility generation preserves original forensic evidence');
+    }
+    const longPdf = await PDFDocument.create(); for (let i = 0; i < 11; i++) longPdf.addPage();
+    response = await req('/projects/oasis/submissions', 'POST', form({ ...claim, requestId: crypto.randomUUID() }, await longPdf.save(), 'application/pdf', 'eleven-pages.pdf'), modernParticipantCookie);
+    const longReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(longReceipt));
+    response = await req(`/admin/submissions/${longReceipt.id}/pdf`, 'GET', undefined, admin); assert.equal(response.status, 200, log); await PDFDocument.load(await response.arrayBuffer());
     assert.ok(!log.includes('PHP Warning'), log);
-  } finally { child.kill(); await new Promise<void>(r => child.once('exit', () => r())); await rm(dir, { recursive: true, force: true }); }
+  } finally { child.kill(); await new Promise<void>(r => child.once('exit', () => r())); if (process.env.IJBK_KEEP_TEST_DATA) console.log(`Browser QA data: ${dir}`); else await rm(dir, { recursive: true, force: true }); }
 });

@@ -73,25 +73,84 @@ function place_ticket_image(Fpdi $pdf, string $path, float $x, float $y, float $
 }
 
 /**
+ * Expand modern compressed PDF object streams into the classic structure
+ * understood by the free FPDI parser. The original attachment is left intact
+ * for storage, download, and forensic review.
+ */
+function normalize_pdf_for_fpdi(string $path): string {
+    if (!function_exists('proc_open')) {
+        throw new RuntimeException('qpdf normalization is unavailable');
+    }
+    $temporary = tempnam(sys_get_temp_dir(), 'ijbk-fpdi-');
+    if ($temporary === false) {
+        throw new RuntimeException('Unable to prepare compatible ticket PDF');
+    }
+    $configured = getenv('IJBK_QPDF_BINARY');
+    $binary = is_string($configured) && $configured !== '' ? $configured : 'qpdf';
+    $descriptors = [
+        0 => ['file', '/dev/null', 'r'],
+        1 => ['file', '/dev/null', 'a'],
+        2 => ['file', '/dev/null', 'a'],
+    ];
+    try {
+        $process = proc_open(
+            [$binary, '--decrypt', '--object-streams=disable', '--', $path, $temporary],
+            $descriptors,
+            $pipes,
+            null,
+            null,
+            ['bypass_shell' => true],
+        );
+        if (!is_resource($process)) {
+            throw new RuntimeException('Unable to start qpdf normalization');
+        }
+        $deadline=microtime(true)+20;
+        do {
+            $state=proc_get_status($process);
+            if(!$state['running'])break;
+            if(microtime(true)>$deadline){proc_terminate($process,9);proc_close($process);throw new RuntimeException('PDF compatibility processing timed out');}
+            usleep(50000);
+        } while(true);
+        $status=$state['exitcode'];proc_close($process);
+        if (!in_array($status, [0, 3], true) || !is_file($temporary) || filesize($temporary) < 5
+            || file_get_contents($temporary, false, null, 0, 5) !== '%PDF-') {
+            throw new RuntimeException('qpdf could not normalize the ticket PDF');
+        }
+        chmod($temporary, 0600);
+        return $temporary;
+    } catch (Throwable $error) {
+        @unlink($temporary);
+        throw new RuntimeException('Unable to normalize the ticket PDF', 0, $error);
+    }
+}
+
+/**
  * Place every page of one uploaded PDF onto the single output page reserved
  * for that ticket. This preserves the one-ticket-per-page format while still
  * retaining receipts whose scan contains several pages.
  */
-function place_ticket_pdf(Fpdi $pdf, string $path, float $x, float $y, float $maxW, float $maxH): void {
+function place_ticket_pdf(Fpdi $pdf, string $path, float $x, float $y, float $maxW, float $maxH, array &$temporaryFiles): void {
     try {
         $count = $pdf->setSourceFile($path);
     } catch (Throwable $error) {
-        throw new RuntimeException('Unreadable or encrypted ticket PDF', 0, $error);
+        $compatiblePath = normalize_pdf_for_fpdi($path);
+        $temporaryFiles[] = $compatiblePath;
+        try {
+            $count = $pdf->setSourceFile($compatiblePath);
+        } catch (Throwable $normalizedError) {
+            throw new RuntimeException('Unreadable or encrypted ticket PDF', 0, $normalizedError);
+        }
     }
-    if ($count < 1 || $count > 10) {
-        throw new RuntimeException('PDF must have 1 to 10 pages');
+    if ($count < 1) {
+        throw new RuntimeException('PDF has no readable pages');
     }
     $cols = $count === 1 ? 1 : 2;
-    $rows = (int) ceil($count / $cols);
+    $rows = (int) ceil(min($count,10) / $cols);
     $gap = 3.0;
     $cellW = ($maxW - (($cols - 1) * $gap)) / $cols;
     $cellH = ($maxH - (($rows - 1) * $gap)) / $rows;
     for ($pageNumber = 1; $pageNumber <= $count; $pageNumber++) {
+        if($pageNumber>1&&($pageNumber-1)%10===0){$pdf->AddPage();$pdf->SetFont('dejavusans','',8);$pdf->MultiCell(180,5,'Supporting document continued - source page '.$pageNumber,0,'L',false,1);}
         $template = $pdf->importPage($pageNumber, PageBoundaries::CROP_BOX);
         $size = $pdf->getTemplateSize($template);
         if (!is_array($size) || $size['width'] <= 0 || $size['height'] <= 0) {
@@ -101,7 +160,7 @@ function place_ticket_pdf(Fpdi $pdf, string $path, float $x, float $y, float $ma
         $width = $size['width'] * $scale;
         $height = $size['height'] * $scale;
         $col = ($pageNumber - 1) % $cols;
-        $row = (int) floor(($pageNumber - 1) / $cols);
+        $row = (int) floor((($pageNumber - 1)%10) / $cols);
         $cellX = $x + ($col * ($cellW + $gap));
         $cellY = $y + ($row * ($cellH + $gap));
         $pdf->useTemplate(
@@ -148,12 +207,15 @@ function declaration_pairs(DeclarationPdf $pdf, array $fields): void {
     }
     $pdf->writeHTML($html.'</table>',true,false,true,false,'');
 }
-function generate_claim_pdf(array $claim, array $files, string $claimDir): string {
+function generate_claim_pdf(array $claim, array $files, string $claimDir, array &$warnings=[]): string {
     $signaturePath=$claimDir.'/signature.jpg';
+    $signatureReadable=true;
+    try {
     $source=@imagecreatefromstring($claim['signatureBytes']);
     if($source===false||imagesx($source)>2000||imagesy($source)>1000)throw new RuntimeException('Invalid signature image');
     $canvas=imagecreatetruecolor(imagesx($source),imagesy($source));$white=imagecolorallocate($canvas,255,255,255);imagefill($canvas,0,0,$white);imagealphablending($canvas,true);imagecopy($canvas,$source,0,0,0,0,imagesx($source),imagesy($source));
     if(!imagejpeg($canvas,$signaturePath,90))throw new RuntimeException('Unable to save signature');chmod($signaturePath,0600);
+    }catch(Throwable){$signatureReadable=false;$warnings[]=['key'=>'signature','filename'=>'Signature','message'=>'Signature could not be displayed. Manual review required.'];}
     $p=$claim['participant'];$title='Reimbursement Declaration - '.$p['name'].' - '.$p['team'];
     $pdf=new DeclarationPdf('P','mm','A4',true,'UTF-8',false);
     $pdf->declarationTitle=$title;$pdf->reference=claim_reference($claim);
@@ -174,7 +236,7 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir): strin
         // Keep each ticket's details together and reserve a line for its page link.
         if($pdf->GetY()>205)$pdf->AddPage();
         $html='<table cellpadding="4" cellspacing="0" style="font-size:8pt"><tr style="background-color:#14264c;color:#ffffff"><th width="5%">#</th><th width="33%">FROM / TO</th><th width="17%">TRAVEL DATE</th><th width="28%">TRANSPORT / FORMAT</th><th width="17%" align="right">EUR</th></tr>';
-        $html.='<tr nobr="true" style="background-color:#f0f4f8"><td width="5%">'.(int)$t['serial'].'</td><td width="33%">'.h($t['from'].' > '.$t['to']).'</td><td width="17%">'.h($t['travelDate']).'</td><td width="28%">'.h($t['mode'].' / '.($t['ticketType']??'Format not recorded')).'</td><td width="17%" align="right">'.number_format($t['euroCents']/100,2,'.',',').'</td></tr></table>';
+        $html.='<tr nobr="true" style="background-color:#f0f4f8"><td width="5%">'.(int)$t['serial'].'</td><td width="33%">'.h(flight_route($t)).'</td><td width="17%">'.h($t['travelDate']).'</td><td width="28%">'.h($t['mode'].' / '.($t['ticketType']??'Format not recorded')).'</td><td width="17%" align="right">'.number_format($t['euroCents']/100,2,'.',',').'</td></tr></table>';
         $pdf->writeHTML($html,true,false,true,false,'');
         $html='<table cellpadding="4" cellspacing="0" style="font-size:8pt"><tr style="color:#596273"><th width="25%">Purchase date</th><th width="25%">Currency of purchase</th><th width="25%">Amount in local currency</th><th width="25%">Amount in EUR</th></tr><tr nobr="true">';
         foreach([$t['purchaseDate'],$t['currency'],number_format($t['amount'],2,'.',','),number_format($t['euroCents']/100,2,'.',',')] as $value)$html.='<td width="25%">'.h($value).'</td>';
@@ -185,6 +247,14 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir): strin
         $attachmentLinks[$t['serial']]=['page'=>$pdf->getPage(),'y'=>$pdf->GetY(),'link'=>$pdf->AddLink()];
         $pdf->SetY($pdf->GetY()+8);
         $pdf->SetFont('dejavusans','',9);
+        foreach(($t['mode']==='Flight'?($t['boardingPasses']??[]):[]) as $j=>$pass){
+            if($pdf->GetY()>245)$pdf->AddPage();
+            $label=($pass['journey']==='return'?'Return':'Outbound').' boarding pass '.($j+1);
+            $html='<table cellpadding="4" style="font-size:8pt"><tr nobr="true"><td width="33%">'.h($label).'</td><td width="50%">'.h(($pass['from']?:'Airport not recorded').' → '.($pass['to']?:'Airport not recorded')).'</td><td width="17%" align="right">0.00 EUR</td></tr></table>';
+            $pdf->writeHTML($html,true,false,true,false,'');
+            $key='boarding-'.$t['serial'].'-'.($j+1);
+            $attachmentLinks[$key]=['page'=>$pdf->getPage(),'y'=>$pdf->GetY(),'link'=>$pdf->AddLink()];$pdf->SetY($pdf->GetY()+8);
+        }
     }
     if($pdf->GetY()>195)$pdf->AddPage();declaration_section($pdf,'Reimbursement calculation');
     $totals=reimbursement_totals($claim);
@@ -198,25 +268,45 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir): strin
         $text=preg_replace('/^([^:]+:)/u','<b>$1</b>',$text);
         $pdf->writeHTML('<p>'.($index+1).'. '.$text.'</p>',true,false,true,false,'');
     }
-    if($pdf->GetY()>230)$pdf->AddPage();$y=$pdf->GetY();$pdf->Image($signaturePath,15,$y,70,22,'JPEG');$pdf->SetY($y+27);
+    if($pdf->GetY()>230)$pdf->AddPage();$y=$pdf->GetY();if($signatureReadable)$pdf->Image($signaturePath,15,$y,70,22,'JPEG');else{$pdf->SetTextColor(185,28,28);$pdf->MultiCell(180,6,'Signature could not be displayed. Manual review required.',0,'L',false,1);$pdf->SetTextColor(20,24,35);}$pdf->SetY($y+27);
     declaration_pairs($pdf,[['Signed by',$p['name']],['Place / date (UTC)',($p['signaturePlace']??'Place not recorded').', '.substr($claim['createdAt'],0,10)]]);
     $pdf->SetAutoPageBreak(false);
-    foreach($files as $index=>$file) {
-        $ticket=$claim['tickets'][$index];$pdf->AddPage();
-        $attachmentLinks[$ticket['serial']]['destination']=$pdf->getPage();
-        $pdf->SetLink($attachmentLinks[$ticket['serial']]['link'],0,$pdf->getPage());
-        $pdf->SetFont('dejavusans','B',11);
-        $pdf->MultiCell(180,6,'Ticket '.($index+1).' of '.count($files).' / '.$ticket['mode'],0,'L',false,1);
-        $pdf->SetFont('dejavusans','',8);$pdf->MultiCell(180,5,$ticket['from'].' > '.$ticket['to'].' / Travel '.$ticket['travelDate'],0,'L',false,1);
-        $y=$pdf->GetY()+4;$height=277-$y;
-        if($file['type']==='application/pdf')place_ticket_pdf($pdf,$file['path'],15,$y,180,$height);
-        else place_ticket_image($pdf,$file['path'],15,$y,180,$height);
+    $temporaryFiles=[];
+    try {
+        $documents=supporting_documents($claim);
+        foreach($files as $index=>$file){
+            $ticket=$documents[$index];$pdf->AddPage();
+            $key=$ticket['isBoardingPass']?$ticket['key']:$ticket['serial'];
+            $attachmentLinks[$key]['destination']=$pdf->getPage();
+            $pdf->SetLink($attachmentLinks[$key]['link'],0,$pdf->getPage());
+            $pdf->SetFont('dejavusans','B',11);$pdf->MultiCell(180,6,$ticket['label'].' / '.$ticket['mode'],0,'L',false,1);
+            $pdf->SetFont('dejavusans','',8);$pdf->MultiCell(180,5,$ticket['route'].' / '.money_eur($ticket['euroCents']),0,'L',false,1);
+            $pdf->MultiCell(180,5,$ticket['filename']?:'No file uploaded',0,'L',false,1);
+            $y=$pdf->GetY()+4;$height=277-$y;
+            // TCPDF transactions remove partial page content if one attachment fails.
+            $pdf->startTransaction();
+            try{
+                if(!$file['path'])throw new RuntimeException('Missing document');
+                if($file['type']==='application/pdf')place_ticket_pdf($pdf,$file['path'],15,$y,180,$height,$temporaryFiles);
+                else place_ticket_image($pdf,$file['path'],15,$y,180,$height);
+                $pdf->commitTransaction();
+            }catch(Throwable $error){
+                $warnings[]=['key'=>$ticket['key'],'filename'=>$ticket['filename']?:$ticket['label'],'message'=>$file['path']?'Document could not be displayed; original attached for manual review.':'Supporting document missing.'];
+                $pdf->rollbackTransaction(true);$pdf->SetTextColor(185,28,28);$pdf->SetXY(15,$y);
+                $pdf->MultiCell(180,6,$file['path']?'This document could not be displayed. The original file is attached for manual review. The claim was generated successfully.':'Boarding pass or supporting document missing. The claim was generated successfully.',0,'L',false,1);
+                $original=$file['originalPath']??$file['path'];
+                if($original&&is_file($original))$pdf->Annotation(15,$pdf->GetY()+3,8,8,'Original supporting document',['Subtype'=>'FileAttachment','FS'=>$original,'Name'=>'Paperclip']);
+                $pdf->SetTextColor(20,24,35);
+            }
+        }
+        foreach($attachmentLinks as $attachment) {
+            $pdf->setPage($attachment['page']);$pdf->SetXY(15,$attachment['y']);
+            $pdf->SetFont('dejavusans','',8);$pdf->SetTextColor(13,94,166);
+            $pdf->Cell(180,5,'Attachment on page '.$attachment['destination'].' - go to page',0,1,'L',false,$attachment['link']);
+        }
+        $pdf->lastPage();
+        return $pdf->Output('','S');
+    } finally {
+        foreach($temporaryFiles as $temporaryFile) @unlink($temporaryFile);
     }
-    foreach($attachmentLinks as $attachment) {
-        $pdf->setPage($attachment['page']);$pdf->SetXY(15,$attachment['y']);
-        $pdf->SetFont('dejavusans','',8);$pdf->SetTextColor(13,94,166);
-        $pdf->Cell(180,5,'Attachment on page '.$attachment['destination'].' - go to page',0,1,'L',false,$attachment['link']);
-    }
-    $pdf->lastPage();
-    return $pdf->Output('','S');
 }

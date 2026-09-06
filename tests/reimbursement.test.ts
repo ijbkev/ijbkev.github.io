@@ -69,6 +69,7 @@ test('complete reimbursement workflow and access isolation', async () => {
   response = await request('/projects/oasis/submissions', 'POST', claimForm({ requestId }), participantCookie);
   const receipt = await response.json() as { id: string; totalCents: number; error?: string };
   assert.equal(response.status, 201, receipt.error); assert.equal(receipt.totalCents, 3826);
+  assert.equal(await (await mf.getR2Bucket('FILES')).head(`reimbursements/oasis/${receipt.id}/complete.pdf`), null, 'submission defers PDF generation until administrator download');
   response = await request('/projects/oasis/submissions', 'POST', claimForm({ requestId }), participantCookie); assert.equal(response.status, 200); assert.equal((await response.json() as {id:string}).id, receipt.id);
   response = await request(`/admin/submissions/${receipt.id}`, 'GET', undefined, adminCookie); assert.equal(response.status, 200);
   const saved = await response.json() as SavedClaim;
@@ -102,9 +103,12 @@ test('complete reimbursement workflow and access isolation', async () => {
   const snapshot = await (await request(`/admin/submissions/${receipt.id}`, 'GET', undefined, adminCookie)).json() as SavedClaim; assert.equal(snapshot.projectCode, '2026-1-DE04-KA152-OASIS');
   response = await request('/projects/oasis/unlock', 'POST', { code: 'rotated-participant-code' }); participantCookie = cookieFrom(response);
   assert.equal((await request('/projects/oasis/submissions', 'POST', claimForm({ participant: { ...participant, team: 'France' } }), participantCookie)).status, 422);
-  assert.equal((await request('/projects/oasis/submissions', 'POST', claimForm({}, [new Uint8Array([1, 2, 3]), multiPdf, jpeg]), participantCookie)).status, 422);
+  response = await request('/projects/oasis/submissions', 'POST', claimForm({}, [new Uint8Array([1, 2, 3]), multiPdf, jpeg]), participantCookie);
+  assert.equal(response.status, 201); const corruptReceipt = await response.json() as { id: string };
+  assert.equal((await request(`/admin/submissions/${corruptReceipt.id}/pdf`, 'GET', undefined, adminCookie)).status, 200);
+  await request(`/admin/submissions/${corruptReceipt.id}`, 'DELETE', undefined, adminCookie);
   assert.equal((await request('/projects/oasis/submissions', 'POST', claimForm({}, [jpeg]), participantCookie)).status, 422);
-  assert.equal((await request('/projects/oasis/submissions', 'POST', claimForm({ signature: 'data:image/png;base64,broken' }), participantCookie)).status, 422);
+  assert.equal((await request('/projects/oasis/submissions', 'POST', claimForm({ signature: '' }), participantCookie)).status, 422);
   const records = await db.prepare('SELECT count(*) AS n FROM submissions').first<{ n: number }>(); assert.equal(records!.n, 1, 'invalid PDF/signature leaves no partial submission');
   await request('/admin/projects/oasis', 'PUT', { ...details, projectCode: 'NEW-PROJECT-CODE', countries: ['Germany', 'Italy'], enabled: false }, adminCookie);
   assert.equal((await request('/projects/oasis/unlock', 'POST', { code: 'rotated-participant-code' })).status, 403);
@@ -161,4 +165,44 @@ test('country names derive codes, activity dates validate, and legacy references
   assert.equal(countryCode('Türkiye'), 'TR'); assert.equal(countryCode('Germany'), 'DE');
   const legacy = { participant, createdAt:'2026-09-06T23:59:00Z', projectName:'Oasis', reference:'OASISDEZoë-Müller-Łukasz' } as SavedClaim;
   assert.equal(claimReference(legacy), 'OASIS_DE_ZOË_MÜLLERŁUKASZ_2026_09_06');
+});
+
+
+test('flight invoice counts once; boarding passes are ordered, zero-cost and optional', async () => {
+  adminCookie = cookieFrom(await request('/admin/login', 'POST', { password: adminPassword }));
+  await request('/admin/projects/oasis', 'PUT', { ...details, projectCode: 'TEST', countries: ['Germany'], accessCode: 'flight-test-code', enabled: true }, adminCookie);
+  participantCookie = cookieFrom(await request('/projects/oasis/unlock', 'POST', { code: 'flight-test-code' }));
+  const boardingPasses = [{ journey: 'outbound', from: 'FRA', to: 'MUC' }, { journey: 'outbound', from: 'MUC', to: 'TLL' }, { journey: 'return', from: 'TLL', to: 'FRA' }];
+  const form = claimForm({ tickets: [{ ...baseTicket, from: 'FRA', to: 'TLL', mode: 'Flight', journeyType: 'round-trip', connections: true, boardingPasses }] }, [jpeg]);
+  form.append('boarding-0-0', new Blob([multiPdf], { type: 'application/pdf' }), 'outbound.pdf');
+  form.append('boarding-0-2', new Blob(['%PDF-2.0 corrupt'], { type: 'application/pdf' }), 'unreadable.pdf');
+  let response = await request('/projects/oasis/submissions', 'POST', form, participantCookie);
+  const receipt = await response.json() as { id: string; totalCents: number }; assert.equal(response.status, 201, JSON.stringify(receipt)); assert.equal(receipt.totalCents, 2550);
+  const manifest = await (await request(`/admin/submissions/${receipt.id}/pdf-tickets`, 'GET', undefined, adminCookie)).json() as { documents: { key: string; amount: number; error?: string }[] };
+  assert.equal(manifest.documents.length, 4); assert.equal(manifest.documents[3].amount, 0); assert.match(manifest.documents[2].error!, /missing/);
+  response = await request(`/admin/submissions/${receipt.id}/pdf`, 'GET', undefined, adminCookie); assert.equal(response.status, 200);
+  const result = new Uint8Array(await response.arrayBuffer()); await PDFDocument.load(result); await writeFile('tmp/pdfs/flight-worker-qa.pdf', result);
+  const prepared = new FormData(); prepared.append('boarding-1-3', new Blob([multiPdf], { type: 'application/pdf' }), 'compatible.pdf');
+  response = await request(`/admin/submissions/${receipt.id}/pdf`, 'POST', prepared, adminCookie); assert.equal(response.status, 200); await PDFDocument.load(await response.arrayBuffer());
+  await request(`/admin/submissions/${receipt.id}`, 'DELETE', undefined, adminCookie);
+  assert.equal(await (await mf.getR2Bucket('FILES')).head(`reimbursements/oasis/${receipt.id}/boarding-1-1`), null);
+});
+
+test('real PDF samples and documents beyond ten pages download through Worker', async () => {
+  const pdfs: [string, Uint8Array][] = [];
+  for (const [label, inputPath] of [['db', process.env.IJBK_TEST_DB_PDF], ['aliisa', process.env.IJBK_TEST_ALIISA_PDF]]) {
+    if (inputPath) pdfs.push([label!, await readFile(inputPath)]);
+  }
+  const long = await PDFDocument.create();
+  for (let i = 0; i < 11; i++) { const page = long.addPage(); page.drawText(`Source page ${i + 1}`); }
+  pdfs.push(['eleven-pages', await long.save()]);
+  for (const [label, bytes] of pdfs) {
+    const form = claimForm({ tickets: [baseTicket] }, []);
+    form.append('ticket-0', new Blob([bytes], { type: 'application/pdf' }), `${label}.pdf`);
+    let response = await request('/projects/oasis/submissions', 'POST', form, participantCookie);
+    const receipt = await response.json() as { id: string }; assert.equal(response.status, 201, JSON.stringify(receipt));
+    response = await request(`/admin/submissions/${receipt.id}/pdf`, 'GET', undefined, adminCookie); assert.equal(response.status, 200);
+    assert.deepEqual(JSON.parse(decodeURIComponent(response.headers.get('X-Document-Warnings') || '%5B%5D')), [], 'readable samples must be displayed, not replaced with a placeholder');
+    const result = new Uint8Array(await response.arrayBuffer()); await PDFDocument.load(result); await writeFile(`tmp/pdfs/${label}-worker-qa.pdf`, result);
+  }
 });

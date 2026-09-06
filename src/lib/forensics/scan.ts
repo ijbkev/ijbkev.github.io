@@ -9,7 +9,7 @@ function inspect(bytes: ArrayBuffer, ticket: PdfTicket, signal: AbortSignal): Pr
     signal.addEventListener('abort', abort, { once: true });
     worker.onmessage = ({ data }) => finish(data.error ? new Error(data.error) : undefined, data.result);
     worker.onerror = () => finish(new Error('The PDF checker could not complete inspection.'));
-    worker.postMessage({ bytes, filename: ticket.filename, currency: ticket.currency, amount: ticket.amount }, [bytes]);
+    worker.postMessage({ bytes, filename: ticket.filename, currency: ticket.currency, amount: ticket.amount, isBoardingPass: ticket.isBoardingPass }, [bytes]);
   });
 }
 export async function scanTicket(ticket: PdfTicket, signal: AbortSignal): Promise<TicketReport> {

@@ -21,7 +21,17 @@ export const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a val
   return !isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }, 'Enter a valid calendar date');
 export const purchaseDateSchema = calendarDate.refine(v => v >= '1999-01-04' && v <= today(), 'Purchase date must be between 4 January 1999 and today');
+export const boardingPassSchema = z.object({
+  journey: z.enum(['outbound', 'return']),
+  from: z.string().trim().max(120).default(''), to: z.string().trim().max(120).default(''),
+  filename: z.string().max(180).optional(),
+});
+export type BoardingPass = z.infer<typeof boardingPassSchema>;
+export type DocumentWarning = { key: string; filename: string; message: string };
 export const ticketSchema = z.object({
+  journeyType: z.enum(['one-way', 'round-trip']).optional(),
+  connections: z.boolean().optional(),
+  boardingPasses: z.array(boardingPassSchema).max(24).optional(),
   purchaseDate: purchaseDateSchema,
   travelDate: calendarDate,
   from: text('Departure', 120), to: text('Destination', 120),
@@ -30,6 +40,9 @@ export const ticketSchema = z.object({
   currency: z.enum(['EUR', 'CZK', 'DKK', 'HUF', 'PLN', 'RON', 'SEK', 'TRY']),
   amount: z.number().finite().positive('Enter an amount greater than zero').max(100000000).refine(v => Math.abs(v * 100 - Math.round(v * 100)) < 0.00001, 'Use at most two decimal places'),
 }).superRefine((ticket, ctx) => {
+  if (ticket.mode !== 'Flight' && ticket.boardingPasses?.length) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Boarding passes must belong to a flight' });
+  if (ticket.journeyType !== 'round-trip' && ticket.boardingPasses?.some(p => p.journey === 'return')) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Return segments require a round trip' });
+  for (const journey of ['outbound', 'return']) if ((ticket.boardingPasses?.filter(p => p.journey === journey).length ?? 0) > 12) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Use at most 12 segments per journey' });
   if (ticket.travelDate < ticket.purchaseDate) ctx.addIssue({ code: 'custom', path: ['travelDate'], message: 'Travel date cannot precede purchase date' });
 });
 export const participantSchema = z.object({
@@ -127,3 +140,19 @@ export const declarationPoints = [
 export const declarationText = declarationPoints.join("\n\n");
 
 export const legacyDeclarationText = 'I confirm that these details are accurate, these expenses were incurred for this project, and the uploaded tickets correspond to the listed journeys. I authorize IJBK to use these details to process my reimbursement.';
+
+export const flightRoute = (ticket: Pick<TicketInput, 'from' | 'to' | 'mode' | 'journeyType'>) =>
+  `${ticket.from} → ${ticket.to}${ticket.mode === 'Flight' && ticket.journeyType === 'round-trip' ? ` → ${ticket.from}` : ''}`;
+
+// A single ordered list drives storage, review, tables and PDF attachment pages.
+// Boarding passes never participate in reimbursement totals.
+export function supportingDocuments(claim: Pick<SavedClaim, 'tickets'>) {
+  return claim.tickets.flatMap(ticket => [
+    { key: `ticket-${ticket.serial}`, label: `Ticket ${ticket.serial}`, ticket, filename: ticket.filename, from: ticket.from, to: ticket.to, route: flightRoute(ticket), amount: ticket.amount, currency: ticket.currency, euroCents: ticket.euroCents, isBoardingPass: false },
+    ...(ticket.mode === 'Flight' ? ticket.boardingPasses ?? [] : []).map((pass, i) => ({
+      key: `boarding-${ticket.serial}-${i + 1}`, label: `Flight ${ticket.serial} / ${pass.journey === 'return' ? 'Return' : 'Outbound'} boarding pass ${i + 1}`,
+      ticket, filename: pass.filename ?? '', from: pass.from, to: pass.to, route: `${pass.from || 'Airport not recorded'} → ${pass.to || 'Airport not recorded'}`,
+      amount: 0, currency: 'EUR', euroCents: 0, isBoardingPass: true,
+    })),
+  ]);
+}

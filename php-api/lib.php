@@ -184,7 +184,19 @@ function parse_claim(array $input, array $countries): array {
         $amount=$ticket['amount']??0; if (!is_int($amount)&&!is_float($amount)) fail('Enter a valid ticket amount.',422); $amount=(float)$amount;
         if ($amount<=0||$amount>100000000||abs($amount*100-round($amount*100))>0.00001) fail('Ticket amount must be positive and use at most two decimals.',422);
         $rate=historical_rate((string)($ticket['currency']??''),$purchase);
-        $parsed[] = array_merge(['purchaseDate'=>$purchase,'travelDate'=>$travel,'from'=>text_value($ticket['from']??null,'departure',120),'to'=>text_value($ticket['to']??null,'destination',120),'mode'=>$mode,'ticketType'=>$ticketType,'amount'=>$amount],$rate,['serial'=>$i+1,'euroCents'=>(int)round($amount*$rate['rate']*100)]);
+        $journeyType=$ticket['journeyType']??'one-way';
+        if(!in_array($journeyType,['one-way','round-trip'],true))fail('Invalid flight booking type.',422);
+        $passes=$ticket['boardingPasses']??[];$boarding=[];
+        if(!is_array($passes)||count($passes)>24)fail('Use at most 24 boarding passes per booking.',422);
+        if($mode!=='Flight'&&count($passes))fail('Boarding passes must belong to a flight.',422);
+        $counts=['outbound'=>0,'return'=>0];
+        foreach($passes as $pass){
+            $journey=$pass['journey']??'';
+            if(!in_array($journey,['outbound','return'],true)||($journey==='return'&&$journeyType!=='round-trip'))fail('Invalid boarding-pass journey.',422);
+            if(++$counts[$journey]>12)fail('Use at most 12 segments per journey.',422);
+            $boarding[]=['journey'=>$journey,'from'=>optional_text($pass['from']??'',120),'to'=>optional_text($pass['to']??'',120)];
+        }
+        $parsed[] = array_merge(['purchaseDate'=>$purchase,'travelDate'=>$travel,'from'=>text_value($ticket['from']??null,'departure',120),'to'=>text_value($ticket['to']??null,'destination',120),'mode'=>$mode,'ticketType'=>$ticketType,'amount'=>$amount],$rate,['journeyType'=>$journeyType,'connections'=>($ticket['connections']??false)===true,'boardingPasses'=>$boarding,'serial'=>$i+1,'euroCents'=>(int)round($amount*$rate['rate']*100)]);
     }
     $signature=$input['signature']??''; if (!is_string($signature)||strlen($signature)>300000||!str_starts_with($signature,'data:image/png;base64,')) fail('Draw your signature before submitting.',422);
     $decoded=base64_decode(substr($signature,22),true); if ($decoded===false||!str_starts_with($decoded,"\x89PNG\r\n\x1a\n")) fail('The signature could not be read.',422);
@@ -244,12 +256,35 @@ function saved_submission(string $id): array {
     if (!$row) fail('Submission not found.',404);
     return $row;
 }
+function flight_route(array $ticket): string {
+    return $ticket['from'].' → '.$ticket['to'].(($ticket['mode']==='Flight'&&($ticket['journeyType']??'')==='round-trip')?' → '.$ticket['from']:'');
+}
+function supporting_documents(array $claim): array {
+    $documents=[];
+    foreach($claim['tickets'] as $ticket){
+        $documents[]=array_merge($ticket,['key'=>'ticket-'.$ticket['serial'],'label'=>'Ticket '.$ticket['serial'],'route'=>flight_route($ticket),'isBoardingPass'=>false]);
+        foreach(($ticket['mode']==='Flight'?($ticket['boardingPasses']??[]):[]) as $i=>$pass){
+            $documents[]=array_merge($ticket,$pass,['key'=>'boarding-'.$ticket['serial'].'-'.($i+1),'label'=>'Flight '.$ticket['serial'].' / '.($pass['journey']==='return'?'Return':'Outbound').' boarding pass '.($i+1),'route'=>($pass['from']?:'Airport not recorded').' → '.($pass['to']?:'Airport not recorded'),'filename'=>$pass['filename']??'','amount'=>0,'euroCents'=>0,'currency'=>'EUR','isBoardingPass'=>true]);
+        }
+    }
+    return $documents;
+}
+function upload_type(string $path, string $filename=''): string {
+    $head=file_get_contents($path,false,null,0,1024);
+    if(str_contains($head?:'','%PDF-')||preg_match('/\.pdf$/i',$filename))return 'application/pdf';
+    $type=(new finfo(FILEINFO_MIME_TYPE))->file($path)?:'application/octet-stream';
+    if(!str_starts_with($type,'image/')){
+        $extension=strtolower(pathinfo($filename,PATHINFO_EXTENSION));
+        $type=['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','webp'=>'image/webp','gif'=>'image/gif','tif'=>'image/tiff','tiff'=>'image/tiff','heic'=>'image/heic','avif'=>'image/avif','bmp'=>'image/bmp'][$extension]??$type;
+    }
+    return $type;
+}
 function saved_ticket_files(array $claim, string $dir): array {
     $files=[];
-    foreach ($claim['tickets'] as $i=>$ticket) {
-        $matches=glob($dir.'/ticket-'.($i+1).'.*')?:[];
-        if (count($matches)!==1) fail('A saved ticket is unavailable. Please retry.',503);
-        $files[]=['path'=>$matches[0],'type'=>(new finfo(FILEINFO_MIME_TYPE))->file($matches[0])];
+    foreach(supporting_documents($claim) as $document){
+        $matches=glob($dir.'/'.$document['key'].'.*')?:[];
+        $path=count($matches)===1?$matches[0]:null;
+        $files[]=['key'=>$document['key'],'path'=>$path,'type'=>$path?upload_type($path,$document['filename']):'application/pdf'];
     }
     return $files;
 }

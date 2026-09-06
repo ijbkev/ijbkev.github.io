@@ -23,6 +23,10 @@ claims, uploaded files, signatures, and PDFs are private to administrators.
 The dashboard supports per-project submissions, search, full participant detail,
 and downloading the single complete PDF. Submissions are grouped into country tables. Administrators can delete a submission with its private files, or approve an extra amount from its details dialog.
 
+Participant submission stores the claim and untouched ticket attachments without
+attempting to join them. The complete reimbursement PDF is assembled on demand
+only after an administrator chooses to download it.
+
 The declaration uses IJBK and Erasmus+ logos, two-column project/participant/bank sections, a travel table, and a signed declaration. Its title and filename are `Reimbursement Declaration - [Participant Name] - [Country]`.
 
 Standard reimbursement is `min(submitted EUR expenses, country limit)`. Final reimbursement adds the administrator-approved extra amount. Saving an extra approval replaces the previous extra; saving zero removes it. All five amounts are shown in the PDF. Downloads are generated from the current saved claim, including any extra approval.
@@ -31,14 +35,38 @@ References use `SHORTPROJECTNAME` + two-letter country code + first name + `-` +
 
 The PDF contains the project code (never the secret code), all participant and
 bank details, ticket costs and exchange-rate evidence, total, and signature.
-It then has **exactly one labeled output page per ticket**. A multi-page source
-PDF is tiled onto that ticket's single output page, preserving every source
-page without mixing different tickets.
+Supporting documents follow their invoice, with boarding passes listed at EUR 0.
+Flight bookings support one-way or round-trip routes and up to 12 outbound and
+12 return segments. The flight invoice contributes its amount exactly once;
+separate invoices are separate expense entries. Missing passes remain visible
+in the supporting-document list and never prevent generating a claim.
 
-Supported uploads are PDF (unencrypted, 1–10 source pages), PNG, and JPEG, up to
-10 MB each and 40 MB overall, with up to 30 tickets per submission. Images are
-limited to 25 megapixels. On the RPTU server, raw uploads, generated PDFs, and
-the SQLite database are stored in `/srv/www/www-ijbk-ev/data/reimbursement`,
+Uploads accept PDF versions without a version or ten-page rejection, plus images,
+up to 10 MB each and 40 MB overall, with up to 30 invoices per submission.
+Generation uses PDF.js in the administrator's browser to render visible content
+(including compressed objects, forms, and annotations) into a separate compatible
+PDF; pdf-lib expansion of object streams is an additional fallback. Original
+uploads remain unchanged for forensic inspection. The PHP renderer can also use
+`qpdf` on `PATH` (or `IJBK_QPDF_BINARY`) for direct API downloads; the browser
+compatibility path does not require it. Keep the built `pdfjs/` assets and worker
+bundle in the deployment.
+
+Modification indicators appear in red in the download review. They are not proof
+of tampering and never block downloading. Unrenderable/password-locked/corrupt
+files produce per-document red warnings and a placeholder in the generated claim,
+with the original attached for manual review when available. Neither these files
+nor missing boarding passes cancel generation. Longer documents continue across
+additional output sheets instead of being rejected.
+
+Configure PHP upload limits for the full form (`upload_max_filesize=45M`,
+`post_max_size=80M`, `max_file_uploads=800`) and sufficient request memory/time
+for PDF generation. Original uploads retain the application's 10 MB per-file and
+40 MB total limits; compatibility rendering can produce larger derived files.
+The Worker limits generated compatibility requests to 80 MB.
+
+On the RPTU
+server, raw uploads, generated PDFs, and the SQLite database are stored in
+`/srv/www/www-ijbk-ev/data/reimbursement`,
 outside the public document root. The optional Cloudflare deployment uses
 private R2 and D1 storage.
 
@@ -173,3 +201,18 @@ To connect a domain, navigate to Project > Settings > Domains and click Connect 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
 
 The Erasmus+ logo is sourced from the [German Erasmus+ National Agency document centre](https://erasmusplus.schule/service-und-unterstuetzung/unterstuetzung-im-programm/dokumentencenter). The attached example informed the layout only; its host organisation, legal terms, deadlines, and personal data are not copied into the portal.
+
+### PDF regression checks
+
+`npm test` covers both PHP and Worker submission/download paths, compressed
+object streams, missing and corrupt boarding passes, route grouping, zero-cost
+passes, authorization, and preservation of original files. To exercise local
+real-world PDF examples without committing private documents:
+
+```sh
+IJBK_TEST_DB_PDF='/path/to/DB.pdf' IJBK_TEST_ALIISA_PDF='/path/to/ALIISA.pdf' npm test
+```
+
+QA PDFs are written only into ignored `tmp/pdfs/`. Browser verification should
+also run with `IJBK_QPDF_BINARY` pointing to an unavailable executable to confirm
+that the deployment does not depend on a server-installed converter.

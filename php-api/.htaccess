@@ -1,6 +1,6 @@
 Options -Indexes -MultiViews
 RewriteEngine On
-RewriteRule ^(?:bootstrap\.php|lib\.php|pdf\.php|projects\.json|composer\.(?:json|lock)|vendor(?:/|$)) - [F,L,NC]
+RewriteRule ^(?:\.user\.ini|bootstrap\.php|lib\.php|pdf\.php|projects\.json|composer\.(?:json|lock)|vendor(?:/|$)) - [F,L,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]

@@ -16,6 +16,7 @@ await writeFile('dist/api/bootstrap.php', bootstrap, { mode: 0o600 });
 await rm('dist/api/bootstrap.template.php');
 // Sites expects static assets beside its server bundle in dist/client. Keep the
 // original Vite dist root usable for the existing Apache frontend deployment.
+for (const folder of ['cmaps', 'standard_fonts', 'wasm']) await cp(`node_modules/pdfjs-dist/${folder}`, `dist/pdfjs/${folder}`, { recursive: true });
 await mkdir('dist/client', { recursive: true });
 const { readdir } = await import('node:fs/promises');
 for (const item of await readdir('dist', { withFileTypes: true })) {

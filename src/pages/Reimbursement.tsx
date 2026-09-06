@@ -11,8 +11,10 @@ import { api, ApiError } from '@/lib/reimbursement-api';
 import { declarationPoints, currencies, travelModes, claimSchema, purchaseDateSchema, euroCents, euro, today, MAX_TICKETS, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type Participant, type ProjectSettings, type Rate, type TicketInput } from '../../shared/reimbursement';
 import NotFound from './NotFound';
 
-type DraftTicket = Omit<TicketInput, 'amount'> & { id: string; amount: string; file: File | null };
-const newTicket = (): DraftTicket => ({ id: crypto.randomUUID(), purchaseDate: '', travelDate: '', from: '', to: '', mode: 'Train', ticketType: 'Electronic ticket', currency: 'EUR', amount: '', file: null });
+type DraftPass = { journey: 'outbound' | 'return'; from: string; to: string; file: File | null };
+type DraftTicket = Omit<TicketInput, 'amount' | 'boardingPasses'> & { id: string; amount: string; file: File | null; boardingPasses: DraftPass[] };
+const newPass = (journey: DraftPass['journey'], from = '', to = ''): DraftPass => ({ journey, from, to, file: null });
+const newTicket = (): DraftTicket => ({ id: crypto.randomUUID(), purchaseDate: '', travelDate: '', from: '', to: '', mode: 'Train', ticketType: 'Electronic ticket', currency: 'EUR', amount: '', file: null, journeyType: 'one-way', connections: false, boardingPasses: [] });
 const blankParticipant: Participant = { firstName: '', lastName: '', name: '', citizenship: '', team: '', city: '', notes: '', greenTravel: false, arrivalDate: '', departureDate: '', role: 'Participant', bankName: '', accountHolder: '', signaturePlace: '', dateOfBirth: '', email: '', phone: '', bankAccount: '', bic: '', bankAddress: '', address: '' };
 
 export default function Reimbursement() {
@@ -58,10 +60,10 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
     if (!signature) { setError('Please draw your signature.'); return; }
     const missing = tickets.findIndex(t => !t.file);
     if (missing >= 0) { setError(`Please upload the file for ticket ${missing + 1}.`); return; }
-    if (tickets.reduce((sum, t) => sum + (t.file?.size ?? 0), 0) > MAX_TOTAL_SIZE) { setError('Total uploads must not exceed 40 MB.'); return; }
+    if (tickets.reduce((sum, t) => sum + (t.file?.size ?? 0) + t.boardingPasses.reduce((n, p) => n + (p.file?.size ?? 0), 0), 0) > MAX_TOTAL_SIZE) { setError('Total uploads must not exceed 40 MB.'); return; }
     setBusy(true);
     const form = new FormData(); form.append('claim', JSON.stringify(parsed.data));
-    tickets.forEach((t, i) => form.append(`ticket-${i}`, t.file!));
+    tickets.forEach((t, i) => { form.append(`ticket-${i}`, t.file!); t.boardingPasses.forEach((p, j) => { if (p.file) form.append(`boarding-${i}-${j}`, p.file); }); });
     try {
       const result = await api<{ id: string; reference?: string; totalCents?: number; finalCents?: number }>(`/projects/${projectId}/submissions`, { method: 'POST', body: form });
       setReceipt(result); setParticipant({ ...blankParticipant }); setTickets([newTicket()]); setSignature(''); setDeclaration(false);
@@ -108,7 +110,7 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
               <Field id={`${ticket.id}-travel`} label="Travel date" type="date" required min={ticket.purchaseDate || undefined} value={ticket.travelDate} onChange={e => updateTicket(ticket.id, { travelDate: e.target.value })} />
               <Field id={`${ticket.id}-from`} label="From" required maxLength={120} placeholder="City / airport / station" value={ticket.from} onChange={e => updateTicket(ticket.id, { from: e.target.value })} />
               <Field id={`${ticket.id}-to`} label="To" required maxLength={120} placeholder="City / airport / station" value={ticket.to} onChange={e => updateTicket(ticket.id, { to: e.target.value })} />
-              <SelectField id={`${ticket.id}-mode`} label="Mode of travel" required value={ticket.mode} onChange={e => updateTicket(ticket.id, { mode: e.target.value as DraftTicket['mode'] })}>{travelModes.map(m => <option key={m}>{m}</option>)}</SelectField>
+              <SelectField id={`${ticket.id}-mode`} label="Mode of travel" required value={ticket.mode} onChange={e => updateTicket(ticket.id, { mode: e.target.value as DraftTicket['mode'], boardingPasses: e.target.value === 'Flight' ? [newPass('outbound', ticket.from, ticket.to)] : [], journeyType: 'one-way', connections: false })}>{travelModes.map(m => <option key={m}>{m}</option>)}</SelectField>
               <SelectField id={`${ticket.id}-type`} label="Ticket format" value={ticket.ticketType} onChange={e => updateTicket(ticket.id, { ticketType: e.target.value as DraftTicket['ticketType'] })}><option>Paper ticket</option><option>Electronic ticket</option></SelectField>
               <SelectField id={`${ticket.id}-currency`} label="Purchase currency" required value={ticket.currency} onChange={e => updateTicket(ticket.id, { currency: e.target.value as DraftTicket['currency'] })}>{currencies.map(c => <option key={c.code} value={c.code}>{c.code} — {c.name}</option>)}</SelectField>
               <Field id={`${ticket.id}-amount`} label={`Amount paid (${ticket.currency})`} type="number" inputMode="decimal" required min="0.01" max="100000000" step="0.01" value={ticket.amount} onChange={e => updateTicket(ticket.id, { amount: e.target.value })} />
@@ -118,14 +120,47 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
               {rates[i].isError ? <p className="text-destructive">{rates[i].error.message} <button type="button" className="underline font-medium" onClick={() => rates[i].refetch()}>Retry rate</button></p> : rates[i].isFetching ? 'Fetching historical exchange rate…' : rates[i].data ? `1 ${ticket.currency} = ${rates[i].data.rate} EUR · Rate date: ${rates[i].data.rateDate} · ${rates[i].data.source}` : 'Select a purchase date to calculate the euro amount.'}
             </div>
             <div className="rounded-lg border border-dashed p-4 space-y-2">
-              <Field id={`${ticket.id}-file`} label={`Upload ticket ${i + 1}`} type="file" accept="application/pdf,image/png,image/jpeg" required onChange={e => {
+              <Field id={`${ticket.id}-file`} label={`Upload ticket ${i + 1}`} type="file" accept="application/pdf,image/*,.pdf" required onChange={e => {
                 const file = e.target.files?.[0] ?? null;
-                if (file && (file.size > MAX_FILE_SIZE || !['application/pdf', 'image/png', 'image/jpeg'].includes(file.type))) { e.target.value = ''; updateTicket(ticket.id, { file: null }); setError(`Ticket ${i + 1}: upload a PDF, PNG, or JPEG no larger than 10 MB.`); return; }
+                if (file && (file.size > MAX_FILE_SIZE)) { e.target.value = ''; updateTicket(ticket.id, { file: null }); setError(`Ticket ${i + 1}: upload a PDF or image no larger than 10 MB.`); return; }
                 updateTicket(ticket.id, { file }); setError('');
               }} />
-              <p className="text-xs text-muted-foreground">PDF, PNG, or JPEG · Up to 10 MB per ticket, 40 MB total. Multi-page PDFs (up to 10 pages) stay together on one extended ticket page.</p>
+              <p className="text-xs text-muted-foreground">PDF or image · Up to 10 MB per file, 40 MB total. Edited PDFs are accepted. Document warnings do not block generation.</p>
               {ticket.file && <p className="text-xs text-primary break-all"><FileText className="w-3 h-3 inline mr-1" />{ticket.file.name} · {(ticket.file.size / 1024 / 1024).toFixed(2)} MB</p>}
             </div>
+            {ticket.mode === 'Flight' && <div className="border-l-2 border-primary/30 pl-4 space-y-4">
+              <h4 className="font-semibold">Flight booking and boarding passes</h4>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <SelectField id={`${ticket.id}-journey`} label="Booking" value={ticket.journeyType ?? 'one-way'} onChange={e => {
+                  const journeyType = e.target.value as DraftTicket['journeyType'];
+                  updateTicket(ticket.id, { journeyType, boardingPasses: journeyType === 'round-trip' ? [...ticket.boardingPasses.filter(p => p.journey === 'outbound'), newPass('return', ticket.to, ticket.from)] : ticket.boardingPasses.filter(p => p.journey === 'outbound') });
+                }}><option value="one-way">One-way</option><option value="round-trip">Round trip / return journey</option></SelectField>
+                <SelectField id={`${ticket.id}-connections`} label="Multiple flight segments / connections?" value={ticket.connections ? 'yes' : 'no'} onChange={e => {
+                  const connections = e.target.value === 'yes';
+                  updateTicket(ticket.id, { connections, boardingPasses: connections ? ticket.boardingPasses : ['outbound', ...(ticket.journeyType === 'round-trip' ? ['return'] : [])].map(j => ticket.boardingPasses.find(p => p.journey === j) ?? newPass(j as DraftPass['journey'])) });
+                }}><option value="no">No - direct flights</option><option value="yes">Yes - select segment counts below</option></SelectField>
+              </div>
+              <p className="text-sm">Route: {ticket.from || 'From'} → {ticket.to || 'To'}{ticket.journeyType === 'round-trip' ? ` → ${ticket.from || 'From'}` : ''}. Enter the full invoice amount once. Add separate invoices as separate expenses.</p>
+              {(['outbound', ...(ticket.journeyType === 'round-trip' ? ['return'] : [])] as DraftPass['journey'][]).map(journey => <section key={journey} className="space-y-3">
+                <h5 className="font-medium">{journey === 'outbound' ? 'Outbound journey' : 'Return journey'}</h5>
+                {ticket.connections && <SelectField id={`${ticket.id}-${journey}-count`} label="Number of flight segments" value={ticket.boardingPasses.filter(p => p.journey === journey).length} onChange={e => {
+                  const old = ticket.boardingPasses.filter(p => p.journey === journey);
+                  const changed = Array.from({ length: Number(e.target.value) }, (_, n) => old[n] ?? newPass(journey));
+                  const other = ticket.boardingPasses.filter(p => p.journey !== journey);
+                  updateTicket(ticket.id, { boardingPasses: journey === 'outbound' ? [...changed, ...other] : [...other, ...changed] });
+                }}>{Array.from({ length: 12 }, (_, n) => <option key={n + 1} value={n + 1}>{n + 1}</option>)}</SelectField>}
+                {ticket.boardingPasses.map((pass, j) => pass.journey !== journey ? null : <div key={`${journey}-${j}`} className="rounded-lg border p-3 space-y-3">
+                  <p className="text-sm font-medium">Boarding pass {ticket.boardingPasses.slice(0, j + 1).filter(p => p.journey === journey).length} · €0</p>
+                  <div className="grid sm:grid-cols-2 gap-3">{(['from', 'to'] as const).map(field => <Field key={field} id={`${ticket.id}-pass-${j}-${field}`} label={`${field === 'from' ? 'From' : 'To'} airport`} maxLength={120} value={pass[field]} onChange={e => updateTicket(ticket.id, { boardingPasses: ticket.boardingPasses.map((p, n) => n === j ? { ...p, [field]: e.target.value } : p) })} />)}</div>
+                  <Field id={`${ticket.id}-pass-${j}`} label="Upload boarding pass (PDF or image)" type="file" accept="application/pdf,image/*,.pdf" onChange={e => {
+                    const file = e.target.files?.[0] ?? null;
+                    if (file && file.size > MAX_FILE_SIZE) { e.target.value = ''; setError('Boarding passes must be no larger than 10 MB.'); return; }
+                    updateTicket(ticket.id, { boardingPasses: ticket.boardingPasses.map((p, n) => n === j ? { ...p, file } : p) });
+                  }} />
+                  {pass.file ? <p className="text-xs break-all">{pass.file.name}</p> : <p role="alert" className="text-sm text-red-700">Boarding pass missing. You can still submit and generate the PDF.</p>}
+                </div>)}
+              </section>)}
+            </div>}
           </article>)}</div>
           <div className="flex flex-wrap justify-between items-center gap-4"><Button type="button" variant="outline" disabled={tickets.length >= MAX_TICKETS} onClick={() => setTickets(rows => [...rows, newTicket()])}><Plus className="w-4 h-4 mr-2" />Add another ticket</Button><div className="text-right" aria-live="polite"><p className="text-xs uppercase tracking-wide text-muted-foreground">{completeRates ? 'Total in euros' : 'Calculated subtotal'}</p><p className="text-3xl font-semibold text-primary">{euro(total)}</p>{!completeRates && <p className="text-xs text-muted-foreground">Complete all ticket amounts and rates for the final total.</p>}</div></div>
         </section>
@@ -153,7 +188,7 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
         </section>
       </fieldset>
       {error && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive break-words">{error}</div>}
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-5 pb-6"><p className="text-xs text-muted-foreground flex gap-2 max-w-lg"><LockKeyhole className="w-4 h-4 shrink-0" />Only administrators can view your submission and download its PDF. Keep this page open until you see the submission confirmation.</p><Button type="submit" size="lg" disabled={busy || needUnlock || !signature || !completeRates || rates.some(r => r.isFetching)} className="w-full sm:w-auto">{busy ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />Saving and creating PDF…</> : <><Send className="w-4 h-4 mr-2" />Submit reimbursement</>}</Button></div>
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-5 pb-6"><p className="text-xs text-muted-foreground flex gap-2 max-w-lg"><LockKeyhole className="w-4 h-4 shrink-0" />Only administrators can view your submission and download its PDF. Keep this page open until you see the submission confirmation.</p><Button type="submit" size="lg" disabled={busy || needUnlock || !signature || !completeRates || rates.some(r => r.isFetching)} className="w-full sm:w-auto">{busy ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />Saving submission…</> : <><Send className="w-4 h-4 mr-2" />Submit reimbursement</>}</Button></div>
     </form>
   </div>;
 }

@@ -31,23 +31,35 @@ try {
         $stmt=db()->prepare('SELECT id,status,session_hash,data FROM submissions WHERE project_id=? AND request_id=?'); $stmt->execute([$id,$input['requestId']]); $existing=$stmt->fetch();
         if($existing){ if($existing['session_hash']!==$sessionHash) fail('This submission reference is already in use.',409); if($existing['status']!=='complete') fail('Your submission is still being processed. Please wait, then retry.',409); $saved=json_decode($existing['data'],true);respond(array_merge(['id'=>$existing['id'],'reference'=>claim_reference($saved),'totalCents'=>$saved['totalCents'],'alreadySubmitted'=>true],reimbursement_totals($saved))); }
         $files=[];$totalSize=0;
-        foreach($input['tickets'] as $i=>&$ticket){ $upload=$_FILES['ticket-'.$i]??null; if(!is_array($upload)||($upload['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||!is_uploaded_file($upload['tmp_name'])) fail('Upload the file for ticket '.($i+1).'.',422);
-            $size=(int)$upload['size']; if($size<1||$size>10*1024*1024) fail('Ticket '.($i+1).' exceeds 10 MB.',413); $totalSize+=$size; if($totalSize>40*1024*1024) fail('Total uploads exceed 40 MB.',413);
-            $type=(new finfo(FILEINFO_MIME_TYPE))->file($upload['tmp_name']); if(!in_array($type,['application/pdf','image/png','image/jpeg'],true)) fail('Ticket '.($i+1).': use a valid PDF, PNG, or JPEG file.',422);
-            if($type==='application/pdf'&&file_get_contents($upload['tmp_name'],false,null,0,5)!=='%PDF-') fail('Ticket '.($i+1).': invalid PDF file.',422);
-            if(str_starts_with($type,'image/')){ $info=@getimagesize($upload['tmp_name']); if(!$info||$info[0]*$info[1]>25000000) fail('Ticket '.($i+1).': image exceeds 25 megapixels.',422); }
-            $ticket['filename']=mb_substr(basename((string)$upload['name']),0,180); $files[]=['tmp'=>$upload['tmp_name'],'type'=>$type];
-        } unset($ticket);
+        foreach($input['tickets'] as $i=>&$ticket){
+            $entries=[['field'=>'ticket-'.$i,'key'=>'ticket-'.($i+1),'pass'=>null]];
+            foreach($ticket['boardingPasses'] as $j=>$pass)$entries[]=['field'=>'boarding-'.$i.'-'.$j,'key'=>'boarding-'.($i+1).'-'.($j+1),'pass'=>$j];
+            foreach($entries as $entry){
+                $upload=$_FILES[$entry['field']]??null;
+                if(!is_array($upload)||($upload['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE){if($entry['pass']!==null)continue;fail('Upload the file for ticket '.($i+1).'.',422);}
+                if(($upload['error']??-1)!==UPLOAD_ERR_OK||!is_uploaded_file($upload['tmp_name']))fail('The upload could not be saved. Please retry.',422);
+                $size=(int)$upload['size'];if($size>10*1024*1024)fail('Each upload must be at most 10 MB.',413);
+                $totalSize+=$size;if($totalSize>40*1024*1024)fail('Total uploads exceed 40 MB.',413);
+                $name=mb_substr(basename((string)$upload['name']),0,180);
+                $type=upload_type($upload['tmp_name'],$name);
+                if($type!=='application/pdf'&&!str_starts_with($type,'image/'))fail('Upload a PDF or image.',422);
+                if($entry['pass']===null)$ticket['filename']=$name;else $ticket['boardingPasses'][$entry['pass']]['filename']=$name;
+                $files[]=['tmp'=>$upload['tmp_name'],'type'=>$type,'key'=>$entry['key']];
+            }
+        }unset($ticket);
         $claimId=uuid4();$claimDir=storage_dir().'/claims/'.$id.'/'.$claimId; if(!mkdir($claimDir,0700,true)&&!is_dir($claimDir)) fail('Could not prepare private claim storage.',503);
         $stored=[];
         try {
-            foreach($files as $i=>&$file){$ext=['application/pdf'=>'pdf','image/png'=>'png','image/jpeg'=>'jpg'][$file['type']];$target="$claimDir/ticket-".($i+1).".$ext";if(!move_uploaded_file($file['tmp'],$target))throw new RuntimeException('Unable to save uploaded ticket');chmod($target,0600);$file['path']=$target;$stored[]=$target;}unset($file);
+            foreach($files as $i=>&$file){$ext=['application/pdf'=>'pdf','image/png'=>'png','image/jpeg'=>'jpg'][$file['type']]??'image';$target=$claimDir.'/'.$file['key'].'.'.$ext;if(!move_uploaded_file($file['tmp'],$target))throw new RuntimeException('Unable to save uploaded ticket');chmod($target,0600);$file['path']=$target;$stored[]=$target;}unset($file);
             $createdAt=gmdate('Y-m-d\TH:i:s\Z');$total=array_sum(array_column($input['tickets'],'euroCents'));
             $claim=['declarationText'=>declaration_text(),'reference'=>submission_reference($details,$input['participant'],$createdAt),'projectShortName'=>$details['shortName'],'activityStartDate'=>$details['activityStartDate'],'activityEndDate'=>$details['activityEndDate'],'destinationCity'=>$details['destinationCity'],'countryLimitCents'=>$details['countryLimits'][$input['participant']['team']],'extraCents'=>0,'id'=>$claimId,'projectId'=>$id,'projectName'=>$project['title'],'projectCode'=>$row['project_code'],'participant'=>$input['participant'],'tickets'=>$input['tickets'],'totalCents'=>$total,'signature'=>$input['signature'],'signatureBytes'=>$input['signatureBytes'],'createdAt'=>$createdAt,'declaration'=>true];
             $pdfPath="$claimDir/complete.pdf"; $data=$claim;unset($data['signatureBytes']);
             db()->prepare('INSERT INTO submissions(id,project_id,request_id,session_hash,name,team,email,total_cents,data,pdf_path,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')->execute([$claimId,$id,$input['requestId'],$sessionHash,$input['participant']['name'],$input['participant']['team'],$input['participant']['email'],$total,json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$pdfPath,$createdAt]);
-            $pdf=generate_claim_pdf($claim,$files,$claimDir);if(file_put_contents($pdfPath,$pdf,LOCK_EX)===false)throw new RuntimeException('Unable to save PDF');chmod($pdfPath,0600);db()->prepare("UPDATE submissions SET status='complete' WHERE id=?")->execute([$claimId]);respond(array_merge(['id'=>$claimId,'reference'=>$claim['reference'],'totalCents'=>$total],reimbursement_totals($claim)),201);
-        }catch(Throwable $e){db()->prepare('DELETE FROM submissions WHERE id=?')->execute([$claimId]);foreach(glob($claimDir.'/*')?:[] as $f)@unlink($f);@rmdir($claimDir);error_log('Reimbursement PDF/storage failure: '.get_class($e));fail('A ticket or signature could not be read. Use unencrypted PDFs with up to 10 pages, or valid PNG/JPEG images, then retry.',422);}
+            // Joining tickets is an administrator download concern. Keeping it
+            // out of submission means a safely stored original cannot be rejected
+            // merely because the PDF renderer needs compatibility processing.
+            db()->prepare("UPDATE submissions SET status='complete' WHERE id=?")->execute([$claimId]);respond(array_merge(['id'=>$claimId,'reference'=>$claim['reference'],'totalCents'=>$total],reimbursement_totals($claim)),201);
+        }catch(Throwable $e){db()->prepare('DELETE FROM submissions WHERE id=?')->execute([$claimId]);foreach(glob($claimDir.'/*')?:[] as $f)@unlink($f);@rmdir($claimDir);error_log('Reimbursement PDF/storage failure: '.get_class($e));fail('The submission could not be saved. Please retry; document editing or PDF versions do not prevent submission.',422);}
     }
 
     if($method==='POST'&&$path==='/admin/login'){rate_limit('admin-login',8);$body=request_json();$pw=$body['password']??'';if(!is_string($pw)||!verify_secret($pw,IJBK_ADMIN_PASSWORD_HASH))fail('Incorrect administrator password.',401);new_session('admin');respond(['ok'=>true]);}
@@ -60,23 +72,26 @@ try {
     if($method==='GET'&&preg_match('#^/admin/submissions/([^/]+)$#',$path,$m)){$stmt=db()->prepare("SELECT data FROM submissions WHERE id=? AND status='complete'");$stmt->execute([rawurldecode($m[1])]);$data=$stmt->fetchColumn();if(!$data)fail('Submission not found.',404);$claim=json_decode($data,true);$claim['reference']=claim_reference($claim);respond($claim);}
     if($method==='GET'&&preg_match('#^/admin/submissions/([^/]+)/pdf-tickets$#',$path,$m)) {
         $row=saved_submission(rawurldecode($m[1]));$claim=json_decode($row['data'],true);$dir=dirname($row['pdf_path']);$tickets=[];$skipped=0;
-        foreach($claim['tickets'] as $t) {
-            $matches=glob($dir.'/ticket-'.(int)$t['serial'].'.*')?:[];
-            $type=count($matches)===1?(new finfo(FILEINFO_MIME_TYPE))->file($matches[0]):false;
-            if(is_string($type)&&str_starts_with($type,'image/')){$skipped++;continue;}
-            $entry=array_intersect_key($t,array_flip(['serial','filename','from','to','amount','currency']));
-            $entry['url']='/api/admin/submissions/'.rawurlencode($claim['id']).'/tickets/'.(int)$t['serial'];
-            if($type!=='application/pdf')$entry['error']='Original attachment could not be identified or is unavailable.';
+        $documents=[];
+        foreach(supporting_documents($claim) as $t){
+            $matches=glob($dir.'/'.$t['key'].'.*')?:[];$type=count($matches)===1?upload_type($matches[0],$t['filename']):null;
+            $entry=array_intersect_key($t,array_flip(['serial','key','label','filename','from','to','amount','currency','isBoardingPass']));
+            $entry['type']=$type;$entry['url']='/api/admin/submissions/'.rawurlencode($claim['id']).'/documents/'.$t['key'];
+            if(!$type)$entry['error']=$t['isBoardingPass']?'Boarding pass missing. The claim can still be downloaded.':'Original attachment is unavailable. The claim can still be downloaded.';
+            $documents[]=$entry;
+            if($type&&str_starts_with($type,'image/')){$skipped++;continue;}
             $tickets[]=$entry;
         }
-        respond(['participant'=>$claim['participant']['name'],'tickets'=>$tickets,'skippedImages'=>$skipped]);
+        respond(['participant'=>$claim['participant']['name'],'tickets'=>$tickets,'documents'=>$documents,'skippedImages'=>$skipped]);
     }
-    if($method==='GET'&&preg_match('#^/admin/submissions/([^/]+)/tickets/([1-9][0-9]*)$#',$path,$m)) {
-        $row=saved_submission(rawurldecode($m[1]));$claim=json_decode($row['data'],true);$serial=(int)$m[2];
-        if(!in_array($serial,array_column($claim['tickets'],'serial'),true))fail('Ticket not found.',404);
-        $matches=glob(dirname($row['pdf_path']).'/ticket-'.$serial.'.*')?:[];if(count($matches)!==1)fail('Original PDF is unavailable.',404);
-        if((new finfo(FILEINFO_MIME_TYPE))->file($matches[0])!=='application/pdf')fail('Only PDF tickets are scanned. Images are excluded.',415);
-        header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="ticket-'.$serial.'.pdf"');readfile($matches[0]);exit;
+    if($method==='GET'&&preg_match('#^/admin/submissions/([^/]+)/(tickets/[1-9][0-9]*|documents/(?:ticket-[1-9][0-9]*|boarding-[1-9][0-9]*-[1-9][0-9]*))$#',$path,$m)){
+        $row=saved_submission(rawurldecode($m[1]));$claim=json_decode($row['data'],true);
+        $key=str_starts_with($m[2],'tickets/')?'ticket-'.substr($m[2],8):substr($m[2],10);
+        $docs=array_column(supporting_documents($claim),null,'key');if(!isset($docs[$key]))fail('Document not found.',404);
+        $matches=glob(dirname($row['pdf_path']).'/'.$key.'.*')?:[];if(count($matches)!==1)fail('Original document is unavailable.',404);
+        $type=upload_type($matches[0],$docs[$key]['filename']);
+        if(str_starts_with($m[2],'tickets/')&&$type!=='application/pdf')fail('Only PDF tickets are scanned. Images are excluded.',415);
+        header('Content-Type: '.$type);header('Content-Disposition: attachment');readfile($matches[0]);exit;
     }
     if($method==='PUT'&&preg_match('#^/admin/submissions/([^/]+)/extra$#',$path,$m)) {
         $row=saved_submission(rawurldecode($m[1]));$claim=json_decode($row['data'],true);$body=request_json();
@@ -96,10 +111,21 @@ try {
         if(is_dir($dir)&&!rmdir($dir))fail('Could not remove submission storage. Please retry.',503);
         db()->prepare('DELETE FROM submissions WHERE id=?')->execute([$id]);respond(['ok'=>true]);
     }
-    if($method==='GET'&&preg_match('#^/admin/submissions/([^/]+)/pdf$#',$path,$m)) {
+    if(in_array($method,['GET','POST'],true)&&preg_match('#^/admin/submissions/([^/]+)/pdf$#',$path,$m)) {
         $row=saved_submission(rawurldecode($m[1]));$claim=json_decode($row['data'],true);$dir=dirname($row['pdf_path']);
         $claim['signatureBytes']=base64_decode(substr($claim['signature'],22),true);
-        $pdf=generate_claim_pdf($claim,saved_ticket_files($claim,$dir),$dir);
+        $files=saved_ticket_files($claim,$dir);
+        if($method==='POST')foreach($files as &$file){
+            $upload=$_FILES[$file['key']]??null;
+            if(is_array($upload)&&($upload['error']??-1)===UPLOAD_ERR_OK&&is_uploaded_file($upload['tmp_name'])){
+                $type=upload_type($upload['tmp_name']);
+                if(in_array($type,['application/pdf','image/png','image/jpeg'],true)){$file['originalPath']=$file['path'];$file['path']=$upload['tmp_name'];$file['type']=$type;}
+            }
+        }unset($file);
+        $warnings=[];$pdf=generate_claim_pdf($claim,$files,$dir,$warnings);
+        $notice=array_slice($warnings,0,10);
+        if(count($warnings)>10)$notice[]=['key'=>'generation','filename'=>'Supporting documents','message'=>'Additional document warnings are shown inside the generated PDF.'];
+        header('X-Document-Warnings: '.rawurlencode(json_encode($notice,JSON_UNESCAPED_UNICODE)));
         header('Content-Type: application/pdf');header("Content-Disposition: attachment; filename=\"Reimbursement Declaration.pdf\"; filename*=UTF-8''".rawurlencode(pdf_filename($claim)));header('Content-Length: '.strlen($pdf));echo $pdf;exit;
     }
     fail('Endpoint not found.',404);

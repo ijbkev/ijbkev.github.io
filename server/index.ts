@@ -4,7 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { deleteCookie } from 'hono/cookie';
 import { ZodError, z } from 'zod';
 import { projects } from '../src/data/projects';
-import { claimReference, declarationText, claimSchema, settingsSchema, projectDetailsSchema, extraSchema, reimbursement, submissionReference, pdfFilename, currencies, euroCents, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type SavedClaim } from '../shared/reimbursement';
+import { supportingDocuments, claimReference, declarationText, claimSchema, settingsSchema, projectDetailsSchema, extraSchema, reimbursement, submissionReference, pdfFilename, currencies, euroCents, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type BoardingPass, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
 import { hashPassword, verifyPassword, newSession, requireSession, rateLimit } from './auth';
 import { historicalRate } from './rates';
 import { generatePdf, type TicketFile } from './pdf';
@@ -56,7 +56,7 @@ app.use('/api/*', async (c, next) => {
   await initialize(c.env.DB);
   await next();
 });
-app.use('/api/*', bodyLimit({ maxSize: MAX_TOTAL_SIZE + 1024 * 1024, onError: c => c.json({ error: 'Total upload size must be below 40 MB.' }, 413) }));
+app.use('/api/*', bodyLimit({ maxSize: 80 * 1024 * 1024, onError: c => c.json({ error: 'This request exceeds the 80 MB processing limit.' }, 413) }));
 app.get('/api/projects/:id', async c => c.json(publicSettings(await settings(c.env.DB, c.req.param('id')))));
 app.post('/api/projects/:id/unlock', async c => {
   const id = c.req.param('id');
@@ -101,23 +101,27 @@ app.post('/api/projects/:id/submissions', async c => {
   }
   const files: TicketFile[] = [];
   let totalSize = 0;
-  for (let i = 0; i < input.tickets.length; i++) {
-    const file = form.get(`ticket-${i}`);
-    if (!file || typeof file === 'string' || !file.size) throw new HTTPException(422, { message: `Upload the file for ticket ${i + 1}.` });
-    if (file.size > MAX_FILE_SIZE) throw new HTTPException(413, { message: `Ticket ${i + 1} exceeds 10 MB.` });
-    totalSize += file.size;
-    if (totalSize > MAX_TOTAL_SIZE) throw new HTTPException(413, { message: 'Total uploads exceed 40 MB.' });
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const type = new TextDecoder().decode(bytes.slice(0, 5)) === '%PDF-' ? 'application/pdf'
-      : bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71 ? 'image/png'
-      : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'image/jpeg' : null;
-    if (!type || type !== file.type) throw new HTTPException(422, { message: `Ticket ${i + 1}: use a valid PDF, PNG, or JPEG file.` });
-    files.push({ bytes, type, name: file.name.slice(0, 180) });
+  for (const [i, ticket] of input.tickets.entries()) {
+    const uploads = [{ field: `ticket-${i}`, key: `ticket-${i + 1}`, pass: undefined as BoardingPass | undefined },
+      ...(ticket.boardingPasses ?? []).map((pass, j) => ({ field: `boarding-${i}-${j}`, key: `boarding-${i + 1}-${j + 1}`, pass }))];
+    for (const entry of uploads) {
+      const file = form.get(entry.field);
+      if (!file || typeof file === 'string') { if (entry.pass) { delete entry.pass.filename; continue; } throw new HTTPException(422, { message: `Upload the file for ticket ${i + 1}.` }); }
+      if (file.size > MAX_FILE_SIZE) throw new HTTPException(413, { message: 'Each upload must be at most 10 MB.' });
+      totalSize += file.size; if (totalSize > MAX_TOTAL_SIZE) throw new HTTPException(413, { message: 'Total uploads exceed 40 MB.' });
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const type = new TextDecoder().decode(bytes.slice(0, 1024)).includes('%PDF-') || /\.pdf$/i.test(file.name) ? 'application/pdf'
+        : bytes[0] === 137 && bytes[1] === 80 ? 'image/png'
+        : bytes[0] === 255 && bytes[1] === 216 ? 'image/jpeg' : file.type.startsWith('image/') ? file.type : null;
+      if (!type) throw new HTTPException(422, { message: 'Upload a PDF or image.' });
+      files.push({ key: entry.key, bytes, type, name: file.name.slice(0, 180) });
+      if (entry.pass) entry.pass.filename = file.name.slice(0, 180);
+    }
   }
   const tickets = [];
   for (const [i, ticket] of input.tickets.entries()) {
     const rate = await historicalRate(c.env.DB, ticket.currency, ticket.purchaseDate);
-    tickets.push({ ...rate, ...ticket, serial: i + 1, euroCents: euroCents(ticket.amount, rate.rate), filename: files[i].name });
+    tickets.push({ ...rate, ...ticket, serial: i + 1, euroCents: euroCents(ticket.amount, rate.rate), filename: files.find(f => f.key === `ticket-${i + 1}`)!.name });
   }
   const details = projectDetailsSchema.safeParse(row.details);
   if (!details.success || !Object.hasOwn(details.data.countryLimits, input.participant.team) || !details.data.countryCodes[input.participant.team]) throw new HTTPException(422, { message: 'The organizer must configure activity details and the country reimbursement limit before submission.' });
@@ -131,16 +135,13 @@ app.post('/api/projects/:id/submissions', async c => {
   if (!inserted.meta.changes) throw new HTTPException(409, { message: 'This submission is already processing. Please wait and retry.' });
   const storedKeys: string[] = [];
   try {
-    let pdf;
-    try { pdf = await generatePdf(claim, files); }
-    catch { throw new HTTPException(422, { message: 'A ticket or signature could not be read. Use unencrypted PDFs with up to 10 pages, or valid PNG/JPEG images up to 25 megapixels, then retry.' }); }
-    for (const [i, file] of files.entries()) {
-      const key = `${prefix}/ticket-${i + 1}`;
+    for (const file of files) {
+      const key = `${prefix}/${file.key}`;
       storedKeys.push(key);
       await c.env.FILES.put(key, file.bytes, { httpMetadata: { contentType: file.type } });
     }
-    storedKeys.push(pdfKey);
-    await c.env.FILES.put(pdfKey, pdf, { httpMetadata: { contentType: 'application/pdf' } });
+    // The complete document is assembled only when an administrator downloads
+    // it. Participant submission stores the claim and untouched attachments.
     await c.env.DB.prepare("UPDATE submissions SET status = 'complete' WHERE id = ?").bind(id).run();
   } catch (error) {
     await c.env.FILES.delete(storedKeys);
@@ -198,22 +199,29 @@ async function savedSubmission(db: D1Database, id: string) {
   return { ...row, claim: JSON.parse(row.data) as SavedClaim };
 }
 async function claimFiles(bucket: R2Bucket, claim: SavedClaim): Promise<TicketFile[]> {
-  return Promise.all(claim.tickets.map(async (ticket, i) => {
-    const file = await bucket.get(`reimbursements/${claim.projectId}/${claim.id}/ticket-${i + 1}`);
-    if (!file) throw new HTTPException(503, { message: 'A saved ticket is unavailable. Please retry.' });
-    return { bytes: new Uint8Array(await file.arrayBuffer()), type: file.httpMetadata!.contentType as TicketFile['type'], name: ticket.filename };
+  return Promise.all(supportingDocuments(claim).map(async document => {
+    const file = await bucket.get(`reimbursements/${claim.projectId}/${claim.id}/${document.key}`);
+    return { key: document.key, bytes: file ? new Uint8Array(await file.arrayBuffer()) : new Uint8Array(), type: file?.httpMetadata?.contentType ?? 'application/pdf', name: document.filename };
   }));
 }
 app.get('/api/admin/submissions/:id/pdf-tickets', async c => {
   const { claim } = await savedSubmission(c.env.DB, c.req.param('id'));
-  const entries = await Promise.all(claim.tickets.map(async ticket => {
-    const file = await c.env.FILES.head(`reimbursements/${claim.projectId}/${claim.id}/ticket-${ticket.serial}`);
-    if (file?.httpMetadata?.contentType?.startsWith('image/')) return null;
-    return { serial: ticket.serial, filename: ticket.filename, from: ticket.from, to: ticket.to, amount: ticket.amount, currency: ticket.currency,
-      url: `/api/admin/submissions/${claim.id}/tickets/${ticket.serial}`,
-      ...(!file || file.httpMetadata?.contentType !== 'application/pdf' ? { error: 'Original attachment could not be identified or is unavailable.' } : {}) };
+  const documents = await Promise.all(supportingDocuments(claim).map(async document => {
+    const file = await c.env.FILES.head(`reimbursements/${claim.projectId}/${claim.id}/${document.key}`);
+    return { serial: document.ticket.serial, key: document.key, label: document.label, isBoardingPass: document.isBoardingPass, filename: document.filename, from: document.from, to: document.to, amount: document.amount, currency: document.currency, type: file?.httpMetadata?.contentType,
+      url: `/api/admin/submissions/${claim.id}/documents/${document.key}`,
+      ...(!file ? { error: `${document.isBoardingPass ? 'Boarding pass missing' : 'Original attachment unavailable'}. The claim can still be downloaded.` } : {}) };
   }));
-  return c.json({ participant: claim.participant.name, tickets: entries.filter(Boolean), skippedImages: entries.filter(e => e === null).length });
+  return c.json({ participant: claim.participant.name, tickets: documents.filter(d => !d.type?.startsWith('image/')), documents, skippedImages: documents.filter(d => d.type?.startsWith('image/')).length });
+});
+app.get('/api/admin/submissions/:id/documents/:key', async c => {
+  const { claim } = await savedSubmission(c.env.DB, c.req.param('id'));
+  const key = c.req.param('key');
+  if (!supportingDocuments(claim).some(d => d.key === key)) throw new HTTPException(404, { message: 'Document not found.' });
+  const file = await c.env.FILES.get(`reimbursements/${claim.projectId}/${claim.id}/${key}`);
+  if (!file) throw new HTTPException(404, { message: 'Original document is unavailable.' });
+  c.header('Content-Type', file.httpMetadata?.contentType ?? 'application/octet-stream'); c.header('Content-Disposition', 'attachment');
+  return c.body(file.body);
 });
 app.get('/api/admin/submissions/:id/tickets/:serial', async c => {
   const { claim } = await savedSubmission(c.env.DB, c.req.param('id'));
@@ -242,13 +250,27 @@ app.delete('/api/admin/submissions/:id', async c => {
   if (!['complete', 'deleting'].includes(row.status)) throw new HTTPException(409, { message: 'This submission is still processing. Please retry after it completes.' });
   const claim = JSON.parse(row.data) as SavedClaim;
   await c.env.DB.prepare("UPDATE submissions SET status = 'deleting' WHERE id = ?").bind(claim.id).run();
-  await c.env.FILES.delete([row.pdf_key, ...claim.tickets.map((_, i) => `reimbursements/${claim.projectId}/${claim.id}/ticket-${i + 1}`)]);
+  await c.env.FILES.delete([row.pdf_key, ...supportingDocuments(claim).map(d => `reimbursements/${claim.projectId}/${claim.id}/${d.key}`)]);
   await c.env.DB.prepare('DELETE FROM submissions WHERE id = ?').bind(claim.id).run();
   return c.json({ ok: true });
 });
-app.get('/api/admin/submissions/:id/pdf', async c => {
+app.on(['GET', 'POST'], '/api/admin/submissions/:id/pdf', async c => {
   const { claim } = await savedSubmission(c.env.DB, c.req.param('id'));
-  const pdf = await generatePdf(claim, await claimFiles(c.env.FILES, claim));
+  const files = await claimFiles(c.env.FILES, claim);
+  if (c.req.method === 'POST') {
+    const form = await c.req.formData();
+    for (const file of files) {
+      const prepared = form.get(file.key!);
+      if (prepared && typeof prepared !== 'string' && ['application/pdf', 'image/png', 'image/jpeg'].includes(prepared.type)) {
+        file.originalBytes = file.bytes; file.bytes = new Uint8Array(await prepared.arrayBuffer()); file.type = prepared.type;
+      }
+    }
+  }
+  const warnings: DocumentWarning[] = [];
+  const pdf = await generatePdf(claim, files, warnings);
+  const notice = warnings.slice(0, 10);
+  if (warnings.length > 10) notice.push({ key: 'generation', filename: 'Supporting documents', message: 'Additional document warnings are shown inside the generated PDF.' });
+  c.header('X-Document-Warnings', encodeURIComponent(JSON.stringify(notice)));
   c.header('Content-Type', 'application/pdf');
   c.header('Content-Disposition', `attachment; filename="Reimbursement Declaration.pdf"; filename*=UTF-8''${encodeURIComponent(pdfFilename(claim))}`);
   return c.body(pdf.buffer as ArrayBuffer);
