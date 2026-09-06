@@ -1,0 +1,40 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "ijbk-reimbursement",
+	"main": "server/index.ts",
+	"compatibility_date": "2026-09-01",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "ijbk-reimbursement",
+			"database_id": "70e60ab8-4881-466e-bffc-8126303d9c29",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "FILES",
+			"bucket_name": "ijbk-reimbursement-files"
+		}
+	],
+	"rules": [
+		{
+			"type": "Data",
+			"globs": [
+				"**/*.ttf",
+				"**/*.png"
+			],
+			"fallthrough": true
+		},
+		{
+			"type": "Text",
+			"globs": [
+				"**/*.sql"
+			],
+			"fallthrough": true
+		}
+	],
+	"dev": {
+		"port": 8787
+	}
+}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShieldCheck } from "lucide-react";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +39,7 @@ const Navigation = () => {
             </div>
           </Link>
 
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden xl:flex items-center gap-6">
             {navItems.map((item) => (
               <Link
                 key={item.name}
@@ -56,7 +56,12 @@ const Navigation = () => {
             ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-3">
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+              <Link to="/admin/reimbursements" aria-label="Administrator sign-in">
+                <ShieldCheck className="w-4 h-4 mr-2" />Admin
+              </Link>
+            </Button>
             <Button asChild variant="ghost" className="font-semibold">
               <Link to="/projects">Projects</Link>
             </Button>
@@ -65,13 +70,15 @@ const Navigation = () => {
             </Button>
           </div>
 
-          <div className="md:hidden">
+          <div className="xl:hidden">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsOpen(!isOpen)}
               className="rounded-xl border-border gap-2"
               aria-label="Toggle navigation"
+              aria-expanded={isOpen}
+              aria-controls="mobile-navigation"
             >
               {isOpen ? <X size={18} /> : <Menu size={18} />}
               <span className="font-semibold">{isOpen ? "Close" : "Menu"}</span>
@@ -80,7 +87,7 @@ const Navigation = () => {
         </nav>
 
         {isOpen && (
-          <div className="md:hidden pb-6 animate-slide-up">
+          <div id="mobile-navigation" className="xl:hidden pb-6 animate-slide-up">
             <div className="glass rounded-2xl p-4 shadow-medium border border-border/70">
               <div className="space-y-2">
                 {navItems.map((item) => (
@@ -98,6 +105,13 @@ const Navigation = () => {
                   </Link>
                 ))}
               </div>
+              <Link
+                to="/admin/reimbursements"
+                onClick={() => setIsOpen(false)}
+                className="mt-4 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                <ShieldCheck className="w-4 h-4" />Admin sign-in
+              </Link>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Button asChild variant="outline" className="w-full">
                   <Link to="/projects" onClick={() => setIsOpen(false)}>Projects</Link>

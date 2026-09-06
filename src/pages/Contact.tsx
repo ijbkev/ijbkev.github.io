@@ -233,21 +233,6 @@ const Contact = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 grid gap-8 xl:grid-cols-[1.05fr_0.95fr] items-center">
           <div className="space-y-6 text-center xl:text-left">
-            <div className="xl:hidden">
-              <a
-                href="https://docs.google.com/document/d/1Cv544_mi0AVQsFhjGvPIrFd1nGeRkaHs/edit?usp=sharing&ouid=111431115553739998032&rtpof=true&sd=true"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/15 px-4 py-3 text-left shadow-lg backdrop-blur-md"
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <FileText className="w-4 h-4 flex-shrink-0" />
-                  Start with our PIF
-                </span>
-                <ArrowRight className="w-4 h-4 flex-shrink-0 text-white/90" />
-              </a>
-            </div>
-
             <Badge className="mx-auto xl:mx-0 bg-white/15 text-white border-white/20 w-fit">
               <Sparkles className="w-4 h-4 mr-2 inline" />
               Contact IJBK e.V.
@@ -260,15 +245,31 @@ const Contact = () => {
               by email.
             </p>
 
-            <div className="hidden xl:block max-w-2xl mx-auto xl:mx-0">
+            <div className="max-w-2xl mx-auto xl:mx-0">
               <a
                 href="https://docs.google.com/document/d/1Cv544_mi0AVQsFhjGvPIrFd1nGeRkaHs/edit?usp=sharing&ouid=111431115553739998032&rtpof=true&sd=true"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition-colors"
+                className="group block rounded-3xl border border-cyan-300/40 bg-white/12 p-4 md:p-5 text-left shadow-2xl shadow-cyan-950/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-200/60 hover:bg-white/16 hover:shadow-cyan-950/30"
               >
-                <FileText className="w-4 h-4" />
-                Start with our PIF (Partner Identification Form)
+                <div className="flex items-center gap-4">
+                  <div className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-2xl bg-white text-slate-950 shadow-lg shadow-cyan-950/20 transition-transform duration-300 group-hover:scale-105">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-cyan-300/20 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.24em] text-cyan-100">
+                        PIF
+                      </span>
+                      <span className="text-sm md:text-base font-semibold uppercase tracking-[0.18em] text-white/75">
+                        Partner Identification Form
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-white/90 text-slate-950 transition-transform duration-300 group-hover:translate-x-0.5">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </div>
               </a>
             </div>
           </div>

@@ -1,0 +1,4 @@
+# Run npm run setup:admin to generate a private local administrator password.
+# Set ADMIN_PASSWORD_HASH as a server secret for hosted environments.
+ADMIN_PASSWORD_HASH=""
+APP_ORIGIN="http://localhost:8080"

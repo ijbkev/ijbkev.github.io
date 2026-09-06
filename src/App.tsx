@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +14,9 @@ import Contact from "./pages/Contact";
 import ErasmusPlus from "./pages/ErasmusPlus";
 import NotFound from "./pages/NotFound";
 import WhatsAppWidget from "./components/WhatsAppWidget";
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const Reimbursement = lazy(() => import("./pages/Reimbursement"));
+const ReimbursementAdmin = lazy(() => import("./pages/ReimbursementAdmin"));
 
 const queryClient = new QueryClient();
 
@@ -40,18 +43,23 @@ const App = () => (
           <div className="relative z-10">
             <BrowserRouter>
               <ScrollToTop />
+            <Suspense fallback={<div className="page-shell py-20" role="status">Loading page…</div>}>
             <Routes>
               <Route element={<Layout />}>
                 <Route path="/" element={<Homepage />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/projects" element={<Projects />} />
+                <Route path="/projects/:projectId" element={<ProjectDetail />} />
+                <Route path="/projects/:projectId/reimbursement" element={<Reimbursement />} />
+                <Route path="/admin/reimbursements" element={<ReimbursementAdmin />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/erasmus-plus" element={<ErasmusPlus />} />
               </Route>
               <Route path="*" element={<NotFound />} />
               </Routes>
+            </Suspense>
               <WhatsAppWidget />
             </BrowserRouter>
           </div>
