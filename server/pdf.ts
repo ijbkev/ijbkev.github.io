@@ -2,8 +2,9 @@ import { PDFDocument, PDFName, rgb, degrees, type PDFFont, type PDFPage, type PD
 import fontkit from '@pdf-lib/fontkit';
 import fontBytes from './fonts/NotoSans-Regular.ttf';
 import ngoLogoBytes from '../public/logo.png';
+import euLogoBytes from '../public/reimbursement/eu-logo.png';
 import erasmusLogoBytes from '../public/reimbursement/erasmus-logo.png';
-import { supportingDocuments, flightRoute, claimReference, organisationName, reimbursement, legacyDeclarationText, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
+import { supportingDocuments, flightRoute, claimReference, organisationName, reimbursement, legacyDeclarationText, greenTravelConfirmation, greenTravelDeclaration, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
 
 export type TicketFile = { key?: string; bytes: Uint8Array; originalBytes?: Uint8Array; type: string; name: string };
 const navy = rgb(0.08, 0.15, 0.3);
@@ -36,6 +37,7 @@ export async function generatePdf(claim: SavedClaim, files: TicketFile[], warnin
   doc.setAuthor(organisationName);
   doc.setCreationDate(new Date(claim.createdAt));
   const ngo = await doc.embedPng(ngoLogoBytes);
+  const eu = await doc.embedPng(euLogoBytes);
   const erasmus = await doc.embedPng(erasmusLogoBytes);
   let page!: PDFPage;
   let y = 0;
@@ -60,10 +62,11 @@ export async function generatePdf(claim: SavedClaim, files: TicketFile[], warnin
   }
   function newPage(heading = title) {
     page = doc.addPage([595.28, 841.89]);
-    page.drawImage(ngo, { x: 40, y: 774, ...ngo.scaleToFit(55, 48) });
+    page.drawImage(eu, { x: 40, y: 781, ...eu.scaleToFit(62, 42) });
+    page.drawImage(ngo, { x: 116, y: 774, ...ngo.scaleToFit(55, 48) });
     page.drawImage(erasmus, { x: 405, y: 780, ...erasmus.scaleToFit(150, 40) });
     const headingLines = lines(heading, 515, font, 16);
-    y = 748;
+    y = 740;
     headingLines.forEach(line => { write(line, 40, y, 16); y -= 21; });
     for (const line of lines(organisationName, 515, font, 9)) { write(line, 40, y, 9, grey); y -= 13; } y -= 5;
     page.drawLine({ start: { x: 40, y }, end: { x: 555, y }, thickness: 1, color: navy });
@@ -97,36 +100,34 @@ export async function generatePdf(claim: SavedClaim, files: TicketFile[], warnin
   section('Participant');
   pairs([['Full name (as in ID)', p.name], ['Country of residence', p.team], ['Citizenship', p.citizenship], ['Date of birth', p.dateOfBirth], ['Role', p.role], ['Email', p.email], ['Phone', p.phone], ['Home address', p.address], ['City of residence', p.city], ['Arrival in destination country', p.arrivalDate], ['Departure from destination country', p.departureDate]]);
   section('Bank details for the transfer');
-  pairs([['Account holder', p.accountHolder], ['Bank name', p.bankName], ['Account / IBAN', p.bankAccount], ['BIC / SWIFT', p.bic], ['Bank address', p.bankAddress], ['Green travel', p.greenTravel ? 'Yes' : 'No']]);
+  pairs([['Account holder', p.accountHolder], ['Bank name', p.bankName], ['Account / IBAN', p.bankAccount], ['BIC / SWIFT', p.bic], ['Green travel', p.greenTravel ? 'Yes' : 'No']]);
 
   newPage('Travel and reimbursement');
   section('Travel');
+  const widths = [20, 108, 62, 62, 76, 51, 68, 68];
+  const headers = ['#', 'FROM / TO', 'PURCHASE DATE', 'TRAVEL DATE', 'TRANSPORT / FORMAT', 'PURCHASE CURRENCY', 'AMOUNT IN LOCAL CURRENCY', 'AMOUNT IN EUR'];
   function tableHeader() {
-    page.drawRectangle({ x: 40, y: y - 9, width: 515, height: 23, color: navy });
-    ['#', 'FROM / TO', 'TRAVEL DATE', 'TRANSPORT / FORMAT', 'EUR'].forEach((label, i) => write(label, [46, 68, 245, 322, 495][i], y, 7, rgb(1, 1, 1)));
-    y -= 27;
+    const wrapped = headers.map((label, i) => lines(label, widths[i] - 10, font, 6.5));
+    const height = Math.max(...wrapped.map(v => v.length)) * 9 + 12;
+    page.drawRectangle({ x: 40, y: y - height + 9, width: 515, height, color: navy });
+    let x = 45;
+    wrapped.forEach((cell, i) => { cell.forEach((line, j) => write(line, x, y - j * 9, 6.5, rgb(1, 1, 1))); x += widths[i]; });
+    y -= height + 6;
   }
   const attachmentLinks: { page: PDFPage; y: number; key: string }[] = [];
   tableHeader();
   for (const ticket of claim.tickets) {
-    const route = lines(flightRoute(ticket), 165, font, 9);
-    const mode = lines(`${ticket.mode} / ${ticket.ticketType ?? 'Format not recorded'}`, 165, font, 8);
-    const rateLines = lines(`Exchange rate: 1 ${ticket.currency} = ${ticket.rate} EUR | Rate date: ${ticket.rateDate} | ${ticket.source}`, 485, font, 8);
-    const rowHeight = Math.max(route.length, mode.length) * 12 + rateLines.length * 11 + 70;
-    if (y - rowHeight < 60) { newPage('Travel - continued'); tableHeader(); }
-    const top = y;
-    write(String(ticket.serial), 46, y, 8);
-    route.forEach((line, i) => write(line, 68, top - i * 12, 9));
-    write(ticket.travelDate, 245, top, 8);
-    mode.forEach((line, i) => write(line, 322, top - i * 12, 8));
-    const money = (ticket.euroCents / 100).toFixed(2);
-    write(money, 550 - font.widthOfTextAtSize(money, 8), top, 8);
-    y -= Math.max(route.length, mode.length) * 12 + 6;
-    const columns = [68, 185, 315, 455];
-    ['Purchase date', 'Currency of purchase', 'Amount in local currency', 'Amount in EUR'].forEach((label, i) => write(label, columns[i], y, 7, grey));
-    y -= 14;
-    [ticket.purchaseDate, ticket.currency, ticket.amount.toFixed(2), (ticket.euroCents / 100).toFixed(2)].forEach((value, i) => write(value, columns[i], y, 8));
-    y -= 16;
+    const values = [String(ticket.serial), flightRoute(ticket), ticket.purchaseDate, ticket.travelDate, `${ticket.mode} / ${ticket.ticketType ?? 'Format not recorded'}`, ticket.currency, ticket.amount.toFixed(2), (ticket.euroCents / 100).toFixed(2)];
+    const cells = values.map((value, i) => lines(value, widths[i] - 10, font, 7.5));
+    const rateLines = ticket.currency === 'EUR' ? [] : lines(`Exchange rate: 1 ${ticket.currency} = ${ticket.rate} EUR | Rate date: ${ticket.rateDate} | ${ticket.source}`, 485, font, 8);
+    const height = Math.max(...cells.map(cell => cell.length)) * 11 + 10;
+    if (y - height - rateLines.length * 11 - 35 < 60) { newPage('Travel - continued'); tableHeader(); }
+    let x = 45;
+    cells.forEach((cell, i) => {
+      cell.forEach((line, j) => write(line, i >= 6 ? x + widths[i] - 10 - font.widthOfTextAtSize(line, 7.5) : x, y - j * 11, 7.5));
+      x += widths[i];
+    });
+    y -= height;
     rateLines.forEach(line => { write(line, 68, y, 8, grey); y -= 11; });
     attachmentLinks.push({ page, y, key: `ticket-${ticket.serial}` });
     y -= 15;
@@ -153,10 +154,10 @@ export async function generatePdf(claim: SavedClaim, files: TicketFile[], warnin
   if (declaration.length > 1) newPage('Declaration and signature');
   section('Declaration and signature');
   declaration.forEach((point, index) => {
-    const wrapped = lines(point, 493, font, 9);
+    const wrapped = lines(point, index === 0 ? 515 : 493, font, 9);
     ensure(wrapped.length * 13 + 10);
-    write(`${index + 1}.`, 40, y, 9);
-    wrapped.forEach(line => { write(line, 62, y, 9); y -= 13; });
+    if (index > 0) write(`${index}.`, 40, y, 9);
+    wrapped.forEach(line => { write(line, index === 0 ? 40 : 62, y, 9); y -= 13; });
     y -= 8;
   });
   ensure(155);
@@ -166,6 +167,24 @@ export async function generatePdf(claim: SavedClaim, files: TicketFile[], warnin
   } catch { warnings.push({ key: 'signature', filename: 'Signature', message: 'Signature could not be displayed. Manual review required.' }); write('Signature could not be displayed. Manual review required.', 40, y - 20, 9, rgb(0.73, 0.11, 0.11)); }
   y -= 92;
   pairs([['Signed by', p.name], ['Place / date (UTC)', `${p.signaturePlace || 'Place not recorded'}, ${claim.createdAt.slice(0, 10)}`]]);
+
+  if (p.greenTravel) {
+    newPage('Green Travel Declaration');
+    const confirmation = lines(`[X] ${greenTravelConfirmation}`, 515, font, 10);
+    confirmation.forEach(line => { write(line, 40, y, 10); y -= 15; });
+    y -= 13;
+    for (const paragraph of greenTravelDeclaration) {
+      const wrapped = lines(paragraph, 515, font, 10);
+      wrapped.forEach(line => { write(line, 40, y, 10); y -= 15; });
+      y -= 15;
+    }
+    try {
+      const signature = await doc.embedPng(claim.signature);
+      page.drawImage(signature, { x: 40, y: y - 75, ...signature.scaleToFit(240, 65) });
+    } catch { write('Signature could not be displayed. Manual review required.', 40, y - 20, 9, rgb(0.73, 0.11, 0.11)); }
+    y -= 92;
+    pairs([['Signed by', p.name], ['Place / date (UTC)', `${p.signaturePlace || 'Place not recorded'}, ${claim.createdAt.slice(0, 10)}`]]);
+  }
 
   // Each ticket occupies exactly one output page. Multi-page source PDFs are
   // stacked on one extended page, preserving every source page at readable size.

@@ -2,7 +2,7 @@ import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-or
 
 export const projectSettings = sqliteTable('project_settings', {
   projectId: text('project_id').primaryKey(), projectCode: text('project_code').notNull(),
-  countries: text('countries').notNull(), accessHash: text('access_hash'), enabled: integer('enabled').notNull().default(0),
+  countries: text('countries').notNull(), accessHash: text('access_hash'), organisationAccessHash: text('organisation_access_hash'), enabled: integer('enabled').notNull().default(0),
 });
 export const sessions = sqliteTable('sessions', {
   tokenHash: text('token_hash').primaryKey(), role: text('role').notNull(), projectId: text('project_id'), expiresAt: integer('expires_at').notNull(),
@@ -23,3 +23,9 @@ export const rateLimits = sqliteTable('rate_limits', {
 export const projectDetails = sqliteTable('project_details', {
   projectId: text('project_id').primaryKey(), data: text('data').notNull(),
 });
+
+export const organisationDeclarations = sqliteTable('organisation_declarations', {
+  id: text('id').primaryKey(), projectId: text('project_id').notNull(), country: text('country').notNull(),
+  organisationName: text('organisation_name').notNull(), legalRepresentativeName: text('legal_representative_name').notNull(),
+  totalCents: integer('total_cents').notNull(), data: text('data').notNull(), createdAt: text('created_at').notNull(),
+}, table => [uniqueIndex('idx_organisation_declarations_project_country').on(table.projectId, table.country)]);

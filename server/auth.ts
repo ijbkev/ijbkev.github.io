@@ -19,19 +19,20 @@ export async function verifyPassword(password: string, stored: string) {
   for (let i = 0; i < stored.length; i++) difference |= actual.charCodeAt(i) ^ stored.charCodeAt(i);
   return difference === 0;
 }
-const cookieName = (projectId?: string) => projectId ? `ijbk_project_${projectId}` : 'ijbk_admin';
-export async function newSession(c: Ctx, role: 'admin' | 'participant', projectId?: string) {
+const cookieName = (projectId?: string, role: 'admin' | 'participant' | 'organisation' = projectId ? 'participant' : 'admin') => projectId ? `ijbk_${role}_project_${projectId}` : 'ijbk_admin';
+export async function newSession(c: Ctx, role: 'admin' | 'participant' | 'organisation', projectId?: string) {
   const token = `${crypto.randomUUID()}${crypto.randomUUID()}`;
   await c.env.DB.prepare('INSERT INTO sessions (token_hash, role, project_id, expires_at) VALUES (?, ?, ?, ?)')
     .bind(await sha256(token), role, projectId ?? null, Date.now() + 8 * 3600000).run();
-  setCookie(c, cookieName(projectId), token, { httpOnly: true, secure: new URL(c.req.url).protocol === 'https:', sameSite: 'Strict', path: '/api', maxAge: 8 * 3600 });
+  setCookie(c, cookieName(projectId, role), token, { httpOnly: true, secure: new URL(c.req.url).protocol === 'https:', sameSite: 'Strict', path: '/api', maxAge: 8 * 3600 });
 }
-export async function requireSession(c: Ctx, projectId?: string) {
-  const token = getCookie(c, cookieName(projectId));
+export async function requireSession(c: Ctx, projectId?: string, role: 'participant' | 'organisation' = 'participant') {
+  const expectedRole = projectId ? role : 'admin';
+  const token = getCookie(c, cookieName(projectId, expectedRole));
   if (!token) throw new HTTPException(401, { message: projectId ? 'Enter the project access code to continue.' : 'Administrator sign-in required.' });
   const hash = await sha256(token);
   const session = await c.env.DB.prepare('SELECT role, project_id, expires_at FROM sessions WHERE token_hash = ?').bind(hash).first<{ role: string; project_id: string | null; expires_at: number }>();
-  if (!session || session.expires_at < Date.now() || session.role !== (projectId ? 'participant' : 'admin') || session.project_id !== (projectId ?? null)) throw new HTTPException(401, { message: 'Your session expired. Sign in again; your form is still here.' });
+  if (!session || session.expires_at < Date.now() || session.role !== expectedRole || session.project_id !== (projectId ?? null)) throw new HTTPException(401, { message: 'Your session expired. Sign in again; your form is still here.' });
   c.set('sessionHash', hash);
   return hash;
 }

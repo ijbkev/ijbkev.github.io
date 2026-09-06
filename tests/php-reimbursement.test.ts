@@ -27,7 +27,7 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     }
     let response = await req('/admin/login', 'POST', { password }); assert.equal(response.status, 200, log);
     const admin = response.headers.get('set-cookie')!.split(';')[0];
-    const settings = { projectCode: 'TEST-2026', shortName: 'OASIS', activityStartDate: '2026-09-20', activityEndDate: '2026-09-27', destinationCity: 'Vienna', countryLimits: { Germany: 30900 }, countries: ['Germany'], enabled: true, accessCode: 'participant-test-code' };
+    const settings = { projectCode: 'TEST-2026', shortName: 'OASIS', activityStartDate: '2026-09-20', activityEndDate: '2026-09-27', destinationCity: 'Vienna', countryLimits: { Germany: 30900 }, countries: ['Germany'], enabled: true, accessCode: 'participant-test-code', organisationAccessCode: 'organisation-test-code' };
     response = await req('/admin/projects/oasis', 'PUT', settings, admin); assert.equal(response.status, 200, await response.text());
     assert.equal((await (await req('/projects/oasis')).json()).countryLimits.Germany, 30900);
     response = await req('/projects/oasis/unlock', 'POST', { code: settings.accessCode }); const participantCookie = response.headers.get('set-cookie')!.split(';')[0];
@@ -48,6 +48,17 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     response = await req(`/admin/submissions/${id}/extra`, 'PUT', { extraCents: 4000, note: 'Approved additional support' }, admin); assert.equal(response.status, 200, await response.text());
     const saved = await (await req(`/admin/submissions/${id}`, 'GET', undefined, admin)).json(); assert.equal(saved.extraCents, 4000); assert.equal(saved.destinationCity, 'Vienna');
     const list = await (await req('/admin/projects/oasis/submissions', 'GET', undefined, admin)).json(); assert.equal(list[0].finalCents, 34900);
+    assert.equal((await req('/projects/oasis/organisation-form?country=Germany', 'GET', undefined, participantCookie)).status, 401);
+    response = await req('/projects/oasis/organisation-unlock', 'POST', { code: settings.organisationAccessCode }); const organisationCookie = response.headers.get('set-cookie')!.split(';')[0];
+    const organisationForm = await (await req('/projects/oasis/organisation-form?country=Germany', 'GET', undefined, organisationCookie)).json();
+    assert.deepEqual(organisationForm.participants, [{ label: 'Participant 1', name: 'Tugay Özkan', role: 'Facilitator', reimbursementCents: 34900 }]);
+    const organisationInput = { requestId: crypto.randomUUID(), organisationName: 'Test Youth Organisation', country: 'Germany', legalRepresentativeName: 'Alex Representative', signaturePlace: 'Berlin', signatureDate: '2026-09-06', accountHolder: 'Test Youth Organisation', iban: 'DE89370400440532013000', bankCountry: 'Germany', swift: 'COBADEFFXXX', signature: claim.signature, declaration: true };
+    response = await req('/projects/oasis/organisation-declarations', 'POST', organisationInput, organisationCookie);
+    const organisationReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(organisationReceipt) + log); assert.equal(organisationReceipt.totalCents, 34900);
+    assert.equal((await req('/projects/oasis/organisation-declarations', 'POST', { ...organisationInput, requestId: crypto.randomUUID() }, organisationCookie)).status, 409);
+    const organisationList = await (await req('/admin/projects/oasis/organisation-declarations', 'GET', undefined, admin)).json(); assert.equal(organisationList.length, 1); assert.equal(organisationList[0].country, 'Germany');
+    response = await req(`/admin/organisation-declarations/${organisationReceipt.id}/pdf`, 'GET', undefined, admin); assert.equal(response.status, 200, log);
+    const organisationBytes = new Uint8Array(await response.arrayBuffer()); assert.equal((await PDFDocument.load(organisationBytes)).getTitle(), 'Reimbursement Declaration - Test Youth Organisation - Germany'); await mkdir('tmp/pdfs', { recursive: true }); await writeFile('tmp/pdfs/organisation-php-qa.pdf', organisationBytes);
     response = await req(`/admin/submissions/${id}/pdf`, 'GET', undefined, admin); assert.equal(response.status, 200, log); assert.match(response.headers.get('content-disposition')!, /Tugay%20%C3%96zkan%20-%20Germany.pdf/);
     const bytes = new Uint8Array(await response.arrayBuffer()); const pdf = await PDFDocument.load(bytes); assert.equal(pdf.getTitle(), 'Reimbursement Declaration - Tugay Özkan - Germany'); assert.ok(pdf.getPageCount() >= 3);
     const destinations = pdf.getPages().flatMap(page => {
@@ -82,7 +93,7 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     response = await req(`/admin/submissions/${modernReceipt.id}/pdf`, 'GET', undefined, admin);
     assert.equal(response.status, 200, log); assert.ok((await PDFDocument.load(await response.arrayBuffer())).getPageCount() >= 3);
     assert.equal((await req(`/admin/submissions/${modernReceipt.id}`, 'DELETE', undefined, admin)).status, 200);
-    // One invoice, separate outbound and return passes, missing/corrupt files non-blocking.
+    // One invoice, separate outbound and return passes, missing files rejected, corrupt files retained for review.
     const flight = { ...claim, requestId: crypto.randomUUID(), tickets: [{ ...claim.tickets[0], mode: 'Flight', journeyType: 'round-trip', connections: true, from: 'FRA', to: 'TLL', boardingPasses: [
       { journey: 'outbound', from: 'FRA', to: 'MUC' }, { journey: 'outbound', from: 'MUC', to: 'TLL' }, { journey: 'return', from: 'TLL', to: 'FRA' },
     ] }] };
@@ -90,12 +101,15 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     flightForm.append('boarding-0-0', new Blob([modernPdf], { type: 'application/pdf' }), 'outbound.pdf');
     flightForm.append('boarding-0-2', new Blob(['%PDF-1.7 broken content'], { type: 'application/pdf' }), 'return-unreadable.pdf');
     response = await req('/projects/oasis/submissions', 'POST', flightForm, modernParticipantCookie);
+    assert.equal(response.status, 422, 'missing selected boarding pass must block submission');
+    flightForm.append('boarding-0-1', new Blob([modernPdf], { type: 'application/pdf' }), 'connection.pdf');
+    response = await req('/projects/oasis/submissions', 'POST', flightForm, modernParticipantCookie);
     const flightReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(flightReceipt) + log);
     assert.equal(flightReceipt.totalCents, 34900, 'boarding passes never add cost');
     const flightSaved = await (await req(`/admin/submissions/${flightReceipt.id}`, 'GET', undefined, admin)).json();
     assert.equal(flightSaved.tickets.length, 1); assert.equal(flightSaved.tickets[0].boardingPasses.length, 3);
     const flightManifest = await (await req(`/admin/submissions/${flightReceipt.id}/pdf-tickets`, 'GET', undefined, admin)).json();
-    assert.equal(flightManifest.documents.length, 4); assert.equal(flightManifest.documents[2].key, 'boarding-1-2'); assert.match(flightManifest.documents[2].error, /missing/);
+    assert.equal(flightManifest.documents.length, 4); assert.equal(flightManifest.documents[2].key, 'boarding-1-2'); assert.equal(flightManifest.documents[2].error, undefined);
     assert.equal(flightManifest.documents[3].amount, 0);
     assert.equal((await req(`/admin/submissions/${flightReceipt.id}/documents/boarding-1-1`, 'GET', undefined, participantCookie)).status, 401);
     response = await req(`/admin/submissions/${flightReceipt.id}/pdf`, 'GET', undefined, admin); assert.equal(response.status, 200, log);

@@ -4,14 +4,16 @@ import { bodyLimit } from 'hono/body-limit';
 import { deleteCookie } from 'hono/cookie';
 import { ZodError, z } from 'zod';
 import { projects } from '../src/data/projects';
-import { supportingDocuments, claimReference, declarationText, claimSchema, settingsSchema, projectDetailsSchema, extraSchema, reimbursement, submissionReference, pdfFilename, currencies, euroCents, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type BoardingPass, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
+import { supportingDocuments, claimReference, declarationText, claimSchema, settingsSchema, projectDetailsSchema, extraSchema, reimbursement, submissionReference, pdfFilename, currencies, euroCents, organisationDeclarationSchema, type OrganisationFormData, type OrganisationParticipant, type SavedOrganisationDeclaration, type OrganisationDeclarationSummary, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type BoardingPass, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
 import { hashPassword, verifyPassword, newSession, requireSession, rateLimit } from './auth';
 import { historicalRate } from './rates';
 import { generatePdf, type TicketFile } from './pdf';
 import type { Env, Variables, SettingsRow } from './types';
 import baseSchemaSql from '../drizzle/0000_unknown_newton_destine.sql';
 import detailsSchemaSql from '../drizzle/0001_spicy_master_mold.sql';
-const schemaSql = baseSchemaSql + '\n--> statement-breakpoint\n' + detailsSchemaSql;
+import organisationSchemaSql from '../drizzle/0002_organisation_declarations.sql';
+import { generateOrganisationDeclarationPdf } from './organisation-pdf';
+const schemaSql = [baseSchemaSql, detailsSchemaSql, organisationSchemaSql].join('\n--> statement-breakpoint\n');
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 const initialized = new WeakMap<D1Database, Promise<unknown>>();
@@ -19,7 +21,11 @@ function initialize(db: D1Database) {
   if (!initialized.has(db)) {
     const statements = schemaSql.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean)
       .map(s => s.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS ').replace('CREATE UNIQUE INDEX ', 'CREATE UNIQUE INDEX IF NOT EXISTS ').replace(/^CREATE INDEX /, 'CREATE INDEX IF NOT EXISTS '));
-    initialized.set(db, db.batch(statements.map(sql => db.prepare(sql))).catch(error => { initialized.delete(db); throw error; }));
+    initialized.set(db, (async () => {
+      await db.batch(statements.map(sql => db.prepare(sql)));
+      const columns = await db.prepare('PRAGMA table_info(project_settings)').all<{ name: string }>();
+      if (!columns.results.some(column => column.name === 'organisation_access_hash')) await db.prepare('ALTER TABLE project_settings ADD COLUMN organisation_access_hash TEXT').run();
+    })().catch(error => { initialized.delete(db); throw error; }));
   }
   return initialized.get(db)!;
 }
@@ -35,12 +41,37 @@ async function settings(db: D1Database, id: string) {
   return row ? { ...row, details: details ? JSON.parse(details.data) : undefined } : null;
 }
 function publicSettings(row: SettingsRow | null) {
-  return { ...row?.details, projectCode: row?.project_code ?? '', countries: JSON.parse(row?.countries ?? '[]') as string[], enabled: !!row?.enabled && !!row?.access_hash, hasAccessCode: !!row?.access_hash };
+  return { ...row?.details, projectCode: row?.project_code ?? '', countries: JSON.parse(row?.countries ?? '[]') as string[], enabled: !!row?.enabled && !!row?.access_hash, organisationEnabled: !!row?.enabled && !!row?.organisation_access_hash, hasAccessCode: !!row?.access_hash, hasOrganisationAccessCode: !!row?.organisation_access_hash };
 }
 async function enabledSettings(db: D1Database, id: string) {
   const row = await settings(db, id);
   if (!row || !row.enabled || !row.access_hash) throw new HTTPException(403, { message: 'Reimbursement is not open for this project. Please contact the organizer.' });
   return row;
+}
+
+async function organisationFormData(db: D1Database, projectId: string, country: string): Promise<OrganisationFormData> {
+  const row = await enabledSettings(db, projectId);
+  const project = projectById(projectId);
+  const countries = JSON.parse(row.countries) as string[];
+  if (!countries.includes(country)) throw new HTTPException(422, { message: 'Select one of this project’s participating countries.' });
+  const details = projectDetailsSchema.parse(row.details);
+  const result = await db.prepare("SELECT data FROM submissions WHERE project_id = ? AND team = ? AND status = 'complete' ORDER BY created_at DESC").bind(projectId, country).all<{ data: string }>();
+  const unique = new Map<string, SavedClaim>();
+  for (const item of result.results) {
+    const claim = JSON.parse(item.data) as SavedClaim;
+    if (!unique.has(claim.participant.email.toLowerCase())) unique.set(claim.participant.email.toLowerCase(), claim);
+  }
+  const claims = [...unique.values()].sort((a, b) => {
+    const rank = (role: string) => role === 'Team Leader' ? 0 : role === 'Participant' ? 1 : 2;
+    return rank(a.participant.role) - rank(b.participant.role) || a.participant.name.localeCompare(b.participant.name);
+  });
+  let leader = 0, participant = 0;
+  const participants: OrganisationParticipant[] = claims.map(claim => {
+    const isLeader = claim.participant.role === 'Team Leader';
+    const number = isLeader ? ++leader : ++participant;
+    return { label: isLeader ? `Leader${number > 1 ? ` ${number}` : ''}` : `Participant ${number}`, name: claim.participant.name, role: claim.participant.role, reimbursementCents: reimbursement(claim).finalCents };
+  });
+  return { ...details, projectName: project.title, projectCode: row.project_code, countries, country, participants, totalCents: participants.reduce((sum, item) => sum + item.reimbursementCents, 0) };
 }
 
 app.use('/api/*', async (c, next) => {
@@ -67,9 +98,41 @@ app.post('/api/projects/:id/unlock', async c => {
   await newSession(c, 'participant', id);
   return c.json({ ok: true });
 });
+app.post('/api/projects/:id/organisation-unlock', async c => {
+  const id = c.req.param('id');
+  await rateLimit(c, `organisation-unlock:${id}`, 10);
+  const row = await enabledSettings(c.env.DB, id);
+  const { code } = z.object({ code: z.string().min(1).max(128) }).parse(await c.req.json());
+  if (!row.organisation_access_hash || !await verifyPassword(code, row.organisation_access_hash)) throw new HTTPException(401, { message: 'Incorrect partner organisation access code.' });
+  await newSession(c, 'organisation', id);
+  return c.json({ ok: true });
+});
 app.get('/api/projects/:id/session', async c => {
   await requireSession(c, c.req.param('id'));
   return c.json(publicSettings(await enabledSettings(c.env.DB, c.req.param('id'))));
+});
+app.get('/api/projects/:id/organisation-session', async c => {
+  await requireSession(c, c.req.param('id'), 'organisation');
+  return c.json(publicSettings(await enabledSettings(c.env.DB, c.req.param('id'))));
+});
+app.get('/api/projects/:id/organisation-form', async c => {
+  await requireSession(c, c.req.param('id'), 'organisation');
+  return c.json(await organisationFormData(c.env.DB, c.req.param('id'), c.req.query('country') ?? ''));
+});
+app.post('/api/projects/:id/organisation-declarations', async c => {
+  const projectId = c.req.param('id');
+  await requireSession(c, projectId, 'organisation');
+  await rateLimit(c, `organisation-submit:${projectId}`, 10);
+  const input = organisationDeclarationSchema.parse(await c.req.json());
+  const source = await organisationFormData(c.env.DB, projectId, input.country);
+  if (!source.participants.length) throw new HTTPException(422, { message: 'No completed participant reimbursements were found for this country.' });
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const saved: SavedOrganisationDeclaration = { ...source, ...input, id, projectId, createdAt };
+  const result = await c.env.DB.prepare('INSERT OR IGNORE INTO organisation_declarations (id, project_id, country, organisation_name, legal_representative_name, total_cents, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, projectId, input.country, input.organisationName, input.legalRepresentativeName, source.totalCents, JSON.stringify(saved), createdAt).run();
+  if (!result.meta.changes) throw new HTTPException(409, { message: 'An organisation declaration has already been submitted for this country.' });
+  return c.json({ id, country: input.country, totalCents: source.totalCents, createdAt }, 201);
 });
 app.get('/api/projects/:id/rate', async c => {
   await requireSession(c, c.req.param('id'));
@@ -106,7 +169,7 @@ app.post('/api/projects/:id/submissions', async c => {
       ...(ticket.boardingPasses ?? []).map((pass, j) => ({ field: `boarding-${i}-${j}`, key: `boarding-${i + 1}-${j + 1}`, pass }))];
     for (const entry of uploads) {
       const file = form.get(entry.field);
-      if (!file || typeof file === 'string') { if (entry.pass) { delete entry.pass.filename; continue; } throw new HTTPException(422, { message: `Upload the file for ticket ${i + 1}.` }); }
+      if (!file || typeof file === 'string' || file.size === 0) throw new HTTPException(422, { message: entry.pass ? `Upload every selected boarding pass for ticket ${i + 1}.` : `Upload the file for ticket ${i + 1}.` });
       if (file.size > MAX_FILE_SIZE) throw new HTTPException(413, { message: 'Each upload must be at most 10 MB.' });
       totalSize += file.size; if (totalSize > MAX_TOTAL_SIZE) throw new HTTPException(413, { message: 'Total uploads exceed 40 MB.' });
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -174,11 +237,12 @@ app.put('/api/admin/projects/:id', async c => {
   const old = await settings(c.env.DB, id);
   const input = settingsSchema.parse(await c.req.json());
   const accessHash = input.accessCode ? await hashPassword(input.accessCode) : old?.access_hash;
+  const organisationAccessHash = input.organisationAccessCode ? await hashPassword(input.organisationAccessCode) : old?.organisation_access_hash;
   if (!accessHash) throw new HTTPException(422, { message: 'Set a secret access code for this project.' });
-  const queries = [c.env.DB.prepare('INSERT INTO project_settings (project_id, project_code, countries, access_hash, enabled) VALUES (?, ?, ?, ?, ?) ON CONFLICT(project_id) DO UPDATE SET project_code = excluded.project_code, countries = excluded.countries, access_hash = excluded.access_hash, enabled = excluded.enabled')
-    .bind(id, input.projectCode, JSON.stringify(input.countries), accessHash, input.enabled ? 1 : 0)];
+  const queries = [c.env.DB.prepare('INSERT INTO project_settings (project_id, project_code, countries, access_hash, organisation_access_hash, enabled) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(project_id) DO UPDATE SET project_code = excluded.project_code, countries = excluded.countries, access_hash = excluded.access_hash, organisation_access_hash = excluded.organisation_access_hash, enabled = excluded.enabled')
+    .bind(id, input.projectCode, JSON.stringify(input.countries), accessHash, organisationAccessHash ?? null, input.enabled ? 1 : 0)];
   queries.push(c.env.DB.prepare('INSERT INTO project_details (project_id, data) VALUES (?, ?) ON CONFLICT(project_id) DO UPDATE SET data = excluded.data').bind(id, JSON.stringify(projectDetailsSchema.parse(input))));
-  if (input.accessCode || !input.enabled) queries.push(c.env.DB.prepare('DELETE FROM sessions WHERE project_id = ?').bind(id));
+  if (input.accessCode || input.organisationAccessCode || !input.enabled) queries.push(c.env.DB.prepare('DELETE FROM sessions WHERE project_id = ?').bind(id));
   await c.env.DB.batch(queries);
   return c.json(publicSettings(await settings(c.env.DB, id)));
 });
@@ -186,6 +250,20 @@ app.get('/api/admin/projects/:id/submissions', async c => {
   projectById(c.req.param('id'));
   const rows = await c.env.DB.prepare("SELECT id, name, team, email, total_cents AS totalCents, created_at AS createdAt, data FROM submissions WHERE project_id = ? AND status = 'complete' ORDER BY created_at DESC").bind(c.req.param('id')).all();
   return c.json(rows.results.map(({ data, ...summary }) => { const claim = JSON.parse(data as string) as SavedClaim; return { ...summary, reference: claimReference(claim), finalCents: reimbursement(claim).finalCents }; }));
+});
+app.get('/api/admin/projects/:id/organisation-declarations', async c => {
+  projectById(c.req.param('id'));
+  const rows = await c.env.DB.prepare('SELECT id, project_id AS projectId, country, organisation_name AS organisationName, legal_representative_name AS legalRepresentativeName, total_cents AS totalCents, created_at AS createdAt FROM organisation_declarations WHERE project_id = ? ORDER BY country').bind(c.req.param('id')).all<OrganisationDeclarationSummary>();
+  return c.json(rows.results);
+});
+app.get('/api/admin/organisation-declarations/:id/pdf', async c => {
+  const row = await c.env.DB.prepare('SELECT data FROM organisation_declarations WHERE id = ?').bind(c.req.param('id')).first<{ data: string }>();
+  if (!row) throw new HTTPException(404, { message: 'Organisation declaration not found.' });
+  const declaration = JSON.parse(row.data) as SavedOrganisationDeclaration;
+  const pdf = await generateOrganisationDeclarationPdf(declaration);
+  c.header('Content-Type', 'application/pdf');
+  c.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`Reimbursement Declaration - ${declaration.organisationName} - ${declaration.country}.pdf`)}`);
+  return c.body(pdf.buffer as ArrayBuffer);
 });
 app.get('/api/admin/submissions/:id', async c => {
   const row = await c.env.DB.prepare("SELECT data FROM submissions WHERE id = ? AND status = 'complete'").bind(c.req.param('id')).first<{ data: string }>();
@@ -266,6 +344,7 @@ app.on(['GET', 'POST'], '/api/admin/submissions/:id/pdf', async c => {
       }
     }
   }
+  if (supportingDocuments(claim).some((document, i) => document.isBoardingPass && !files[i]?.bytes.length)) throw new HTTPException(422, { message: 'Upload all selected boarding passes before generating the PDF.' });
   const warnings: DocumentWarning[] = [];
   const pdf = await generatePdf(claim, files, warnings);
   const notice = warnings.slice(0, 10);

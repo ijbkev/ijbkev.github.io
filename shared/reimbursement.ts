@@ -41,9 +41,9 @@ export const ticketSchema = z.object({
   amount: z.number().finite().positive('Enter an amount greater than zero').max(100000000).refine(v => Math.abs(v * 100 - Math.round(v * 100)) < 0.00001, 'Use at most two decimal places'),
 }).superRefine((ticket, ctx) => {
   if (ticket.mode !== 'Flight' && ticket.boardingPasses?.length) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Boarding passes must belong to a flight' });
-  if (ticket.journeyType !== 'round-trip' && ticket.boardingPasses?.some(p => p.journey === 'return')) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Return segments require a round trip' });
+  if (ticket.journeyType !== 'round-trip' && ticket.boardingPasses?.some(p => p.journey === 'return')) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Choose a round trip to add return flights' });
   for (const journey of ['outbound', 'return']) if ((ticket.boardingPasses?.filter(p => p.journey === journey).length ?? 0) > 12) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Use at most 12 segments per journey' });
-  if (ticket.travelDate < ticket.purchaseDate) ctx.addIssue({ code: 'custom', path: ['travelDate'], message: 'Travel date cannot precede purchase date' });
+  if (ticket.travelDate < ticket.purchaseDate) ctx.addIssue({ code: 'custom', path: ['travelDate'], message: 'Travel date cannot be before the purchase date' });
 });
 export const participantSchema = z.object({
   firstName: text('First name', 80), lastName: text('Last name', 80),
@@ -59,8 +59,8 @@ export const participantSchema = z.object({
   phone: text('Phone number', 40).refine(v => /^\+?[0-9 ()\-.]{6,40}$/.test(v), 'Enter a valid phone number'),
   bankAccount: text('Bank account / IBAN', 80),
   bic: z.string().trim().toUpperCase().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'BIC must contain 8 or 11 letters and numbers'),
-  bankAddress: text('Bank address', 500), address: text('Participant address', 500),
-}).refine(p => p.departureDate >= p.arrivalDate, { path: ['departureDate'], message: 'Departure cannot precede arrival' }).transform(p => ({ ...p, name: `${p.firstName} ${p.lastName}` }));
+  bankAddress: z.string().trim().max(500).default(''), address: text('Participant address', 500),
+}).refine(p => p.departureDate >= p.arrivalDate, { path: ['departureDate'], message: 'Departure date cannot be before the arrival date' }).transform(p => ({ ...p, name: `${p.firstName} ${p.lastName}` }));
 export const claimSchema = z.object({
   requestId: z.string().uuid(), participant: participantSchema,
   tickets: z.array(ticketSchema).min(1, 'Add at least one ticket').max(MAX_TICKETS),
@@ -80,6 +80,7 @@ export const settingsSchema = z.object({
   projectCode: text('Project code', 120),
   countries: z.array(text('Country', 80)).min(1, 'Add participating countries').max(40).refine(v => new Set(v.map(x => x.toLowerCase())).size === v.length, 'Remove duplicate countries'),
   accessCode: z.string().min(8, 'Use at least 8 characters').max(128).optional(),
+  organisationAccessCode: z.string().min(8, 'Use at least 8 characters for the partner organisation code').max(128).optional(),
   enabled: z.boolean(),
 }).superRefine((s, ctx) => {
   for (const country of s.countries) {
@@ -95,9 +96,33 @@ export type ClaimInput = z.infer<typeof claimSchema>;
 export type Rate = { currency: string; requestedDate: string; rateDate: string; rate: number; source: string };
 export type CalculatedTicket = TicketInput & Rate & { serial: number; euroCents: number; filename: string };
 export type ProjectDetails = z.infer<typeof projectDetailsSchema>;
-export type ProjectSettings = Partial<ProjectDetails> & { projectCode: string; countries: string[]; enabled: boolean; hasAccessCode: boolean };
+export type ProjectSettings = Partial<ProjectDetails> & { projectCode: string; countries: string[]; enabled: boolean; organisationEnabled: boolean; hasAccessCode: boolean; hasOrganisationAccessCode: boolean };
 export type SavedClaim = { projectShortName?: string; activityStartDate?: string; activityEndDate?: string; declarationText?: string; reference?: string; activityDuration?: string; destinationCity?: string; countryLimitCents?: number; extraCents?: number; extraNote?: string; extraApprovedAt?: string; id: string; projectId: string; projectName: string; projectCode: string; participant: Participant; tickets: CalculatedTicket[]; totalCents: number; signature: string; createdAt: string; declaration: true };
 export type ClaimSummary = { reference?: string; finalCents?: number; id: string; name: string; team: string; email: string; totalCents: number; createdAt: string };
+
+export const organisationDeclarationSchema = z.object({
+  requestId: z.string().uuid(),
+  organisationName: text('Organisation name', 200),
+  country: text('Country', 80),
+  legalRepresentativeName: text('Legal representative name', 160),
+  signaturePlace: text('Place of signature', 120),
+  signatureDate: calendarDate.refine(value => value <= today(), 'Signature date cannot be in the future'),
+  accountHolder: text('Account holder', 160),
+  iban: text('IBAN', 80),
+  bankCountry: text('Bank country', 80),
+  swift: z.string().trim().toUpperCase().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'SWIFT must contain 8 or 11 letters and numbers'),
+  signature: z.string().max(300000).startsWith('data:image/png;base64,'),
+  declaration: z.literal(true, { errorMap: () => ({ message: 'Confirm the declaration before submitting' }) }),
+});
+export type OrganisationDeclarationInput = z.infer<typeof organisationDeclarationSchema>;
+export type OrganisationParticipant = { label: string; name: string; role: Participant['role']; reimbursementCents: number };
+export type OrganisationFormData = ProjectDetails & { projectName: string; projectCode: string; countries: string[]; country: string; participants: OrganisationParticipant[]; totalCents: number };
+export type SavedOrganisationDeclaration = OrganisationDeclarationInput & OrganisationFormData & { id: string; projectId: string; createdAt: string };
+export type OrganisationDeclarationSummary = { id: string; projectId: string; country: string; organisationName: string; legalRepresentativeName: string; totalCents: number; createdAt: string };
+
+export function organisationPaymentDeclaration(data: Pick<SavedOrganisationDeclaration, 'totalCents' | 'projectName' | 'projectCode' | 'destinationCity' | 'activityStartDate' | 'activityEndDate'>) {
+  return `I declare that a payment of ${euro(data.totalCents)} will be paid by bank transfer to the bank account below after the required participant reporting has been completed and all original travel documents for the EU project ${data.projectName} (${data.projectCode}) held in ${data.destinationCity}, between ${data.activityStartDate} and ${data.activityEndDate}, have been delivered and checked.`;
+}
 export const euroCents = (amount: number, rate: number) => Math.round((amount * rate + Number.EPSILON) * 100);
 export const euro = (cents: number) => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 
@@ -125,19 +150,22 @@ export function pdfFilename(claim: SavedClaim) {
   return `Reimbursement Declaration - ${claim.participant.name} - ${claim.participant.team}.pdf`.replace(/[\x00-\x1f\x7f/\\:"<>|?*]/g, '');
 }
 
+export const declarationIntro = "I declare that all information provided is true and complete, that all tickets and supporting documents are genuine, unaltered, and relate to my travel for this project, and that these expenses have not been and will not be reimbursed from any other source.";
 export const declarationPoints = [
-  "I declare that all information provided is true and complete, and that all tickets and supporting documents are genuine, unaltered, and relate to my travel for this project.",
-  "These expenses have not been and will not be reimbursed from any other source.",
-  "If any document is found to be forged, falsified, Photoshopped, digitally manipulated, or otherwise intentionally altered, I understand that IJBK reserves the right to cancel my entire reimbursement.",
-  "I authorize IJBK to use the provided details to process my reimbursement.",
-  "Deadline: This claim, together with all supporting documents, must be submitted within 15 days of the last day of the activity. Claims received after this deadline cannot be reimbursed.",
-  "Ceiling: Reimbursement is limited to the applicable Erasmus+ distance-band amount for the participant’s city of departure. Higher actual costs may be declared in full, but reimbursement will not exceed this maximum; any amount above the ceiling is borne by the participant. In special cases, extra costs for travel may be reimbursed by the organiser.",
-  "Actual costs only: Only costs supported by the attached tickets, invoices, receipts, and other required evidence will be reimbursed, up to the applicable ceiling.",
+  "Authenticity of documents: If any document is found to be forged, falsified, Photoshopped, digitally manipulated, or otherwise intentionally altered, I understand that IJBK reserves the right to cancel my entire reimbursement.",
+  "Data processing: I authorize IJBK to use the provided details to process my reimbursement.",
+  "Deadline and incomplete claims: The claim and all required supporting documents must be submitted within 15 days of the last day of the activity. Claims submitted after this deadline cannot be reimbursed. If required documents are missing, IJBK will contact the participant once by email. If the missing documents are not provided within 14 days of that email, the claim will be closed.",
+  "Reimbursement ceiling and actual costs: Reimbursement is limited to the applicable Erasmus+ distance-band amount based on the participant’s city of departure and only covers actual costs supported by the attached tickets, invoices, receipts, and other required evidence. Higher actual costs may be declared in full, but reimbursement will not exceed the applicable ceiling, and any amount above it is borne by the participant. In special cases, additional travel costs may be reimbursed by the organiser.",
   "Payment conditions: Payment will be made only after (a) the participant’s full attendance at the activity has been confirmed and (b) the agreed dissemination activities have been completed and validated by IJBK. The transfer will normally be made within two weeks of such validation.",
-  "Incomplete claims: If required documents are missing, IJBK will contact the participant once by email. If the missing documents are not provided within 14 days of that email, the reimbursement claim will be closed.",
   "Transfer: Reimbursement will be made by SEPA transfer in EUR to the bank account stated in the claim. Any charges imposed by the receiving bank are borne by the participant."
 ];
-export const declarationText = declarationPoints.join("\n\n");
+export const declarationText = [declarationIntro, ...declarationPoints].join("\n\n");
+
+export const greenTravelConfirmation = "I confirm that I used green means of transport for my travel related to this Erasmus+ activity.";
+export const greenTravelDeclaration = [
+  "I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using eligible low-emission means of transport, such as train, bus, car-sharing or bicycle.",
+  "I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered."
+];
 
 export const legacyDeclarationText = 'I confirm that these details are accurate, these expenses were incurred for this project, and the uploaded tickets correspond to the listed journeys. I authorize IJBK to use these details to process my reimbursement.';
 
