@@ -169,21 +169,66 @@ export async function generatePdf(claim: SavedClaim, files: TicketFile[], warnin
   pairs([['Signed by', p.name], ['Place / date (UTC)', `${p.signaturePlace || 'Place not recorded'}, ${claim.createdAt.slice(0, 10)}`]]);
 
   if (p.greenTravel) {
-    newPage('Green Travel Declaration');
-    const confirmation = lines(`[X] ${greenTravelConfirmation}`, 515, font, 10);
-    confirmation.forEach(line => { write(line, 40, y, 10); y -= 15; });
-    y -= 13;
-    for (const paragraph of greenTravelDeclaration) {
-      const wrapped = lines(paragraph, 515, font, 10);
-      wrapped.forEach(line => { write(line, 40, y, 10); y -= 15; });
-      y -= 15;
+    const greenHeading = 'Erasmus+ Green Travel Declaration';
+    newPage(greenHeading);
+    const greenEnsure = (height: number) => {
+      if (y - height < 55) newPage(`${greenHeading} - continued`);
+    };
+    function formSection(label: string) {
+      greenEnsure(60);
+      page.drawRectangle({ x: 40, y: y - 7, width: 515, height: 22, color: light });
+      write(label.toUpperCase(), 48, y, 9); y -= 23;
     }
+    function formRow(fields: [string, string | undefined][]) {
+      const present = fields.filter(([, value]) => value?.trim());
+      if (!present.length) return;
+      const width = 515 / present.length;
+      const cells = present.map(([label, value]) => ({ label, text: lines(value!, width - 16, font, 9) }));
+      const height = Math.max(...cells.map(cell => cell.text.length)) * 12 + 18;
+      greenEnsure(height);
+      cells.forEach((cell, i) => {
+        const x = 40 + i * width;
+        page.drawRectangle({ x, y: y - height + 12, width, height, borderColor: light, borderWidth: 0.7 });
+        write(cell.label.toUpperCase(), x + 8, y, 7, grey);
+        cell.text.forEach((line, k) => write(line, x + 8, y - 14 - k * 12, 9));
+      });
+      y -= height;
+    }
+    formSection('Project information');
+    formRow([['Project number', claim.projectCode]]);
+    formRow([['Project name', claim.projectName]]);
+    formRow([['Coordinating organisation', organisationName]]);
+    formRow([['Venue / destination city', claim.destinationCity], ['Activity dates', [claim.activityStartDate, claim.activityEndDate].filter(Boolean).join(' - ')]]);
+    y -= 8;
+    formSection('Participant information');
+    formRow(p.firstName && p.lastName ? [['First name', p.firstName], ['Last name', p.lastName]] : [['Full name', p.name]]);
+    formRow([['Email', p.email], ['City / country of residence', [p.city, p.team].filter(Boolean).join(', ')]]);
+    y -= 8;
+    formSection('Travel details');
+    formRow([['Arrival in destination country', p.arrivalDate], ['Departure from destination country', p.departureDate]]);
+    // Tickets contain actual routes and travel dates, but no reliable return
+    // arrival date or journey direction. Display the recorded legs verbatim.
+    for (const ticket of claim.tickets) {
+      formRow([['Departure city / place', ticket.from], ['Arrival city / place', ticket.to], ['Travel date / transport', `${ticket.travelDate} / ${ticket.mode}`]]);
+    }
+    y -= 8;
+    const paragraphs = [`[X] ${greenTravelConfirmation}`, ...greenTravelDeclaration];
+    const declarationHeight = paragraphs.reduce((height, paragraph) => height + lines(paragraph, 499, font, 8).length * 11 + 6, 0);
+    greenEnsure(declarationHeight + 133);
+    formSection('Declaration');
+    for (const paragraph of paragraphs) {
+      for (const line of lines(paragraph, 499, font, 8)) { write(line, 48, y, 8); y -= 11; }
+      y -= 6;
+    }
+    y -= 5;
+    write('PARTICIPANT SIGNATURE', 48, y, 7, grey);
     try {
       const signature = await doc.embedPng(claim.signature);
-      page.drawImage(signature, { x: 40, y: y - 75, ...signature.scaleToFit(240, 65) });
-    } catch { write('Signature could not be displayed. Manual review required.', 40, y - 20, 9, rgb(0.73, 0.11, 0.11)); }
-    y -= 92;
-    pairs([['Signed by', p.name], ['Place / date (UTC)', `${p.signaturePlace || 'Place not recorded'}, ${claim.createdAt.slice(0, 10)}`]]);
+      page.drawImage(signature, { x: 48, y: y - 56, ...signature.scaleToFit(220, 48) });
+    } catch { write('Signature unavailable - manual review required.', 48, y - 24, 8, rgb(0.73, 0.11, 0.11)); }
+    page.drawLine({ start: { x: 48, y: y - 60 }, end: { x: 285, y: y - 60 }, thickness: 0.7, color: grey });
+    y -= 76;
+    formRow([['Signed by', p.name], ['Place / date (UTC)', [p.signaturePlace, claim.createdAt.slice(0, 10)].filter(Boolean).join(', ')]]);
   }
 
   // Each ticket occupies exactly one output page. Multi-page source PDFs are

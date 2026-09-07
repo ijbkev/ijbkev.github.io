@@ -276,12 +276,42 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
     if($pdf->GetY()>230)$pdf->AddPage();$y=$pdf->GetY();if($signatureReadable)$pdf->Image($signaturePath,15,$y,70,22,'JPEG');else{$pdf->SetTextColor(185,28,28);$pdf->MultiCell(180,6,'Signature could not be displayed. Manual review required.',0,'L',false,1);$pdf->SetTextColor(20,24,35);}$pdf->SetY($y+27);
     declaration_pairs($pdf,[['Signed by',$p['name']],['Place / date (UTC)',($p['signaturePlace']??'Place not recorded').', '.substr($claim['createdAt'],0,10)]]);
     if(!empty($p['greenTravel'])){
-        $pdf->AddPage();declaration_section($pdf,'Green Travel Declaration');
-        $pdf->writeHTML('<p><b>[X] I confirm that I used green means of transport for my travel related to this Erasmus+ activity.</b></p>',true,false,true,false,'');
-        $pdf->writeHTML('<p>I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using eligible low-emission means of transport, such as train, bus, car-sharing or bicycle.</p>',true,false,true,false,'');
-        $pdf->writeHTML('<p>I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered.</p>',true,false,true,false,'');
-        $y=$pdf->GetY()+6;if($signatureReadable)$pdf->Image($signaturePath,15,$y,70,22,'JPEG');$pdf->SetY($y+27);
-        declaration_pairs($pdf,[['Signed by',$p['name']],['Place / date (UTC)',($p['signaturePlace']??'Place not recorded').', '.substr($claim['createdAt'],0,10)]]);
+        $pdf->declarationTitle='Erasmus+ Green Travel Declaration';
+        $pdf->AddPage();
+        $formSection = function(string $label) use ($pdf): void {
+            $pdf->SetFont('dejavusans','B',9);$pdf->SetFillColor(235,240,247);
+            $pdf->MultiCell(180,7,strtoupper($label),0,'L',true,1);$pdf->SetFont('dejavusans','',8);
+        };
+        $formRow = function(array $fields) use ($pdf): void {
+            $fields=array_values(array_filter($fields,fn($field)=>trim((string)($field[1]??''))!==''));
+            if(!$fields)return;
+            $width=100/count($fields);
+            $html='<table cellpadding="3" cellspacing="0" style="font-size:8pt"><tr nobr="true">';
+            foreach($fields as [$label,$value])$html.='<td width="'.$width.'%" style="border:0.5px solid #ebf0f7"><span style="font-size:6.5pt;color:#596273">'.h(strtoupper($label)).'</span><br>'.h($value).'</td>';
+            $pdf->writeHTML($html.'</tr></table>',false,false,true,false,'');
+        };
+        $formSection('Project information');
+        $formRow([['Project number',$claim['projectCode']??'']]);
+        $formRow([['Project name',$claim['projectName']??'']]);
+        $formRow([['Coordinating organisation','Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.']]);
+        $formRow([['Venue / destination city',$claim['destinationCity']??''],['Activity dates',implode(' - ',array_filter([$claim['activityStartDate']??'',$claim['activityEndDate']??'']))]]);
+        $pdf->Ln(3);$formSection('Participant information');
+        $formRow(!empty($p['firstName'])&&!empty($p['lastName'])?[['First name',$p['firstName']],['Last name',$p['lastName']]]:[['Full name',$p['name']]]);
+        $formRow([['Email',$p['email']??''],['City / country of residence',implode(', ',array_filter([$p['city']??'',$p['team']??'']))]]);
+        $pdf->Ln(3);$formSection('Travel details');
+        $formRow([['Arrival in destination country',$p['arrivalDate']??''],['Departure from destination country',$p['departureDate']??'']]);
+        // Preserve recorded ticket legs; do not infer a journey direction or arrival date.
+        foreach($claim['tickets'] as $ticket)$formRow([['Departure city / place',$ticket['from']],['Arrival city / place',$ticket['to']],['Travel date / transport',$ticket['travelDate'].' / '.$ticket['mode']]]);
+        if($pdf->GetY()>205)$pdf->AddPage();
+        $pdf->Ln(3);$formSection('Declaration');
+        $pdf->writeHTML('<p><b>[X] I confirm that I used green means of transport for my travel related to this Erasmus+ activity.</b></p><p>I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using eligible low-emission means of transport, such as train, bus, car-sharing or bicycle.</p><p>I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered.</p>',true,false,true,false,'');
+        $pdf->Ln(2);$pdf->SetFont('dejavusans','',7);$pdf->Cell(180,5,'PARTICIPANT SIGNATURE',0,1);
+        $y=$pdf->GetY();
+        if($signatureReadable)$pdf->Image($signaturePath,17,$y,65,17,'JPEG');
+        else $pdf->MultiCell(180,5,'Signature unavailable - manual review required.',0,'L',false,1);
+        $pdf->Line(17,$y+19,95,$y+19);$pdf->SetY($y+22);
+        $formRow([['Signed by',$p['name']],['Place / date (UTC)',implode(', ',array_filter([$p['signaturePlace']??'',substr($claim['createdAt'],0,10)]))]]);
+        $pdf->declarationTitle=$title;
     }
     $pdf->SetAutoPageBreak(false);
     $temporaryFiles=[];
