@@ -81,10 +81,18 @@ export async function generateOrganisationDeclarationPdf(data: SavedOrganisation
   heading('Declaration');
   for (const line of wrap(organisationPaymentDeclaration(data), 515, font, 8)) { write(line, 40, y, 8); y -= 11; }
   y -= 7;
-  pair(['Legal representative', data.legalRepresentativeName], ['Date and place', `${data.signatureDate}, ${data.signaturePlace}`]);
+  const role = data.submitterRole ?? 'sending-organisation-member';
+  const submitterName = data.submitterName || data.legalRepresentativeName;
+  const submitterRole = role === 'team-leader' ? 'Team leader' : 'Member of the sending organisation';
+  pair(['Submitted by', submitterRole], ['Name', submitterName]);
+  if (role === 'sending-organisation-member') pair(['Position', data.submitterPosition], ['Contact', data.submitterPhone]);
+  else pair(['Contact', data.submitterPhone], ['Email', data.submitterEmail]);
+  if (role === 'sending-organisation-member') pair(['Email', data.submitterEmail], ['Date and place', `${data.signatureDate}, ${data.signaturePlace}`]);
+  else pair(['Date and place', `${data.signatureDate}, ${data.signaturePlace}`], ['Signature role', 'Team leader']);
+  write(`SIGNATURE OF THE ${role === 'team-leader' ? 'TEAM LEADER' : 'SENDING ORGANISATION MEMBER'} — ${submitterName}`, 40, y, 7, grey);
   try {
     const signature = await doc.embedPng(data.signature);
-    page.drawImage(signature, { x: 40, y: y - 48, ...signature.scaleToFit(190, 42) });
+    page.drawImage(signature, { x: 40, y: y - 52, ...signature.scaleToFit(190, 42) });
   } catch { write('Signature could not be displayed.', 40, y - 20, 9, rgb(0.73, 0.11, 0.11)); }
   y -= 57;
   heading('Bank details');

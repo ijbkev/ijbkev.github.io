@@ -18,6 +18,7 @@ const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Reimbursement = lazy(() => import("./pages/Reimbursement"));
 const ReimbursementAdmin = lazy(() => import("./pages/ReimbursementAdmin"));
 const OrganisationReimbursement = lazy(() => import("./pages/OrganisationReimbursement"));
+const PartnershipAgreement = lazy(() => import("./pages/PartnershipAgreement"));
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
                 <Route path="/projects/:projectId/reimbursement" element={<Reimbursement />} />
                 <Route path="/projects/:projectId/organisation-reimbursement" element={<OrganisationReimbursement />} />
+                <Route path="/projects/:projectId/partnership-agreement" element={<PartnershipAgreement />} />
                 <Route path="/admin/reimbursements" element={<ReimbursementAdmin />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="/contact" element={<Contact />} />

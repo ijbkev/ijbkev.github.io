@@ -164,25 +164,31 @@ const MissionAreaCard = ({ area, index }: { area: MissionArea; index: number }) 
 
 type FieldMoment = { title: string; location: string; image: string };
 
-const FieldMomentTile = ({ item }: { item: FieldMoment }) => (
-  <div className="relative w-64 sm:w-72 h-56 sm:h-64 shrink-0 overflow-hidden rounded-2xl shadow-medium group holo-card">
-    <img
-      src={item.image}
-      alt={`${item.title} — ${item.location}`}
-      loading="lazy"
-      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-    />
-    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-    <div className="absolute inset-x-0 bottom-0 p-4">
-      <h3 className="text-white font-semibold leading-tight drop-shadow-sm">{item.title}</h3>
-      <p className="text-white/80 text-sm">{item.location}</p>
+const FieldMomentTile = ({ item, tilt = 0 }: { item: FieldMoment; tilt?: number }) => (
+  <figure
+    className="journey-postcard relative w-56 sm:w-64 shrink-0 rounded-lg bg-[#fffaf0] p-2.5 pb-4 border border-[#e9dfca]"
+    style={{ "--postcard-tilt": `${tilt}deg` } as CSSProperties}
+  >
+    <div className="h-40 sm:h-44 overflow-hidden rounded-sm bg-[#eee5d3]">
+      <img
+        src={item.image}
+        alt={`${item.title} — ${item.location}`}
+        loading="lazy"
+        className="w-full h-full object-cover"
+      />
     </div>
-  </div>
+    <figcaption className="px-2 pt-3 min-h-[84px]">
+      <h3 className="text-[#061b49] font-semibold text-sm leading-snug">{item.title}</h3>
+      <p className="text-[#6c6559] text-xs mt-2 flex items-center gap-2">
+        <span className="h-px w-5 bg-[#c5a04f] shrink-0" aria-hidden="true" />
+        {item.location}
+      </p>
+    </figcaption>
+  </figure>
 );
 
 const Homepage = () => {
   const [heroScroll, setHeroScroll] = useState(0);
-  const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -192,18 +198,6 @@ const Homepage = () => {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const handlePointerMove = (event: PointerEvent) => {
-      const { innerWidth, innerHeight } = window;
-      const x = ((event.clientX - innerWidth / 2) / innerWidth) * 40;
-      const y = ((event.clientY - innerHeight / 2) / innerHeight) * 40;
-      setParallax({ x, y });
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    return () => window.removeEventListener("pointermove", handlePointerMove);
   }, []);
 
   const missionAreas = useMemo(
@@ -359,63 +353,25 @@ const Homepage = () => {
       <main className="overflow-hidden relative z-10">
         {/* HERO */}
         <section className="relative overflow-hidden text-white scroll-fade section-chrome min-h-[92vh]">
-          <video
-            className="absolute inset-0 h-full w-full object-cover opacity-60"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            fetchPriority="high"
-            poster="/lovable-uploads/banner-poster.jpg"
-            aria-hidden
-          >
-            <source src="/lovable-uploads/banner.mp4" type="video/mp4" />
-          </video>
+          <div className="eu-hero-background" aria-hidden="true">
+            <div className="eu-hero-light" />
+            <div className="eu-hero-network">
+              <img src="/europe-network-map.png" alt="" className="eu-hero-map" fetchPriority="high" />
+              <span className="eu-hero-connection" style={{ left: "22.657%", top: "91.935%", width: "23.033%", transform: "rotate(-44.549deg)", animationDelay: "0.0s" }} />
+              <span className="eu-hero-connection" style={{ left: "39.071%", top: "72.546%", width: "7.809%", transform: "rotate(-7.477deg)", animationDelay: "-1.3s" }} />
+              <span className="eu-hero-connection" style={{ left: "46.814%", top: "71.326%", width: "9.806%", transform: "rotate(-34.892deg)", animationDelay: "-2.6s" }} />
+              <span className="eu-hero-connection" style={{ left: "46.814%", top: "71.326%", width: "14.116%", transform: "rotate(61.400deg)", animationDelay: "-3.9000000000000004s" }} />
+              <span className="eu-hero-connection" style={{ left: "46.814%", top: "71.326%", width: "16.446%", transform: "rotate(11.767deg)", animationDelay: "-5.2s" }} />
+              <span className="eu-hero-connection" style={{ left: "54.857%", top: "64.595%", width: "15.485%", transform: "rotate(-64.479deg)", animationDelay: "-6.5s" }} />
+              <span className="eu-hero-city" style={{ left: "22.657%", top: "91.935%", animationDelay: "0.0s" }} />
+              <span className="eu-hero-city" style={{ left: "39.071%", top: "72.546%", animationDelay: "-0.8s" }} />
+              <span className="eu-hero-city eu-hero-city-home" style={{ left: "46.814%", top: "71.326%", animationDelay: "-1.6s" }} />
+              <span className="eu-hero-city" style={{ left: "54.857%", top: "64.595%", animationDelay: "-2.4000000000000004s" }} />
+              <span className="eu-hero-city" style={{ left: "53.571%", top: "86.198%", animationDelay: "-3.2s" }} />
+              <span className="eu-hero-city" style={{ left: "62.914%", top: "75.351%", animationDelay: "-4.0s" }} />
+              <span className="eu-hero-city" style={{ left: "61.529%", top: "47.827%", animationDelay: "-4.800000000000001s" }} />
+            </div>
 
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,51,153,0.72),rgba(6,13,31,0.9)),radial-gradient(circle_at_20%_20%,rgba(0,51,153,0.28),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.12),transparent_32%)]" />
-
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div
-              className="orb primary"
-              style={{
-                width: 360,
-                height: 360,
-                top: "-8%",
-                left: "8%",
-                transform: `translate3d(${parallax.x * 0.3}px, ${parallax.y * 0.25}px, 0)`,
-              }}
-            />
-            <div
-              className="orb accent"
-              style={{
-                width: 320,
-                height: 320,
-                bottom: "-10%",
-                right: "6%",
-                transform: `translate3d(${parallax.x * -0.25}px, ${parallax.y * -0.2}px, 0)`,
-              }}
-            />
-            <div
-              className="aurora-ribbon"
-              style={{
-                width: "150%",
-                height: "62%",
-                top: "-12%",
-                left: "-18%",
-                transform: `translate3d(${parallax.x * 0.08}px, ${parallax.y * 0.06}px, 0)`,
-              }}
-            />
-            <div
-              className="aurora-ribbon secondary"
-              style={{
-                width: "140%",
-                height: "58%",
-                bottom: "-18%",
-                right: "-12%",
-                transform: `translate3d(${parallax.x * -0.06}px, ${parallax.y * -0.05}px, 0)`,
-              }}
-            />
           </div>
 
           <div className="page-shell relative z-10 pt-20 pb-16 md:pb-24">
@@ -601,24 +557,24 @@ const Homepage = () => {
             </div>
           </div>
 
-          <div className="mt-10 space-y-4 w-screen relative left-1/2 -translate-x-1/2">
+          <div className="postcard-gallery page-shell mt-10 space-y-1">
             <div className="marquee-track">
               <div
-                className="marquee-row marquee-left gap-4 px-2"
+                className="marquee-row marquee-left gap-6 px-3"
                 style={{ "--marquee-duration": "70s" } as CSSProperties}
               >
                 {[...galleryRowTop, ...galleryRowTop].map((item, i) => (
-                  <FieldMomentTile key={`top-${i}-${item.image}`} item={item} />
+                  <FieldMomentTile key={`top-${i}-${item.image}`} item={item} tilt={(i % galleryRowTop.length) % 2 === 0 ? -2 : 2} />
                 ))}
               </div>
             </div>
             <div className="marquee-track">
               <div
-                className="marquee-row marquee-right gap-4 px-2"
+                className="marquee-row marquee-right gap-6 px-3"
                 style={{ "--marquee-duration": "62s" } as CSSProperties}
               >
                 {[...galleryRowBottom, ...galleryRowBottom].map((item, i) => (
-                  <FieldMomentTile key={`bottom-${i}-${item.image}`} item={item} />
+                  <FieldMomentTile key={`bottom-${i}-${item.image}`} item={item} tilt={(i % galleryRowBottom.length) % 2 === 0 ? 2 : -2} />
                 ))}
               </div>
             </div>

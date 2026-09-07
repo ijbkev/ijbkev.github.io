@@ -3,8 +3,8 @@ import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
 import { deleteCookie } from 'hono/cookie';
 import { ZodError, z } from 'zod';
-import { projects } from '../src/data/projects';
-import { supportingDocuments, claimReference, declarationText, claimSchema, settingsSchema, projectDetailsSchema, extraSchema, reimbursement, submissionReference, pdfFilename, currencies, euroCents, organisationDeclarationSchema, type OrganisationFormData, type OrganisationParticipant, type SavedOrganisationDeclaration, type OrganisationDeclarationSummary, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type BoardingPass, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
+import { acceptsReimbursements, projects } from '../src/data/projects';
+import { supportingDocuments, claimReference, declarationText, claimSchema, settingsSchema, projectDetailsSchema, extraSchema, reimbursement, submissionReference, pdfFilename, currencies, euroCents, organisationDeclarationSchema, partnershipAgreementSchema, type PartnershipAgreementSummary, type SavedPartnershipAgreement, type OrganisationFormData, type OrganisationParticipant, type SavedOrganisationDeclaration, type OrganisationDeclarationSummary, MAX_FILE_SIZE, MAX_TOTAL_SIZE, type BoardingPass, type SavedClaim, type DocumentWarning } from '../shared/reimbursement';
 import { hashPassword, verifyPassword, newSession, requireSession, rateLimit } from './auth';
 import { historicalRate } from './rates';
 import { generatePdf, type TicketFile } from './pdf';
@@ -12,8 +12,10 @@ import type { Env, Variables, SettingsRow } from './types';
 import baseSchemaSql from '../drizzle/0000_unknown_newton_destine.sql';
 import detailsSchemaSql from '../drizzle/0001_spicy_master_mold.sql';
 import organisationSchemaSql from '../drizzle/0002_organisation_declarations.sql';
+import partnershipSchemaSql from '../drizzle/0004_partnership_agreements.sql';
 import { generateOrganisationDeclarationPdf } from './organisation-pdf';
-const schemaSql = [baseSchemaSql, detailsSchemaSql, organisationSchemaSql].join('\n--> statement-breakpoint\n');
+import { generatePartnershipAgreementPdf } from './partnership-pdf';
+const schemaSql = [baseSchemaSql, detailsSchemaSql, organisationSchemaSql, partnershipSchemaSql].join('\n--> statement-breakpoint\n');
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 const initialized = new WeakMap<D1Database, Promise<unknown>>();
@@ -30,7 +32,7 @@ function initialize(db: D1Database) {
   return initialized.get(db)!;
 }
 function projectById(id: string) {
-  const project = projects.find(p => p.id === id && p.status === 'Upcoming');
+  const project = projects.find(p => p.id === id && acceptsReimbursements(p));
   if (!project) throw new HTTPException(404, { message: 'Project not found.' });
   return project;
 }
@@ -130,10 +132,19 @@ app.post('/api/projects/:id/organisation-declarations', async c => {
   const createdAt = new Date().toISOString();
   const saved: SavedOrganisationDeclaration = { ...source, ...input, id, projectId, createdAt };
   const result = await c.env.DB.prepare('INSERT OR IGNORE INTO organisation_declarations (id, project_id, country, organisation_name, legal_representative_name, total_cents, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(id, projectId, input.country, input.organisationName, input.legalRepresentativeName, source.totalCents, JSON.stringify(saved), createdAt).run();
+    .bind(id, projectId, input.country, input.organisationName, input.submitterName, source.totalCents, JSON.stringify(saved), createdAt).run();
   if (!result.meta.changes) throw new HTTPException(409, { message: 'An organisation declaration has already been submitted for this country.' });
   return c.json({ id, country: input.country, totalCents: source.totalCents, createdAt }, 201);
 });
+app.post('/api/projects/:id/partnership-agreements', async c => {
+  const projectId = c.req.param('id'); await requireSession(c, projectId, 'organisation'); await rateLimit(c, `partnership-submit:${projectId}`, 10);
+  const row = await enabledSettings(c.env.DB, projectId); const input = partnershipAgreementSchema.parse(await c.req.json()); const countries = JSON.parse(row.countries) as string[];
+  if (!countries.includes(input.partnerCountry)) throw new HTTPException(422, { message: 'Select one of this project’s participating countries.' });
+  const id = crypto.randomUUID(), createdAt = new Date().toISOString(); const saved: SavedPartnershipAgreement = { ...input, id, projectId, projectName: projectById(projectId).title, projectCode: row.project_code, createdAt };
+  const result = await c.env.DB.prepare('INSERT OR IGNORE INTO partnership_agreements (id, project_id, partner_country, partner_name, legal_representative_name, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, projectId, input.partnerCountry, input.partnerName, input.legalRepresentativeName, JSON.stringify(saved), createdAt).run();
+  if (!result.meta.changes) throw new HTTPException(409, { message: 'A partnership agreement has already been submitted for this country.' }); return c.json({ id, partnerCountry: input.partnerCountry, createdAt }, 201);
+});
+app.get('/api/projects/:id/partnership-agreements/:agreementId/pdf', async c => { const projectId = c.req.param('id'); await requireSession(c, projectId, 'organisation'); const row = await c.env.DB.prepare('SELECT data FROM partnership_agreements WHERE id = ? AND project_id = ?').bind(c.req.param('agreementId'), projectId).first<{ data: string }>(); if (!row) throw new HTTPException(404, { message: 'Partnership agreement not found.' }); const agreement = JSON.parse(row.data) as SavedPartnershipAgreement; const pdf = await generatePartnershipAgreementPdf(agreement); c.header('Content-Type', 'application/pdf'); c.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`Partnership Agreement - ${agreement.partnerName} - ${agreement.partnerCountry}.pdf`)}`); return c.body(pdf.buffer as ArrayBuffer); });
 app.get('/api/projects/:id/rate', async c => {
   await requireSession(c, c.req.param('id'));
   await enabledSettings(c.env.DB, c.req.param('id'));
@@ -230,7 +241,7 @@ app.post('/api/admin/logout', async c => {
   return c.json({ ok: true });
 });
 app.get('/api/admin/projects', async c => {
-  return c.json(await Promise.all(projects.filter(p => p.status === 'Upcoming').map(async p => ({ ...p, settings: publicSettings(await settings(c.env.DB, p.id)) }))));
+  return c.json(await Promise.all(projects.filter(acceptsReimbursements).map(async p => ({ ...p, settings: publicSettings(await settings(c.env.DB, p.id)) }))));
 });
 app.put('/api/admin/projects/:id', async c => {
   const id = c.req.param('id');
@@ -265,6 +276,10 @@ app.get('/api/admin/organisation-declarations/:id/pdf', async c => {
   c.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`Reimbursement Declaration - ${declaration.organisationName} - ${declaration.country}.pdf`)}`);
   return c.body(pdf.buffer as ArrayBuffer);
 });
+app.delete('/api/admin/organisation-declarations/:id', async c => { const result = await c.env.DB.prepare('DELETE FROM organisation_declarations WHERE id = ?').bind(c.req.param('id')).run(); if (!result.meta.changes) throw new HTTPException(404, { message: 'Organisation declaration not found.' }); return c.json({ ok: true }); });
+app.get('/api/admin/projects/:id/partnership-agreements', async c => { projectById(c.req.param('id')); const rows = await c.env.DB.prepare('SELECT id, project_id AS projectId, partner_country AS partnerCountry, partner_name AS partnerName, legal_representative_name AS legalRepresentativeName, created_at AS createdAt FROM partnership_agreements WHERE project_id = ? ORDER BY partner_country').bind(c.req.param('id')).all<PartnershipAgreementSummary>(); return c.json(rows.results); });
+app.get('/api/admin/partnership-agreements/:id/pdf', async c => { const row = await c.env.DB.prepare('SELECT data FROM partnership_agreements WHERE id = ?').bind(c.req.param('id')).first<{ data: string }>(); if (!row) throw new HTTPException(404, { message: 'Partnership agreement not found.' }); const agreement = JSON.parse(row.data) as SavedPartnershipAgreement; const pdf = await generatePartnershipAgreementPdf(agreement); c.header('Content-Type', 'application/pdf'); c.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`Partnership Agreement - ${agreement.partnerName} - ${agreement.partnerCountry}.pdf`)}`); return c.body(pdf.buffer as ArrayBuffer); });
+app.delete('/api/admin/partnership-agreements/:id', async c => { const result = await c.env.DB.prepare('DELETE FROM partnership_agreements WHERE id = ?').bind(c.req.param('id')).run(); if (!result.meta.changes) throw new HTTPException(404, { message: 'Partnership agreement not found.' }); return c.json({ ok: true }); });
 app.get('/api/admin/submissions/:id', async c => {
   const row = await c.env.DB.prepare("SELECT data FROM submissions WHERE id = ? AND status = 'complete'").bind(c.req.param('id')).first<{ data: string }>();
   if (!row) throw new HTTPException(404, { message: 'Submission not found.' });

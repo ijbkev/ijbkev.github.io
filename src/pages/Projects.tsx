@@ -2,20 +2,27 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ExternalLink, Sparkles, ArrowRight } from "lucide-react";
+import { Calendar, ExternalLink, Sparkles, ArrowRight, ShieldCheck, Fingerprint, Smartphone, Leaf, TrainFront, HeartHandshake, Laptop, BrainCircuit, Utensils, Mountain } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { projects } from "@/data/projects";
+import { acceptsReimbursements, projects } from "@/data/projects";
+
+const projectArtwork = {
+  oasis: { icon: ShieldCheck, base: "#082638", accent: "#67e8f9", glow: "#155e75", label: "Online safety", pattern: "network" },
+  "who-am-ai": { icon: Fingerprint, base: "#201c43", accent: "#c4b5fd", glow: "#4c1d95", label: "Identity & AI", pattern: "grid" },
+  "connected-not-consumed": { icon: Smartphone, base: "#10294b", accent: "#93c5fd", glow: "#1e40af", label: "Digital balance", pattern: "rings" },
+  "green-stage-sustainable-future": { icon: Leaf, base: "#102d32", accent: "#6ee7b7", glow: "#065f46", label: "Creativity & climate", pattern: "rings" },
+  "discover-eu": { icon: TrainFront, base: "#282a3a", accent: "#fcd34d", glow: "#854d0e", label: "Europe by rail", pattern: "network" },
+  "ai-social-impact": { icon: HeartHandshake, base: "#2d1d39", accent: "#fda4af", glow: "#881337", label: "AI for good", pattern: "network" },
+  KA152: { icon: Laptop, base: "#102b40", accent: "#67e8f9", glow: "#155e75", label: "Digital skills", pattern: "grid" },
+  KA153: { icon: BrainCircuit, base: "#241e42", accent: "#c4b5fd", glow: "#4c1d95", label: "Tools for youth work", pattern: "grid" },
+  "ai-culinary": { icon: Utensils, base: "#302537", accent: "#fdba74", glow: "#9a3412", label: "Culture & cuisine", pattern: "rings" },
+  "hiking-tours": { icon: Mountain, base: "#1c2c38", accent: "#a3e635", glow: "#365314", label: "Explore sustainably", pattern: "network" },
+};
 
 const Projects = () => {
 
-  const statusStyles: Record<string, string> = {
-    success: "bg-green-100 text-green-800",
-    warning: "bg-amber-100 text-amber-800",
-    info: "bg-blue-100 text-blue-800",
-  };
-
-  const statusTabs = ["Upcoming", "Completed", "Ongoing"] as const;
+  const statusTabs = ["Upcoming", "Ongoing", "Completed"] as const;
   const [activeStatus, setActiveStatus] = useState<(typeof statusTabs)[number]>("Upcoming");
 
   const projectCounts = statusTabs.reduce<Record<string, number>>((acc, status) => {
@@ -95,45 +102,38 @@ const Projects = () => {
           </TabsList>
         </Tabs>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-fr gap-6">
+          {filteredProjects.map((project) => {
+            const artwork = projectArtwork[project.id as keyof typeof projectArtwork] ?? projectArtwork.oasis;
+            const ArtworkIcon = artwork.icon;
+            return (
             <Card
               key={project.id}
               className="panel-strong relative h-full overflow-hidden holo-card hover-lift flex flex-col"
             >
-              <div className="relative h-40 sm:h-44 shrink-0">
-                <img
-                  src={project.coverImage}
-                  alt={project.coverAlt}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/80 via-blue-950/70 to-cyan-950/25" />
-                <div className="absolute inset-0 bg-black/18" />
-                <div className="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-3 text-white z-10">
-                  <div className="space-y-1 min-w-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
-                    <p className="text-[0.7rem] uppercase tracking-[0.22em] text-white/85">{project.location}</p>
-                    <h3 className="text-lg font-semibold leading-tight line-clamp-2 text-white">{project.title}</h3>
-                  </div>
-                  <Badge
-                    className={`rounded-full border-0 px-3 py-1 text-xs font-semibold whitespace-nowrap shadow-sm text-white ${statusStyles[project.statusTone] ?? "bg-slate-100 text-slate-800"}`}
-                  >
-                    {project.status}
-                  </Badge>
+              <div className="relative h-64 shrink-0 overflow-hidden bg-[#061b49] text-white" style={{ background: `radial-gradient(ellipse at 90% 10%, ${artwork.glow}, transparent 75%), ${artwork.base}` }}>
+                <div className={`project-cover-pattern project-cover-pattern-${artwork.pattern}`} aria-hidden="true" />
+                <div className="absolute right-6 top-7" style={{ color: artwork.accent }} aria-hidden="true">
+                  <ArtworkIcon className="w-20 h-20" strokeWidth={1.2} />
+                </div>
+                <div className="relative p-5 flex items-start justify-between gap-3">
+                  <p className="text-[0.65rem] uppercase tracking-[0.18em] font-semibold max-w-[55%]" style={{ color: artwork.accent }}>{artwork.label}</p>
+                </div>
+                <div className="absolute inset-x-0 bottom-0 p-5 pt-10" style={{ background: `linear-gradient(to top, ${artwork.base}, ${artwork.base}e6 65%, transparent)` }}>
+                  <p className="text-xs text-white/75 mb-2">{project.location}</p>
+                  <h3 className="text-lg font-semibold leading-snug">{project.title}</h3>
+                  <img src={project.coverImage} alt={project.coverAlt} title={project.location} loading="lazy" className="mt-3 h-6 w-9 object-cover rounded-sm ring-1 ring-white/25 shadow-sm" />
                 </div>
               </div>
 
-              <CardContent className="p-6 space-y-4 flex-1 flex flex-col">
+              <CardContent className="p-6 gap-4 flex-1 flex flex-col">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="text-primary border-primary">
                     {project.category}
                   </Badge>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar size={15} className="shrink-0 text-primary" />
-                  <span className="text-foreground">{project.date}</span>
-                </div>
+                <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4 shrink-0 text-primary" /><span>{project.date}</span></div>
 
                 <p className="text-muted-foreground leading-relaxed">{project.description}</p>
 
@@ -148,7 +148,7 @@ const Projects = () => {
                   ))}
                 </div>
 
-                {project.status === "Upcoming" ? (
+                {acceptsReimbursements(project) ? (
                   <div className="pt-3 border-t border-border mt-auto">
                     <Link to={`/projects/${project.id}`} className="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2 font-semibold after:absolute after:inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4" aria-label={`View ${project.title}`}>
                       View project <ArrowRight className="w-4 h-4" />
@@ -169,7 +169,8 @@ const Projects = () => {
                 )}
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </section>
 

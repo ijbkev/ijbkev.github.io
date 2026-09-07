@@ -14,11 +14,14 @@ export type Project = {
   applicationLabel?: string;
 };
 
+export const acceptsReimbursements = (project: Project) =>
+  project.status === "Upcoming" || project.status === "Ongoing";
+
 
 export const projects: Project[] = [
     {
       id: "oasis",
-      title: "🌴 OASIS",
+      title: "OASIS: Online Safety and Awareness in the Society",
       category: "Erasmus+ Youth Exchange",
       status: "Upcoming",
       statusTone: "warning",
@@ -68,8 +71,8 @@ export const projects: Project[] = [
       id: "green-stage-sustainable-future",
       title: "Green Stage for Sustainable Future",
       category: "Erasmus+ Youth Exchange",
-      status: "Completed",
-      statusTone: "success",
+      status: "Ongoing",
+      statusTone: "info",
       date: "22–31 May 2026",
       location: "Norway",
       description:

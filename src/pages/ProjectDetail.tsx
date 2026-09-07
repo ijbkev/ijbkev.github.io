@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Calendar, MapPin, ExternalLink, FileCheck2, LockKeyhole } from 'lucide-react';
-import { projects } from '@/data/projects';
+import { ArrowLeft, ArrowRight, Calendar, MapPin, ExternalLink, FileCheck2, LockKeyhole, UserRound, Landmark, Handshake } from 'lucide-react';
+import { acceptsReimbursements, projects } from '@/data/projects';
 import { api } from '@/lib/reimbursement-api';
 import type { ProjectSettings } from '../../shared/reimbursement';
 import { Button } from '@/components/ui/button';
@@ -9,14 +9,14 @@ import NotFound from './NotFound';
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
-  const project = projects.find(p => p.id === projectId && p.status === 'Upcoming');
+  const project = projects.find(p => p.id === projectId && acceptsReimbursements(p));
   const settings = useQuery({ queryKey: ['project-settings', projectId], queryFn: () => api<ProjectSettings>(`/projects/${projectId}`), enabled: !!project, retry: 1 });
   if (!project) return <NotFound />;
   return <div className="pb-20">
     <section className="relative bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white">
       <div className="page-shell py-12 md:py-20 space-y-7">
         <Link to="/projects" className="inline-flex items-center text-sm gap-2 text-white/80 hover:text-white"><ArrowLeft className="w-4 h-4" />All projects</Link>
-        <div className="flex flex-wrap gap-3 text-xs font-semibold"><span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">Upcoming</span><span className="border border-white/30 px-3 py-1 rounded-full">{project.category}</span></div>
+        <div className="flex flex-wrap gap-3 text-xs font-semibold"><span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">{project.status}</span><span className="border border-white/30 px-3 py-1 rounded-full">{project.category}</span></div>
         <h1 className="text-4xl md:text-6xl font-semibold">{project.title}</h1>
         <div className="flex flex-wrap gap-6 text-white/80"><span className="flex items-center gap-2"><Calendar className="w-4 h-4" />{project.date}</span><span className="flex items-center gap-2"><MapPin className="w-4 h-4" />{project.location}</span></div>
       </div>
@@ -30,13 +30,16 @@ export default function ProjectDetail() {
         </section>
         {project.applicationLink && <Button asChild variant="outline"><a href={project.applicationLink} target="_blank" rel="noopener noreferrer">{project.applicationLabel ?? 'Apply now'}<ExternalLink className="w-4 h-4 ml-2" /></a></Button>}
       </div>
-      <aside className="rounded-2xl border bg-card p-6 md:p-8 space-y-5 shadow-sm">
-        <FileCheck2 className="w-10 h-10 text-primary" /><h2 className="text-2xl font-semibold">Travel reimbursement</h2>
-        <p className="text-muted-foreground">Fill in your details, add your journeys and tickets, and sign once. We’ll put everything into one complete PDF for your organizer.</p>
-        <ol className="space-y-3 text-sm">{['Your personal and team details', 'Travel costs and ticket uploads', 'Bank details and your signature'].map((s, i) => <li key={s} className="flex gap-3 items-center"><span className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">{i + 1}</span>{s}</li>)}</ol>
-        {settings.data?.enabled ? <div className="grid grid-cols-2 gap-3"><Button asChild className="w-full h-auto min-h-14 whitespace-normal px-3 py-2 text-xs sm:text-sm leading-tight"><Link className="justify-center text-center" to={`/projects/${project.id}/reimbursement`}><span>Participant Reimbursement Portal</span><ArrowRight className="ml-1.5 w-4 h-4 shrink-0" /></Link></Button><Button asChild className="w-full h-auto min-h-14 whitespace-normal px-3 py-2 leading-tight"><Link className="justify-center text-center" to={`/projects/${project.id}/organisation-reimbursement`}><span className="min-w-0"><span className="block text-xs sm:text-sm">Reimbursement Declaration</span><span className="block text-[10px] opacity-80 mt-0.5">Partner organisations only</span></span><ArrowRight className="ml-1.5 w-4 h-4 shrink-0" /></Link></Button></div> : <p className="rounded-lg bg-muted p-3 text-sm">{settings.isError ? 'Reimbursement is temporarily unavailable.' : 'Reimbursement will open when the organizer has configured this project.'}</p>}
+      <aside className="rounded-3xl border bg-card p-6 md:p-8 space-y-6 shadow-sm">
+        <div className="flex items-start gap-4"><span className="rounded-2xl bg-primary/10 p-3"><FileCheck2 className="w-7 h-7 text-primary" /></span><div><h2 className="text-2xl font-semibold">Participant and Partner Toolkit</h2><p className="mt-1 text-sm text-muted-foreground">Choose the document or portal that matches your role.</p></div></div>
+        {settings.data?.enabled ? <div className="space-y-3"><ToolkitLink to={`/projects/${project.id}/reimbursement`} icon={UserRound} title="Participant Reimbursement" description="Submit travel costs, tickets, bank details and signature." tone="blue" /><ToolkitLink to={`/projects/${project.id}/organisation-reimbursement`} icon={Landmark} title="Reimbursement Declaration" description="For partner organisations after participant reimbursements are finalized." tone="violet" /><ToolkitLink to={`/projects/${project.id}/partnership-agreement`} icon={Handshake} title="Partnership Agreement" description="Review, complete and sign the full project partnership agreement." tone="emerald" /></div> : <p className="rounded-lg bg-muted p-3 text-sm">{settings.isError ? 'The toolkit is temporarily unavailable.' : 'The toolkit will open when the organizer has configured this project.'}</p>}
         <p className="flex items-start gap-2 text-xs text-muted-foreground"><LockKeyhole className="w-4 h-4 shrink-0" />You’ll need the secret access code from your project organizer.</p>
       </aside>
     </div>
   </div>;
+}
+
+function ToolkitLink({ to, icon: Icon, title, description, tone }: { to: string; icon: typeof UserRound; title: string; description: string; tone: 'blue' | 'violet' | 'emerald' }) {
+  const tones = { blue: 'border-blue-200 bg-blue-50/60 hover:border-blue-400 hover:bg-blue-50 text-blue-800', violet: 'border-violet-200 bg-violet-50/60 hover:border-violet-400 hover:bg-violet-50 text-violet-800', emerald: 'border-emerald-200 bg-emerald-50/60 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-800' };
+  return <Link to={to} className={`group flex items-center gap-4 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${tones[tone]}`}><span className="rounded-xl bg-white/80 p-2.5 shadow-sm"><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block font-semibold text-foreground">{title}</span><span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{description}</span></span><ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" /></Link>;
 }

@@ -125,7 +125,7 @@ test('complete reimbursement workflow and access isolation', async () => {
   const organisationForm = await (await request('/projects/oasis/organisation-form?country=Germany', 'GET', undefined, organisationCookie)).json() as { participants: { label: string; name: string; reimbursementCents: number }[]; totalCents: number };
   assert.deepEqual(organisationForm.participants, [{ label: 'Leader', name: participant.name, role: 'Team Leader', reimbursementCents: 7826 }]);
   assert.equal(organisationForm.totalCents, 7826, 'organisation total includes coordinator-approved extra reimbursement');
-  const organisationInput = { requestId: crypto.randomUUID(), organisationName: 'Example Youth Organisation', country: 'Germany', legalRepresentativeName: 'Alex Representative', signaturePlace: 'Berlin', signatureDate: '2026-09-06', accountHolder: 'Example Youth Organisation', iban: 'DE89370400440532013000', bankCountry: 'Germany', swift: 'COBADEFFXXX', signature, declaration: true };
+  const organisationInput = { requestId: crypto.randomUUID(), organisationName: 'Example Youth Organisation', country: 'Germany', submitterRole: 'team-leader', submitterName: 'Alex Leader', submitterPosition: '', submitterPhone: '+49 123456789', submitterEmail: 'leader@example.test', signaturePlace: 'Berlin', signatureDate: '2026-09-06', accountHolder: 'Example Youth Organisation', iban: 'DE89370400440532013000', bankCountry: 'Germany', swift: 'COBADEFFXXX', signature, declaration: true };
   response = await request('/projects/oasis/organisation-declarations', 'POST', organisationInput, organisationCookie);
   const organisationReceipt = await response.json() as { id: string; totalCents: number }; assert.equal(response.status, 201, JSON.stringify(organisationReceipt)); assert.equal(organisationReceipt.totalCents, 7826);
   assert.equal((await request('/projects/oasis/organisation-declarations', 'POST', { ...organisationInput, requestId: crypto.randomUUID() }, organisationCookie)).status, 409);
@@ -149,6 +149,7 @@ test('validation rejects bad dates, currencies, money and missing declaration', 
   assert.equal(claimSchema.safeParse(base).success, true);
   for (const ticket of [{ ...baseTicket, purchaseDate: '2026-02-30' }, { ...baseTicket, purchaseDate: '2099-01-01' }, { ...baseTicket, amount: -1 }, { ...baseTicket, amount: 1.001 }, { ...baseTicket, travelDate: '2026-01-01' }, { ...baseTicket, currency: 'USD' }, { ...baseTicket, currency: 'BGN' }]) assert.equal(claimSchema.safeParse({ ...base, tickets: [ticket] }).success, false);
   assert.equal(claimSchema.safeParse({ ...base, declaration: false }).success, false);
+  assert.equal(claimSchema.safeParse({ ...base, participant: { ...participant, greenTravel: true }, tickets: [{ ...baseTicket, mode: 'Flight' }] }).success, false);
   assert.equal(euroCents(1.005, 1), 101); assert.equal(euroCents(1000, 0.00275), 275);
 });
 
@@ -171,6 +172,7 @@ test('country caps, extra approval, references and new fields', () => {
   const base = { requestId: crypto.randomUUID(), participant, signature: 'data:image/png;base64,test', declaration: true, tickets: [baseTicket] };
   for (const p of [{ ...participant, firstName: '' }, { ...participant, role: 'Administrator' }, { ...participant, departureDate: '2026-09-19' }]) assert.equal(claimSchema.safeParse({ ...base, participant: p }).success, false);
   assert.equal(claimSchema.safeParse({ ...base, tickets: [{ ...baseTicket, currency: 'TRY', ticketType: 'Paper ticket' }] }).success, true);
+  assert.equal(claimSchema.safeParse({ ...base, tickets: [{ ...baseTicket, currency: 'NOK' }] }).success, true);
   assert.equal(claimSchema.safeParse({ ...base, tickets: [{ ...baseTicket, ticketType: undefined }] }).success, false);
 });
 

@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Trash2, CheckCircle2, FileText, LockKeyhole, Send, RefreshCw } from 'lucide-react';
-import { projects } from '@/data/projects';
+import { acceptsReimbursements, projects } from '@/data/projects';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field, SelectField, AddressField } from '@/components/reimbursement/Field';
@@ -17,10 +17,13 @@ type DraftTicket = Omit<TicketInput, 'amount' | 'boardingPasses'> & { id: string
 const newPass = (journey: DraftPass['journey'], from = '', to = ''): DraftPass => ({ journey, from, to, file: null });
 const newTicket = (): DraftTicket => ({ id: crypto.randomUUID(), purchaseDate: '', travelDate: '', from: '', to: '', mode: 'Train', ticketType: 'Electronic ticket', currency: 'EUR', amount: '', file: null, journeyType: 'one-way', connections: false, boardingPasses: [] });
 const blankParticipant: Participant = { firstName: '', lastName: '', name: '', citizenship: '', team: '', city: '', notes: '', greenTravel: false, arrivalDate: '', departureDate: '', role: 'Participant', bankName: '', accountHolder: '', signaturePlace: '', dateOfBirth: '', email: '', phone: '', bankAccount: '', bic: '', bankAddress: '', address: '' };
+const participantForProject = (projectId: string): Participant => projectId === 'green-stage-sustainable-future'
+  ? { ...blankParticipant, city: 'Silijan', team: 'Norway' }
+  : { ...blankParticipant };
 
 export default function Reimbursement() {
   const { projectId } = useParams();
-  const project = projects.find(p => p.id === projectId && p.status === 'Upcoming');
+  const project = projects.find(p => p.id === projectId && acceptsReimbursements(p));
   const client = useQueryClient();
   const session = useQuery({ queryKey: ['participant-session', projectId], queryFn: () => api<ProjectSettings>(`/projects/${projectId}/session`), enabled: !!project, retry: false, refetchOnWindowFocus: false });
   if (!project) return <NotFound />;
@@ -33,7 +36,8 @@ export default function Reimbursement() {
 
 function ClaimForm({ projectId, settings }: { projectId: string; settings: ProjectSettings }) {
   const client = useQueryClient();
-  const [participant, setParticipant] = useState<Participant>({ ...blankParticipant });
+  const fixedResidence = projectId === 'green-stage-sustainable-future';
+  const [participant, setParticipant] = useState<Participant>(() => participantForProject(projectId));
   const [tickets, setTickets] = useState<DraftTicket[]>([newTicket()]);
   const [signature, setSignature] = useState('');
   const [declaration, setDeclaration] = useState(false);
@@ -44,6 +48,7 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
   const [receipt, setReceipt] = useState<{ id: string; reference?: string; totalCents?: number; finalCents?: number } | null>(null);
   const [formVersion, setFormVersion] = useState(0);
   const [greenDialogOpen, setGreenDialogOpen] = useState(false);
+  const [greenTravelConflictOpen, setGreenTravelConflictOpen] = useState(false);
   const [greenDeclarationAccepted, setGreenDeclarationAccepted] = useState(false);
   const rates = useQueries({ queries: tickets.map(ticket => ({
     queryKey: ['rate', projectId, ticket.currency, ticket.purchaseDate],
@@ -70,7 +75,7 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
     tickets.forEach((t, i) => { form.append(`ticket-${i}`, t.file!); t.boardingPasses.forEach((p, j) => { if (p.file) form.append(`boarding-${i}-${j}`, p.file); }); });
     try {
       const result = await api<{ id: string; reference?: string; totalCents?: number; finalCents?: number }>(`/projects/${projectId}/submissions`, { method: 'POST', body: form });
-      setReceipt(result); setParticipant({ ...blankParticipant }); setTickets([newTicket()]); setSignature(''); setDeclaration(false);
+      setReceipt(result); setParticipant(participantForProject(projectId)); setTickets([newTicket()]); setSignature(''); setDeclaration(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) { setError((e as Error).message); if (e instanceof ApiError && e.status === 401) setNeedUnlock(true); }
     finally { setBusy(false); }
@@ -93,11 +98,13 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
             <Field id="last-name" label="Surname (as in ID)" required autoComplete="family-name" maxLength={80} value={participant.lastName} onChange={e => updateParticipant('lastName', e.target.value)} />
             <Field id="activity-start" label="Activity start date (set by admin)" type="date" readOnly value={settings.activityStartDate ?? ''} /><Field id="activity-end" label="Activity end date (set by admin)" type="date" readOnly value={settings.activityEndDate ?? ''} />
             <Field id="destination-city" label="Destination city (set by admin)" readOnly value={settings.destinationCity ?? 'Awaiting organizer configuration'} />
-            <Field id="residence-city" label="City of residence" required maxLength={120} autoComplete="address-level2" value={participant.city} onChange={e => updateParticipant('city', e.target.value)} />
+            <Field id="residence-city" label="City of residence" required readOnly={fixedResidence} maxLength={120} autoComplete="address-level2" value={participant.city} onChange={e => updateParticipant('city', e.target.value)} />
             <Field id="arrival-date" label="Arrival in destination country" type="date" required value={participant.arrivalDate} onChange={e => updateParticipant('arrivalDate', e.target.value)} />
             <Field id="departure-date" label="Departure from destination country" type="date" min={participant.arrivalDate || undefined} required value={participant.departureDate} onChange={e => updateParticipant('departureDate', e.target.value)} />
             <SelectField id="role" label="Role" required value={participant.role} onChange={e => updateParticipant('role', e.target.value)}>{['Participant', 'Team Leader', 'Facilitator'].map(role => <option key={role}>{role}</option>)}</SelectField>
-            <SelectField id="team" label="Country of residence" required value={participant.team} onChange={e => updateParticipant('team', e.target.value)}><option value="">Select your country</option>{settings.countries.map(c => <option key={c} value={c}>{c}</option>)}</SelectField>
+            {fixedResidence
+              ? <Field id="team" label="Country of residence" required readOnly value={participant.team} />
+              : <SelectField id="team" label="Country of residence" required value={participant.team} onChange={e => updateParticipant('team', e.target.value)}><option value="">Select your country</option>{settings.countries.map(c => <option key={c} value={c}>{c}</option>)}</SelectField>}
             <Field id="citizenship" label="Citizenship" required maxLength={80} value={participant.citizenship} onChange={e => updateParticipant('citizenship', e.target.value)} />
             <Field id="dob" label="Date of birth" type="date" required min="1900-01-01" max={today()} autoComplete="bday" value={participant.dateOfBirth} onChange={e => updateParticipant('dateOfBirth', e.target.value)} />
             <Field id="email" label="Email" type="email" required maxLength={254} autoComplete="email" value={participant.email} onChange={e => updateParticipant('email', e.target.value)} />
@@ -115,7 +122,10 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
               <Field id={`${ticket.id}-travel`} label="Travel date" type="date" required min={ticket.purchaseDate || undefined} value={ticket.travelDate} onChange={e => updateTicket(ticket.id, { travelDate: e.target.value })} />
               <Field id={`${ticket.id}-from`} label="From" required maxLength={120} placeholder="City / airport / station" value={ticket.from} onChange={e => updateTicket(ticket.id, { from: e.target.value })} />
               <Field id={`${ticket.id}-to`} label="To" required maxLength={120} placeholder="City / airport / station" value={ticket.to} onChange={e => updateTicket(ticket.id, { to: e.target.value })} />
-              <SelectField id={`${ticket.id}-mode`} label="Mode of travel" required value={ticket.mode} onChange={e => updateTicket(ticket.id, { mode: e.target.value as DraftTicket['mode'], boardingPasses: e.target.value === 'Flight' ? [newPass('outbound', ticket.from, ticket.to)] : [], journeyType: 'one-way', connections: false })}>{travelModes.map(m => <option key={m}>{m}</option>)}</SelectField>
+              <SelectField id={`${ticket.id}-mode`} label="Mode of travel" required value={ticket.mode} onChange={e => {
+                if (e.target.value === 'Flight' && participant.greenTravel) { setGreenTravelConflictOpen(true); return; }
+                updateTicket(ticket.id, { mode: e.target.value as DraftTicket['mode'], boardingPasses: e.target.value === 'Flight' ? [newPass('outbound', ticket.from, ticket.to)] : [], journeyType: 'one-way', connections: false });
+              }}>{travelModes.map(m => <option key={m}>{m}</option>)}</SelectField>
               <SelectField id={`${ticket.id}-type`} label="Ticket format" value={ticket.ticketType} onChange={e => updateTicket(ticket.id, { ticketType: e.target.value as DraftTicket['ticketType'] })}><option>Paper ticket</option><option>Electronic ticket</option></SelectField>
               <SelectField id={`${ticket.id}-currency`} label="Purchase currency" required value={ticket.currency} onChange={e => updateTicket(ticket.id, { currency: e.target.value as DraftTicket['currency'] })}>{currencies.map(c => <option key={c.code} value={c.code}>{c.code} — {c.name}</option>)}</SelectField>
               <Field id={`${ticket.id}-amount`} label={`Amount paid (${ticket.currency})`} type="number" inputMode="decimal" required min="0.01" max="100000000" step="0.01" value={ticket.amount} onChange={e => updateTicket(ticket.id, { amount: e.target.value })} />
@@ -181,6 +191,7 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
           <dl className="grid sm:grid-cols-2 gap-4"><div><dt className="text-sm text-muted-foreground">Submitted expenses</dt><dd className="font-semibold">{euro(total)}</dd></div><div><dt className="text-sm text-muted-foreground">Country limit</dt><dd className="font-semibold">{settings.countryLimits?.[participant.team] !== undefined ? euro(settings.countryLimits[participant.team]) : 'Select your country'}</dd></div></dl>
           <p className="text-sm text-muted-foreground">You can receive up to your travel costs or your country’s limit, whichever is lower. The organizer can approve an extra amount separately.</p>
           <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={participant.greenTravel} onChange={e => {
+            if (e.target.checked && tickets.some(ticket => ticket.mode === 'Flight')) { setGreenTravelConflictOpen(true); return; }
             if (e.target.checked) { setGreenDeclarationAccepted(false); setGreenDialogOpen(true); }
             else setParticipant(p => ({ ...p, greenTravel: false }));
           }} />Green travel (most of your journey was by train, bus, bike, or shared car)</label>
@@ -216,6 +227,12 @@ function ClaimForm({ projectId, settings }: { projectId: string; settings: Proje
           {greenTravelDeclaration.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
         </div>
         <DialogFooter><Button type="button" disabled={!greenDeclarationAccepted} onClick={() => { setParticipant(p => ({ ...p, greenTravel: true })); setGreenDialogOpen(false); }}>Confirm green travel</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={greenTravelConflictOpen} onOpenChange={setGreenTravelConflictOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Flight is not eligible for green travel</DialogTitle><DialogDescription>You cannot select both Flight and Green travel. Please choose a low-emission mode of travel before selecting Green travel, or untick Green travel before selecting Flight.</DialogDescription></DialogHeader>
+        <DialogFooter><Button type="button" onClick={() => setGreenTravelConflictOpen(false)}>OK</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   </div>;

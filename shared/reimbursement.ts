@@ -7,7 +7,7 @@ export const currencies = [
   { code: 'EUR', name: 'Euro' }, { code: 'CZK', name: 'Czech koruna' },
   { code: 'DKK', name: 'Danish krone' }, { code: 'HUF', name: 'Hungarian forint' },
   { code: 'PLN', name: 'Polish zloty' }, { code: 'RON', name: 'Romanian leu' },
-  { code: 'SEK', name: 'Swedish krona' },
+  { code: 'NOK', name: 'Norwegian krone' }, { code: 'SEK', name: 'Swedish krona' },
   { code: 'TRY', name: 'Turkish lira' },
 ] as const;
 export const travelModes = ['Car', 'Bus', 'Train', 'Flight'] as const;
@@ -37,7 +37,7 @@ export const ticketSchema = z.object({
   from: text('Departure', 120), to: text('Destination', 120),
   mode: z.enum(travelModes),
   ticketType: z.enum(['Paper ticket', 'Electronic ticket']),
-  currency: z.enum(['EUR', 'CZK', 'DKK', 'HUF', 'PLN', 'RON', 'SEK', 'TRY']),
+  currency: z.enum(['EUR', 'CZK', 'DKK', 'HUF', 'PLN', 'RON', 'NOK', 'SEK', 'TRY']),
   amount: z.number().finite().positive('Enter an amount greater than zero').max(100000000).refine(v => Math.abs(v * 100 - Math.round(v * 100)) < 0.00001, 'Use at most two decimal places'),
 }).superRefine((ticket, ctx) => {
   if (ticket.mode !== 'Flight' && ticket.boardingPasses?.length) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Boarding passes must belong to a flight' });
@@ -66,6 +66,10 @@ export const claimSchema = z.object({
   tickets: z.array(ticketSchema).min(1, 'Add at least one ticket').max(MAX_TICKETS),
   signature: z.string().max(300000).startsWith('data:image/png;base64,'),
   declaration: z.literal(true, { errorMap: () => ({ message: 'Confirm the declaration before submitting' }) }),
+}).superRefine((claim, ctx) => {
+  if (claim.participant.greenTravel && claim.tickets.some(ticket => ticket.mode === 'Flight')) {
+    ctx.addIssue({ code: 'custom', path: ['participant', 'greenTravel'], message: 'Green travel cannot be selected when any mode of travel is Flight' });
+  }
 });
 const centsSchema = z.number().int().min(0).max(10000000000);
 export const projectDetailsSchema = z.object({
@@ -104,7 +108,11 @@ export const organisationDeclarationSchema = z.object({
   requestId: z.string().uuid(),
   organisationName: text('Organisation name', 200),
   country: text('Country', 80),
-  legalRepresentativeName: text('Legal representative name', 160),
+  submitterRole: z.enum(['team-leader', 'sending-organisation-member']),
+  submitterName: text('Submitter name', 160),
+  submitterPosition: z.string().trim().max(160, 'Position is too long').default(''),
+  submitterPhone: text('Contact number', 40).refine(value => /^\+?[0-9 ()\-.]{6,40}$/.test(value), 'Enter a valid contact number'),
+  submitterEmail: z.string().trim().email('Enter a valid email').max(254),
   signaturePlace: text('Place of signature', 120),
   signatureDate: calendarDate.refine(value => value <= today(), 'Signature date cannot be in the future'),
   accountHolder: text('Account holder', 160),
@@ -113,12 +121,103 @@ export const organisationDeclarationSchema = z.object({
   swift: z.string().trim().toUpperCase().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'SWIFT must contain 8 or 11 letters and numbers'),
   signature: z.string().max(300000).startsWith('data:image/png;base64,'),
   declaration: z.literal(true, { errorMap: () => ({ message: 'Confirm the declaration before submitting' }) }),
-});
+}).superRefine((value, ctx) => {
+  if (value.submitterRole === 'sending-organisation-member' && !value.submitterPosition) ctx.addIssue({ code: 'custom', path: ['submitterPosition'], message: 'Position is required for a member of the sending organisation' });
+}).transform(value => ({ ...value, submitterPosition: value.submitterRole === 'team-leader' ? '' : value.submitterPosition, legalRepresentativeName: value.submitterName }));
 export type OrganisationDeclarationInput = z.infer<typeof organisationDeclarationSchema>;
 export type OrganisationParticipant = { label: string; name: string; role: Participant['role']; reimbursementCents: number };
 export type OrganisationFormData = ProjectDetails & { projectName: string; projectCode: string; countries: string[]; country: string; participants: OrganisationParticipant[]; totalCents: number };
 export type SavedOrganisationDeclaration = OrganisationDeclarationInput & OrganisationFormData & { id: string; projectId: string; createdAt: string };
 export type OrganisationDeclarationSummary = { id: string; projectId: string; country: string; organisationName: string; legalRepresentativeName: string; totalCents: number; createdAt: string };
+
+export const partnershipCurrencies = ['EUR', 'USD', 'GBP', 'CHF', 'NOK', 'SEK', 'DKK', 'ISK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'TRY', 'UAH', 'RSD', 'ALL', 'BAM', 'MKD', 'MDL', 'GEL', 'AMD', 'AZN'] as const;
+export const partnershipAgreementSchema = z.object({
+  requestId: z.string().uuid(),
+  partnerName: text('Partner name', 200),
+  partnerOid: text('Partner OID', 40),
+  partnerCountry: text('Partner country', 80),
+  contactName: text('Contact name', 160),
+  contactEmail: z.string().trim().email('Enter a valid email').max(254),
+  contactPhone: text('Phone number', 40).refine(value => /^\+?[0-9 ()\-.]{6,40}$/.test(value), 'Enter a valid phone number'),
+  iban: text('IBAN', 80),
+  accountHolder: text('Account holder', 160),
+  swift: z.string().trim().toUpperCase().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'SWIFT / BIC must contain 8 or 11 letters and numbers'),
+  bankName: text('Bank name', 160),
+  bankAddress: text('Bank address', 500),
+  bankCurrency: z.enum(partnershipCurrencies),
+  legalRepresentativeName: text('Legal representative name', 160),
+  legalRepresentativePosition: text('Legal representative position', 160),
+  signaturePlace: text('Place of signature', 120),
+  signatureDate: calendarDate.refine(value => value <= today(), 'Signature date cannot be in the future'),
+  signature: z.string().max(300000).startsWith('data:image/png;base64,'),
+  declaration: z.literal(true, { errorMap: () => ({ message: 'Confirm the agreement before submitting' }) }),
+});
+export type PartnershipAgreementInput = z.infer<typeof partnershipAgreementSchema>;
+export type SavedPartnershipAgreement = PartnershipAgreementInput & { id: string; projectId: string; projectName: string; projectCode: string; createdAt: string };
+export type PartnershipAgreementSummary = { id: string; projectId: string; partnerCountry: string; partnerName: string; legalRepresentativeName: string; createdAt: string };
+
+export const partnershipAgreementArticles = [
+  { title: 'Article 1 - Purpose and governing documents', clauses: [
+    ['1.1.', "This Agreement defines the Parties' responsibilities for the preparation, implementation, financing, safety, reporting and follow-up of the Project."],
+    ['1.2.', 'The Project shall be implemented in accordance with the Grant Agreement and its annexes, the approved application and budget, any mandate or accession form, applicable Erasmus+ rules and quality standards, and this Agreement. In case of conflict, the Grant Agreement and mandatory law prevail.'],
+    ['1.3.', 'This Agreement does not create an entitlement to any amount that is not accepted or paid by the German National Agency.'],
+  ]},
+  { title: 'Article 2 - Duration', clauses: [
+    ['2.1.', 'This Agreement enters into force on the date of the last signature and, where legally permitted, applies from the start of the Project eligibility period.'],
+    ['2.2.', 'It remains effective until all Project tasks, payments, reports, audits, recoveries, confidentiality and data-protection obligations have been completed.'],
+  ]},
+  { title: 'Article 3 - Roles and responsibilities', clauses: [
+    ['3.1.', 'Each Party shall perform its assigned tasks lawfully, professionally, on time and in accordance with the approved Project plan. Each Party remains responsible for its own acts and omissions and for the persons engaged by it.'],
+    ['3.2.', 'The Coordinator is responsible for overall coordination, communication with the National Agency, consolidated reporting, verification of partner documentation, financial administration and transfer of Project funds subject to this Agreement and the Grant Agreement.'],
+    ['3.3.', 'The Partner is responsible for its national group and assigned tasks, including:\n(a) selecting eligible participants and a competent adult group leader in accordance with the approved profile;\n(b) preparing participants, supporting travel arrangements and providing programme, safety, emergency, reimbursement and Code of Conduct information before departure;\n(c) checking identity, residence, eligibility and required insurance or health-cover documents;\n(d) supporting participants throughout the Project, collecting required evidence and contributing to evaluation, dissemination and follow-up; and\n(e) providing complete and accurate information and documents by the deadlines communicated by the Coordinator.'],
+    ['3.4.', "If the Partner does not select and confirm the required number of eligible participants by the deadline communicated in writing, the Coordinator may, in coordination with the Partner, assist with or complete the selection and confirm suitable participants for the Partner's national group. The Partner shall reasonably cooperate and provide the information and documents required to verify eligibility. This does not release the Partner from its remaining obligations unless otherwise agreed in writing."],
+    ['3.5.', 'The Partner shall immediately inform the Coordinator of any delay, participant withdrawal, legal or financial risk, safeguarding concern, conflict of interest, suspected fraud, serious complaint or other circumstance that could materially affect the Project.'],
+  ]},
+  { title: 'Article 4 - Participant safety, conduct and incidents', clauses: [
+    ['4.1.', 'The Parties shall cooperate in risk assessment and take reasonable and proportionate measures to provide a safe, respectful and non-discriminatory environment. The Coordinator or host addresses risks under its control at the venue and in the common programme; the Partner addresses risks connected with its participant selection, preparation, travel arrangements, national group and group leadership.'],
+    ['4.2.', 'The Partner shall ensure that its participants and group leader receive and follow the Project Code of Conduct and reasonable safety and emergency instructions. The group leader shall remain reasonably available, monitor wellbeing and conduct, and cooperate with the Coordinator and host team.'],
+    ['4.3.', 'Participants remain personally responsible for intentional, illegal, reckless or clearly prohibited conduct. A participant who seriously endangers themselves or others, harasses others, damages property, uses illegal substances, carries prohibited items or repeatedly ignores safety instructions may be removed from an activity or required to leave the Project, subject to proportionality, safeguarding needs and applicable law.'],
+    ['4.4.', 'Serious injury, hospitalisation, police involvement, a missing person, safeguarding allegation, major property damage or death must be reported to the Coordinator immediately. The Parties shall prioritise protection of life and health, contact emergency services where necessary, document the facts and cooperate with insurers, authorities, the National Agency and affected families as legally appropriate.'],
+  ]},
+  { title: 'Article 5 - Liability and indemnification', clauses: [
+    ['5.1.', "No Party is liable merely because an incident occurred. Responsibility shall be determined by applicable law, the Party's duties, causation, fault and the circumstances of the case."],
+    ['5.2.', "To the maximum extent permitted by law, the Coordinator is not responsible for loss, injury, death, damage, fines or claims caused solely by a participant's intentional, illegal, reckless or clearly prohibited conduct; refusal to follow reasonable safety instructions; risks outside the Coordinator's reasonable control; or the Partner's breach of its selection, preparation, supervision, insurance, reporting or safeguarding duties."],
+    ['5.3.', "Nothing in this Agreement excludes or limits liability that cannot legally be excluded, including liability for a Party's own intentional misconduct and other mandatory liability. Each Party remains responsible for direct loss caused by its own breach, negligence or intentional act or omission."],
+    ['5.4.', "The Partner shall indemnify the Coordinator against third-party claims, grant recoveries, penalties and reasonable external costs to the extent caused by the Partner's breach, false or incomplete information, ineligible participant selection, failure to prepare or support its national group, misuse of funds, or acts or omissions of persons for whom the Partner is legally responsible. This does not apply to the extent the matter was caused by the Coordinator's own breach, negligence or intentional misconduct."],
+  ]},
+  { title: 'Article 6 - Payments, reimbursement and bank account', clauses: [
+    ['6.1.', "Project payments are conditional on the availability of grant funds, satisfactory completion of assigned tasks and timely submission of complete and credible supporting documents. The Coordinator may deduct expenditure paid on the Partner's behalf where agreed or properly documented."],
+    ['6.2.', 'The Partner designates the following account to receive Partner funds including participant travel reimbursement:'],
+    ['6.3.', 'Payment by the Coordinator to the verified account above constitutes valid payment and discharges the Coordinator for that amount. The Partner is responsible for correct and timely onward reimbursement to its participants and group leader and shall provide proof of payment on request.'],
+    ['6.4.', 'Unless otherwise agreed in writing, onward reimbursement shall be completed within ten business days after the Partner receives the relevant funds. The Partner shall not make unauthorised deductions, participation charges or unrelated set-offs from participant reimbursements.'],
+    ['6.5.', 'Any change of bank account must be notified by an authorised representative and independently verified by the Coordinator. The Coordinator may suspend, withhold, reduce or set off payment where documentation is missing, tasks are incomplete, eligibility is doubtful, funds may have been misused, or a grant recovery is reasonably expected.'],
+    ['6.6.', 'The Partner shall repay within thirty days any amount rejected or recovered by the National Agency to the extent attributable to the Partner, its participants, staff or group leader, including amounts resulting from false information, ineligible participation, missing evidence or misuse of funds.'],
+  ]},
+  { title: 'Article 7 - Reporting, records, visibility and data protection', clauses: [
+    ['7.1.', 'The Partner shall provide accurate information and all documents reasonably required for Project reporting, audits, participant evidence and grant calculations by the deadlines set by the Coordinator, and shall retain legally valid records for the period required by the Grant Agreement and applicable law.'],
+    ['7.2.', 'The Parties shall support evaluation and dissemination and shall use the required Erasmus+ and EU visibility statements and visual identity. Public communication must be accurate and respect confidentiality, safeguarding and consent requirements.'],
+    ['7.3.', 'Each Party shall process personal data lawfully and securely for legitimate Project purposes. Medical, safeguarding, incident and bank information shall be shared only with authorised persons who need it for lawful Project duties. Confidentiality continues after the Project ends.'],
+  ]},
+  { title: 'Article 8 - Communication, changes and conflict of interest', clauses: [
+    ['8.1.', 'Each Party shall appoint a Project Contact and an Emergency or Safeguarding Contact (which can be identical). Day-to-day coordination may take place through agreed messaging tools, but formal approvals, financial instructions, bank changes, warnings, suspension and termination notices must be confirmed by email.'],
+    ['8.2.', 'No material change to participants, dates, activities, travel arrangements, responsibilities or use of funds may be made without prior written agreement where the change affects eligibility, safety, quality or reporting.'],
+    ['8.3.', 'The Parties shall avoid conflicts of interest and immediately disclose any situation that could affect impartial implementation. Suspected fraud, corruption, theft, double funding or fabricated evidence must be reported without undue delay.'],
+  ]},
+  { title: 'Article 9 - Suspension and termination', clauses: [
+    ['9.1.', 'The Coordinator may suspend a payment, activity or participant where reasonably necessary to protect participants, Project quality, grant compliance, evidence or funds. Where appropriate, the Partner shall be given a reasonable period to remedy the issue.'],
+    ['9.2.', 'Either Party may terminate this Agreement for a material breach that is not remedied within a reasonable written deadline. The Coordinator may terminate immediately in cases of fraud, serious safeguarding failure, violence, deliberate misuse of funds, false declarations, loss of eligibility or conduct creating a serious risk to participants or the Project.'],
+    ['9.3.', 'Termination does not affect existing repayment, reporting, audit, confidentiality, data-protection, liability or indemnification obligations. The Partner shall return unspent or unsupported funds and provide all outstanding Project documents.'],
+  ]},
+  { title: 'Article 10 - Force majeure, disputes and applicable law', clauses: [
+    ['10.1.', 'A Party is not in breach to the extent performance is prevented by an unforeseeable and unavoidable event beyond its reasonable control, provided it promptly informs the other Party and takes reasonable steps to reduce the impact. Financial eligibility remains subject to the Grant Agreement and the National Agency’s decision.'],
+    ['10.2.', 'The Parties shall first attempt to resolve disputes through good-faith written consultation between their authorised representatives. If no solution is reached within fifteen business days, the matter shall be escalated to their legal representatives or governing bodies.'],
+    ['10.3.', "This Agreement is governed by German law to the extent permitted by mandatory law. Where legally permissible, the courts competent for the Coordinator's registered office shall have jurisdiction."],
+  ]},
+  { title: 'Article 11 - Final provisions', clauses: [
+    ['11.1.', 'Amendments must be made in writing and approved by authorised representatives of both Parties. If any provision is invalid or unenforceable, the remaining provisions remain effective and the Parties shall replace the affected provision with a lawful provision closest to its intended purpose.'],
+    ['11.2.', 'Electronic signatures and counterparts are permitted where legally valid. The working language is English.'],
+  ]},
+] as const;
 
 export function organisationPaymentDeclaration(data: Pick<SavedOrganisationDeclaration, 'totalCents' | 'projectName' | 'projectCode' | 'destinationCity' | 'activityStartDate' | 'activityEndDate'>) {
   return `I declare that a payment of ${euro(data.totalCents)} will be paid by bank transfer to the bank account below after the required participant reporting has been completed and all original travel documents for the EU project ${data.projectName} (${data.projectCode}) held in ${data.destinationCity}, between ${data.activityStartDate} and ${data.activityEndDate}, have been delivered and checked.`;

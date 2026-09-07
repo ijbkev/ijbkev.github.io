@@ -36,6 +36,8 @@ function db(): PDO {
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_request ON submissions(project_id, request_id)',
         "CREATE TABLE IF NOT EXISTS organisation_declarations (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, country TEXT NOT NULL, organisation_name TEXT NOT NULL, legal_representative_name TEXT NOT NULL, total_cents INTEGER NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL)",
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_organisation_declarations_project_country ON organisation_declarations(project_id, country)',
+        "CREATE TABLE IF NOT EXISTS partnership_agreements (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, partner_country TEXT NOT NULL, partner_name TEXT NOT NULL, legal_representative_name TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL)",
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_partnership_agreements_project_country ON partnership_agreements(project_id, partner_country)',
         'CREATE TABLE IF NOT EXISTS rate_cache (cache_key TEXT PRIMARY KEY, rate REAL NOT NULL, rate_date TEXT NOT NULL, source TEXT NOT NULL)',
         'CREATE TABLE IF NOT EXISTS rate_limits (limit_key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL)',
     ];
@@ -133,7 +135,7 @@ function public_settings(?array $row): array { $details=[]; if ($row) { $stmt=db
 function enabled_settings(string $id): array { $row = settings($id); if (!$row || empty($row['enabled']) || empty($row['access_hash'])) fail('Reimbursement is not open for this project. Please contact the organizer.', 403); return $row; }
 
 function historical_rate(string $currency, string $date): array {
-    $allowed = ['EUR','CZK','DKK','HUF','PLN','RON','SEK','TRY'];
+    $allowed = ['EUR','CZK','DKK','HUF','PLN','RON','NOK','SEK','TRY'];
     if (!in_array($currency, $allowed, true)) fail('Unsupported purchase currency.', 422);
     valid_date($date, 'purchase date');
     if ($date < '1999-01-04' || $date > gmdate('Y-m-d')) fail('Purchase date must be between 4 January 1999 and today.', 422);
@@ -184,6 +186,7 @@ function parse_claim(array $input, array $countries): array {
         $purchase=valid_date($ticket['purchaseDate']??null,'ticket purchase date'); $travel=valid_date($ticket['travelDate']??null,'travel date');
         if ($travel<$purchase) fail('Travel date cannot be before the purchase date.',422);
         $mode=$ticket['mode']??''; if (!in_array($mode,['Car','Bus','Train','Flight'],true)) fail('Invalid mode of travel.',422);
+        if ($participant['greenTravel'] && $mode === 'Flight') fail('Green travel cannot be selected when any mode of travel is Flight.',422);
         $ticketType=$ticket['ticketType']??''; if (!in_array($ticketType,['Paper ticket','Electronic ticket'],true)) fail('Select paper or electronic ticket.',422);
         $amount=$ticket['amount']??0; if (!is_int($amount)&&!is_float($amount)) fail('Enter a valid ticket amount.',422); $amount=(float)$amount;
         if ($amount<=0||$amount>100000000||abs($amount*100-round($amount*100))>0.00001) fail('Ticket amount must be positive and use at most two decimals.',422);
@@ -322,8 +325,27 @@ function parse_organisation_declaration(array $body,array $countries): array {
     $country=text_value($body['country']??null,'country',80);if(!in_array($country,$countries,true))fail('Select one of this project’s participating countries.',422);
     $date=valid_date($body['signatureDate']??null,'signature date');if($date>gmdate('Y-m-d'))fail('Signature date cannot be in the future.',422);
     $swift=strtoupper(text_value($body['swift']??null,'SWIFT / BIC',11));if(!preg_match('/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/',$swift))fail('SWIFT must contain 8 or 11 letters and numbers.',422);
-    $signature=$body['signature']??'';if(!is_string($signature)||strlen($signature)>300000||!str_starts_with($signature,'data:image/png;base64,'))fail('Draw the legal representative signature before submitting.',422);
+    $submitterRole=$body['submitterRole']??'';if(!in_array($submitterRole,['team-leader','sending-organisation-member'],true))fail('Select who is submitting the declaration.',422);
+    $submitterName=text_value($body['submitterName']??null,'submitter name',160);
+    $submitterPosition=optional_text($body['submitterPosition']??'',160);if($submitterRole==='sending-organisation-member'&&$submitterPosition==='')fail('Position is required for a member of the sending organisation.',422);
+    $submitterPhone=text_value($body['submitterPhone']??null,'contact number',40);if(!preg_match('/^\+?[0-9 ()\-.]{6,40}$/',$submitterPhone))fail('Enter a valid contact number.',422);
+    $submitterEmail=$body['submitterEmail']??'';if(!filter_var($submitterEmail,FILTER_VALIDATE_EMAIL)||strlen($submitterEmail)>254)fail('Enter a valid email.',422);
+    $signature=$body['signature']??'';if(!is_string($signature)||strlen($signature)>300000||!str_starts_with($signature,'data:image/png;base64,'))fail('Draw the submitter signature before submitting.',422);
     $bytes=base64_decode(substr($signature,22),true);if($bytes===false||!str_starts_with($bytes,"\x89PNG\r\n\x1a\n"))fail('The signature could not be read.',422);
     if(($body['declaration']??null)!==true)fail('Confirm the declaration before submitting.',422);
-    return ['requestId'=>$body['requestId'],'organisationName'=>text_value($body['organisationName']??null,'organisation name',200),'country'=>$country,'legalRepresentativeName'=>text_value($body['legalRepresentativeName']??null,'legal representative name',160),'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'iban'=>text_value($body['iban']??null,'IBAN',80),'bankCountry'=>text_value($body['bankCountry']??null,'bank country',80),'swift'=>$swift,'signature'=>$signature,'declaration'=>true];
+    return ['requestId'=>$body['requestId'],'organisationName'=>text_value($body['organisationName']??null,'organisation name',200),'country'=>$country,'submitterRole'=>$submitterRole,'submitterName'=>$submitterName,'submitterPosition'=>$submitterRole==='team-leader'?'':$submitterPosition,'submitterPhone'=>$submitterPhone,'submitterEmail'=>$submitterEmail,'legalRepresentativeName'=>$submitterName,'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'iban'=>text_value($body['iban']??null,'IBAN',80),'bankCountry'=>text_value($body['bankCountry']??null,'bank country',80),'swift'=>$swift,'signature'=>$signature,'declaration'=>true];
+}
+
+function parse_partnership_agreement(array $body,array $countries): array {
+    if(!is_uuid($body['requestId']??null))fail('Invalid submission reference.',422);
+    $country=text_value($body['partnerCountry']??null,'partner country',80);if(!in_array($country,$countries,true))fail('Select one of this project’s participating countries.',422);
+    $date=valid_date($body['signatureDate']??null,'signature date');if($date>gmdate('Y-m-d'))fail('Signature date cannot be in the future.',422);
+    $email=$body['contactEmail']??'';if(!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($email)>254)fail('Enter a valid email.',422);
+    $phone=text_value($body['contactPhone']??null,'phone number',40);if(!preg_match('/^\+?[0-9 ()\-.]{6,40}$/',$phone))fail('Enter a valid phone number.',422);
+    $swift=strtoupper(text_value($body['swift']??null,'SWIFT / BIC',11));if(!preg_match('/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/',$swift))fail('SWIFT / BIC must contain 8 or 11 letters and numbers.',422);
+    $signature=$body['signature']??'';if(!is_string($signature)||strlen($signature)>300000||!str_starts_with($signature,'data:image/png;base64,'))fail('Draw the partner signature before submitting.',422);
+    $bytes=base64_decode(substr($signature,22),true);if($bytes===false||!str_starts_with($bytes,"\x89PNG\r\n\x1a\n"))fail('The signature could not be read.',422);
+    if(($body['declaration']??null)!==true)fail('Confirm the agreement before submitting.',422);
+    $bankCurrency=strtoupper(text_value($body['bankCurrency']??null,'bank account currency',3));$allowedCurrencies=['EUR','USD','GBP','CHF','NOK','SEK','DKK','ISK','PLN','CZK','HUF','RON','BGN','TRY','UAH','RSD','ALL','BAM','MKD','MDL','GEL','AMD','AZN'];if(!in_array($bankCurrency,$allowedCurrencies,true))fail('Select a supported bank account currency.',422);
+    return ['requestId'=>$body['requestId'],'partnerName'=>text_value($body['partnerName']??null,'partner name',200),'partnerOid'=>text_value($body['partnerOid']??null,'partner OID',40),'partnerCountry'=>$country,'contactName'=>text_value($body['contactName']??null,'contact name',160),'contactEmail'=>$email,'contactPhone'=>$phone,'iban'=>text_value($body['iban']??null,'IBAN',80),'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'swift'=>$swift,'bankName'=>text_value($body['bankName']??null,'bank name',160),'bankAddress'=>text_value($body['bankAddress']??null,'bank address',500),'bankCurrency'=>$bankCurrency,'legalRepresentativeName'=>text_value($body['legalRepresentativeName']??null,'legal representative name',160),'legalRepresentativePosition'=>text_value($body['legalRepresentativePosition']??null,'legal representative position',160),'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'signature'=>$signature,'declaration'=>true];
 }
