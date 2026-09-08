@@ -18,7 +18,7 @@ export default function ProjectDetail() {
         <MapHeroAccent />
       <div className="page-shell relative py-12 md:py-20 space-y-7">
         <Link to="/projects" className="inline-flex items-center text-sm gap-2 text-white/80 hover:text-white"><ArrowLeft className="w-4 h-4" />All projects</Link>
-        <div className="flex flex-wrap gap-3 text-xs font-semibold"><span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">{project.status}</span><span className="border border-white/30 px-3 py-1 rounded-full">{project.category}</span></div>
+        <div className="flex flex-wrap gap-3 text-xs font-semibold"><span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">{project.status}</span><span className="border border-white/30 px-3 py-1 rounded-full">{project.category}</span>{project.availability && <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wide ${project.availability === 'full' ? 'bg-red-600 text-white' : 'bg-emerald-500 text-white'}`}>{project.availability === 'full' ? 'Spots full' : 'Spots available'}</span>}</div>
         <h1 className="text-4xl md:text-6xl font-semibold">{project.title}</h1>
         <div className="flex flex-wrap gap-6 text-white/80"><span className="flex items-center gap-2"><Calendar className="w-4 h-4" />{project.date}</span><span className="flex items-center gap-2"><MapPin className="w-4 h-4" />{project.location}</span></div>
       </div>

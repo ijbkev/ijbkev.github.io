@@ -27,6 +27,9 @@ function db(): PDO {
     ]);
     $db->exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=15000');
     $schema = [
+        'CREATE TABLE IF NOT EXISTS access_code_secrets (project_id TEXT NOT NULL, country TEXT NOT NULL, encrypted_code TEXT NOT NULL, PRIMARY KEY(project_id,country))',
+        'CREATE TABLE IF NOT EXISTS partner_country_access (project_id TEXT NOT NULL, country TEXT NOT NULL, access_hash TEXT NOT NULL, PRIMARY KEY(project_id,country))',
+        'CREATE TABLE IF NOT EXISTS reimbursement_drafts (token_hash TEXT PRIMARY KEY, project_id TEXT NOT NULL, data TEXT NOT NULL, files TEXT NOT NULL, claim_id TEXT, revision INTEGER NOT NULL DEFAULT 1, finalized INTEGER NOT NULL DEFAULT 0)',
         'CREATE TABLE IF NOT EXISTS drive_projects (project_id TEXT PRIMARY KEY NOT NULL, countries_folder_id TEXT NOT NULL UNIQUE)',
         "CREATE TABLE IF NOT EXISTS drive_participants (folder_id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, country_id TEXT NOT NULL, country TEXT NOT NULL, name TEXT NOT NULL, email TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Needs privacy setup')",
         "CREATE UNIQUE INDEX IF NOT EXISTS drive_participant_identity ON drive_participants(project_id,country_id,email) WHERE email <> ''",
@@ -46,6 +49,10 @@ function db(): PDO {
         'CREATE TABLE IF NOT EXISTS rate_limits (limit_key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL)',
     ];
     foreach ($schema as $sql) $db->exec($sql);
+    if(!in_array('country',array_column($db->query('PRAGMA table_info(sessions)')->fetchAll(),'name'),true))$db->exec('ALTER TABLE sessions ADD COLUMN country TEXT');
+    $draftColumns=array_column($db->query('PRAGMA table_info(reimbursement_drafts)')->fetchAll(),'name');
+    foreach(['resume_number','legacy_submission_id'] as $column)if(!in_array($column,$draftColumns,true))$db->exec('ALTER TABLE reimbursement_drafts ADD COLUMN '.$column.' TEXT');
+    $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_draft_legacy_submission ON reimbursement_drafts(legacy_submission_id) WHERE legacy_submission_id IS NOT NULL');
     $columns=$db->query('PRAGMA table_info(project_settings)')->fetchAll();
     if(!in_array('organisation_access_hash',array_column($columns,'name'),true))$db->exec('ALTER TABLE project_settings ADD COLUMN organisation_access_hash TEXT');
     if (random_int(1, 100) === 1) {
@@ -107,12 +114,43 @@ function request_is_https(): bool {
         || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 }
 
+function masked_client_ip(): string {
+    $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
+    if(getenv('IJBK_TRUST_PROXY')==='1'){
+        $forwarded=trim(explode(',',(string)($_SERVER['HTTP_X_FORWARDED_FOR']??''))[0]);
+        $candidate=(string)($_SERVER['HTTP_CF_CONNECTING_IP']??$forwarded);
+        if(filter_var($candidate,FILTER_VALIDATE_IP))$ip=$candidate;
+    }
+    if(filter_var($ip,FILTER_VALIDATE_IP,FILTER_FLAG_IPV4)){$parts=explode('.',$ip);$parts[3]='xxx';return implode('.',$parts);}
+    if(filter_var($ip,FILTER_VALIDATE_IP,FILTER_FLAG_IPV6)){$parts=array_slice(explode(':',$ip),0,4);return implode(':',$parts).'::';}
+    return 'Unavailable';
+}
+
+function browser_device_label(?string $userAgent=null): string {
+    $ua=trim($userAgent??(string)($_SERVER['HTTP_USER_AGENT']??''));if($ua==='')return 'Unavailable';
+    $browser='Other browser';
+    foreach([['Edge','#Edg/([0-9.]+)#'],['Chrome','#(?:Chrome|CriOS)/([0-9.]+)#'],['Firefox','#(?:Firefox|FxiOS)/([0-9.]+)#'],['Safari','#Version/([0-9.]+).*Safari/#']] as [$name,$pattern])if(preg_match($pattern,$ua,$match)){$browser=$name.' '.$match[1];break;}
+    $device='Other device';
+    if(preg_match('#Windows NT ([0-9.]+)#',$ua,$match))$device='Windows '.$match[1];
+    elseif(preg_match('#Android ([0-9.]+)#',$ua,$match))$device='Android '.$match[1];
+    elseif(preg_match('#(?:iPhone|CPU) OS ([0-9_]+)#',$ua,$match))$device='iOS '.str_replace('_','.',$match[1]);
+    elseif(preg_match('#Mac OS X ([0-9_]+)#',$ua,$match))$device='macOS '.str_replace('_','.',$match[1]);
+    elseif(str_contains($ua,'Linux'))$device='Linux';
+    return $browser.' / '.$device;
+}
+
+function partnership_document_id(string $projectCode,string $country,string $agreementId,string $createdAt): string {
+    $project=trim((string)preg_replace('/[^A-Z0-9]+/','-',strtoupper($projectCode)),'-');
+    $project=substr($project,0,18)?:'PROJECT';$countryPart=country_code($country)??substr(preg_replace('/[^A-Z]/','',strtoupper($country)),0,2)?:'XX';
+    return 'PA-'.$project.'-'.$countryPart.'-'.str_replace('-','',substr($createdAt,0,10)).'-'.strtoupper(substr(str_replace('-','',$agreementId),0,8));
+}
+
 function cookie_name(?string $projectId = null, string $role = 'participant'): string { return $projectId ? 'ijbk_' . $role . '_project_' . preg_replace('/[^a-z0-9_-]/i', '_', $projectId) : 'ijbk_admin'; }
 
-function new_session(string $role, ?string $projectId = null): void {
+function new_session(string $role, ?string $projectId = null, ?string $country = null): void {
     $token = bin2hex(random_bytes(48));
-    $stmt = db()->prepare('INSERT INTO sessions(token_hash, role, project_id, expires_at) VALUES(?, ?, ?, ?)');
-    $stmt->execute([hash('sha256', $token), $role, $projectId, time() + 28800]);
+    $stmt = db()->prepare('INSERT INTO sessions(token_hash, role, project_id, expires_at, country) VALUES(?, ?, ?, ?, ?)');
+    $stmt->execute([hash('sha256', $token), $role, $projectId, time() + 28800, $country]);
     setcookie(cookie_name($projectId,$role), $token, ['expires' => time() + 28800, 'path' => '/api', 'secure' => request_is_https(), 'httponly' => true, 'samesite' => 'Strict']);
 }
 
@@ -135,7 +173,7 @@ function rate_limit(string $scope, int $limit, int $seconds = 900): void {
 }
 
 function settings(string $id): ?array { project($id); $stmt = db()->prepare('SELECT * FROM project_settings WHERE project_id=?'); $stmt->execute([$id]); return $stmt->fetch() ?: null; }
-function public_settings(?array $row): array { $details=[]; if ($row) { $stmt=db()->prepare('SELECT data FROM project_details WHERE project_id=?'); $stmt->execute([$row['project_id']]); $raw=$stmt->fetchColumn(); if ($raw) $details=json_decode($raw,true); } return array_merge($details, ['projectCode' => $row['project_code'] ?? '', 'countries' => isset($row['countries']) ? json_decode($row['countries'], true) : [], 'enabled' => !empty($row['enabled']) && !empty($row['access_hash']), 'organisationEnabled' => !empty($row['enabled']) && !empty($row['organisation_access_hash']), 'hasAccessCode' => !empty($row['access_hash']), 'hasOrganisationAccessCode' => !empty($row['organisation_access_hash'])]); }
+function public_settings(?array $row): array { $details=[]; if ($row) { $stmt=db()->prepare('SELECT data FROM project_details WHERE project_id=?'); $stmt->execute([$row['project_id']]); $raw=$stmt->fetchColumn(); if ($raw) $details=json_decode($raw,true); } return array_merge($details, ['demo' => getenv('IJBK_DEMO')==='1', 'projectCode' => $row['project_code'] ?? '', 'countries' => isset($row['countries']) ? json_decode($row['countries'], true) : [], 'enabled' => !empty($row['enabled']) && !empty($row['access_hash']), 'organisationEnabled' => !empty($row['enabled']) && !empty(partner_access_flags($row['project_id']??'')), 'hasAccessCode' => !empty($row['access_hash']), 'hasOrganisationAccessCode' => !empty(partner_access_flags($row['project_id']??''))]); }
 function enabled_settings(string $id): array { $row = settings($id); if (!$row || empty($row['enabled']) || empty($row['access_hash'])) fail('Reimbursement is not open for this project. Please contact the organizer.', 403); return $row; }
 
 function historical_rate(string $currency, string $date): array {
@@ -184,12 +222,16 @@ function parse_claim(array $input, array $countries): array {
     if (!preg_match('/^\+?[0-9 ()\-.]{6,40}$/',$participant['phone'])) fail('Enter a valid phone number.',422);
     if (!preg_match('/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/',$participant['bic'])) fail('BIC must contain 8 or 11 letters and numbers.',422);
     $tickets = $input['tickets'] ?? null; if (!is_array($tickets) || count($tickets)<1 || count($tickets)>30) fail('Add between 1 and 30 tickets.',422);
+    $hasTravel=false; $hasReceipt=false; $hasFlight=false;
+    foreach($tickets as $item) { $m=$item['mode']??''; $hasReceipt=$hasReceipt||in_array($m,['Food','Accommodation'],true); $hasTravel=$hasTravel||in_array($m,['Car','Bus','Train','Flight'],true); $hasFlight=$hasFlight||$m==='Flight'; }
+    if(!$hasTravel)fail('Add at least one travel ticket.',422);
+    if($hasReceipt&&(!$participant['greenTravel']||$hasFlight))fail('Food and accommodation receipts require green travel with no flights.',422);
     $parsed=[];
     foreach ($tickets as $i=>$ticket) {
         if (!is_array($ticket)) fail('Invalid ticket ' . ($i+1) . '.',422);
-        $purchase=valid_date($ticket['purchaseDate']??null,'ticket purchase date'); $travel=valid_date($ticket['travelDate']??null,'travel date');
-        if ($travel<$purchase) fail('Travel date cannot be before the purchase date.',422);
-        $mode=$ticket['mode']??''; if (!in_array($mode,['Car','Bus','Train','Flight'],true)) fail('Invalid mode of travel.',422);
+        $purchase=valid_date($ticket['purchaseDate']??null,'ticket purchase date'); $receipt=in_array($ticket['mode']??'',['Food','Accommodation'],true); $travel=$receipt?'':valid_date($ticket['travelDate']??null,'travel date');
+        if (!$receipt && $travel<$purchase) fail('Travel date cannot be before the purchase date.',422);
+        $mode=$ticket['mode']??''; if (!in_array($mode,['Car','Bus','Train','Flight','Food','Accommodation'],true)) fail('Invalid mode of travel.',422);
         if ($participant['greenTravel'] && $mode === 'Flight') fail('Green travel cannot be selected when any mode of travel is Flight.',422);
         $ticketType=$ticket['ticketType']??''; if (!in_array($ticketType,['Paper ticket','Electronic ticket'],true)) fail('Select paper or electronic ticket.',422);
         $amount=$ticket['amount']??0; if (!is_int($amount)&&!is_float($amount)) fail('Enter a valid ticket amount.',422); $amount=(float)$amount;
@@ -207,7 +249,8 @@ function parse_claim(array $input, array $countries): array {
             if(++$counts[$journey]>12)fail('Use at most 12 segments per journey.',422);
             $boarding[]=['journey'=>$journey,'from'=>optional_text($pass['from']??'',120),'to'=>optional_text($pass['to']??'',120)];
         }
-        $parsed[] = array_merge(['purchaseDate'=>$purchase,'travelDate'=>$travel,'from'=>text_value($ticket['from']??null,'departure',120),'to'=>text_value($ticket['to']??null,'destination',120),'mode'=>$mode,'ticketType'=>$ticketType,'amount'=>$amount],$rate,['journeyType'=>$journeyType,'connections'=>($ticket['connections']??false)===true,'boardingPasses'=>$boarding,'serial'=>$i+1,'euroCents'=>(int)round($amount*$rate['rate']*100)]);
+        if($mode==='Flight'&&(!$counts['outbound']||($journeyType==='round-trip'&&!$counts['return'])))fail('Boarding pass missing: add each outbound and return flight segment for ticket '.($i+1).'.',422);
+        $parsed[] = array_merge(['purchaseDate'=>$purchase,'travelDate'=>$travel,'from'=>text_value($ticket['from']??null,'departure',120),'to'=>$receipt?$mode:text_value($ticket['to']??null,'destination',120),'mode'=>$mode,'ticketType'=>$ticketType,'amount'=>$amount],$rate,['journeyType'=>$journeyType,'connections'=>($ticket['connections']??false)===true,'boardingPasses'=>$boarding,'serial'=>$i+1,'euroCents'=>(int)round($amount*$rate['rate']*100)]);
     }
     $signature=$input['signature']??''; if (!is_string($signature)||strlen($signature)>300000||!str_starts_with($signature,'data:image/png;base64,')) fail('Draw your signature before submitting.',422);
     $decoded=base64_decode(substr($signature,22),true); if ($decoded===false||!str_starts_with($decoded,"\x89PNG\r\n\x1a\n")) fail('The signature could not be read.',422);
@@ -237,7 +280,9 @@ function parse_project_details(array $body, array $countries): array {
     if (count(array_unique($outCodes))!==count($countries)) fail('Country codes must be unique.',422);
     $start=valid_date($body['activityStartDate']??null,'activity start date');$end=valid_date($body['activityEndDate']??null,'activity end date');
     if($end<$start)fail('Activity end date cannot precede start date.',422);
-    return ['shortName'=>$short,'activityStartDate'=>$start,'activityEndDate'=>$end,'destinationCity'=>text_value($body['destinationCity']??null,'destination city',120),'countryCodes'=>$outCodes,'countryLimits'=>$outLimits];
+    $expected=$body['expectedParticipants']??[];if(!is_array($expected))fail('Set expected participant counts.',422);
+    foreach($expected as $country=>$count)if(!in_array($country,$countries,true)||!is_int($count)||$count<0||$count>1000)fail('Expected participants must be whole numbers from 0 to 1000.',422);
+    return ['expectedParticipants'=>$expected,'shortName'=>$short,'activityStartDate'=>$start,'activityEndDate'=>$end,'destinationCity'=>text_value($body['destinationCity']??null,'destination city',120),'countryCodes'=>$outCodes,'countryLimits'=>$outLimits];
 }
 function reimbursement_totals(array $claim): array {
     $standard=min($claim['totalCents'],$claim['countryLimitCents']??$claim['totalCents']); $extra=$claim['extraCents']??0;
@@ -268,12 +313,13 @@ function saved_submission(string $id): array {
     return $row;
 }
 function flight_route(array $ticket): string {
+    if(in_array($ticket['mode'],['Food','Accommodation'],true))return $ticket['from'].' / '.$ticket['to'];
     return $ticket['from'].' → '.$ticket['to'].(($ticket['mode']==='Flight'&&($ticket['journeyType']??'')==='round-trip')?' → '.$ticket['from']:'');
 }
 function supporting_documents(array $claim): array {
     $documents=[];
     foreach($claim['tickets'] as $ticket){
-        $documents[]=array_merge($ticket,['key'=>'ticket-'.$ticket['serial'],'label'=>'Ticket '.$ticket['serial'],'route'=>flight_route($ticket),'isBoardingPass'=>false]);
+        $documents[]=array_merge($ticket,['key'=>'ticket-'.$ticket['serial'],'label'=>(in_array($ticket['mode'],['Food','Accommodation'],true)?$ticket['mode'].' receipt':'Ticket').' '.$ticket['serial'],'route'=>flight_route($ticket),'isBoardingPass'=>false]);
         foreach(($ticket['mode']==='Flight'?($ticket['boardingPasses']??[]):[]) as $i=>$pass){
             $documents[]=array_merge($ticket,$pass,['key'=>'boarding-'.$ticket['serial'].'-'.($i+1),'label'=>'Flight '.$ticket['serial'].' / '.($pass['journey']==='return'?'Return':'Outbound').' boarding pass '.($i+1),'route'=>($pass['from']?:'Airport not recorded').' → '.($pass['to']?:'Airport not recorded'),'filename'=>$pass['filename']??'','amount'=>0,'euroCents'=>0,'currency'=>'EUR','isBoardingPass'=>true]);
         }
@@ -316,12 +362,12 @@ function organisation_form_data(string $projectId, string $country): array {
     $row=enabled_settings($projectId);$countries=json_decode($row['countries'],true);
     if(!is_string($country)||!in_array($country,$countries,true))fail('Select one of this project’s participating countries.',422);
     $details=parse_project_details(public_settings($row),$countries);$project=project($projectId);
-    $stmt=db()->prepare("SELECT data FROM submissions WHERE project_id=? AND team=? AND status='complete' ORDER BY created_at DESC");$stmt->execute([$projectId,$country]);
+    $stmt=db()->prepare("SELECT data FROM submissions WHERE project_id=? AND team=? AND status='complete' ORDER BY created_at DESC, rowid DESC");$stmt->execute([$projectId,$country]);
     $unique=[];foreach($stmt->fetchAll() as $item){$claim=json_decode($item['data'],true);$email=mb_strtolower($claim['participant']['email']);if(!isset($unique[$email]))$unique[$email]=$claim;}
-    $claims=array_values($unique);usort($claims,function($a,$b){$rank=fn($role)=>$role==='Team Leader'?0:($role==='Participant'?1:2);return $rank($a['participant']['role'])<=>$rank($b['participant']['role'])?:strcmp($a['participant']['name'],$b['participant']['name']);});
+    $submitted=count($unique);$claims=array_values(array_filter($unique,fn($c)=>!empty($c['approvedAt'])));$approved=count($claims);$expected=$details['expectedParticipants'][$country]??null;$progress=['expected'=>$expected,'submitted'=>$submitted,'approved'=>$approved,'pending'=>$submitted-$approved,'missing'=>$expected===null?null:max(0,$expected-$submitted),'ready'=>$expected!==null&&$expected>0&&$submitted===$expected&&$approved===$expected];usort($claims,function($a,$b){$rank=fn($role)=>$role==='Team Leader'?0:($role==='Participant'?1:2);return $rank($a['participant']['role'])<=>$rank($b['participant']['role'])?:strcmp($a['participant']['name'],$b['participant']['name']);});
     $leader=0;$participant=0;$people=[];
     foreach($claims as $claim){$isLeader=$claim['participant']['role']==='Team Leader';$number=$isLeader?++$leader:++$participant;$people[]=['label'=>$isLeader?'Leader'.($number>1?' '.$number:''):'Participant '.$number,'name'=>$claim['participant']['name'],'role'=>$claim['participant']['role'],'reimbursementCents'=>reimbursement_totals($claim)['finalCents']];}
-    return array_merge($details,['projectName'=>$project['title'],'projectCode'=>$row['project_code'],'countries'=>$countries,'country'=>$country,'participants'=>$people,'totalCents'=>array_sum(array_column($people,'reimbursementCents'))]);
+    return array_merge($details,['projectName'=>$project['title'],'projectCode'=>$row['project_code'],'countries'=>$countries,'country'=>$country,'progress'=>$progress,'participants'=>$people,'totalCents'=>array_sum(array_column($people,'reimbursementCents'))]);
 }
 
 function parse_organisation_declaration(array $body,array $countries): array {
@@ -337,7 +383,7 @@ function parse_organisation_declaration(array $body,array $countries): array {
     $signature=$body['signature']??'';if(!is_string($signature)||strlen($signature)>300000||!str_starts_with($signature,'data:image/png;base64,'))fail('Draw the submitter signature before submitting.',422);
     $bytes=base64_decode(substr($signature,22),true);if($bytes===false||!str_starts_with($bytes,"\x89PNG\r\n\x1a\n"))fail('The signature could not be read.',422);
     if(($body['declaration']??null)!==true)fail('Confirm the declaration before submitting.',422);
-    return ['requestId'=>$body['requestId'],'organisationName'=>text_value($body['organisationName']??null,'organisation name',200),'country'=>$country,'submitterRole'=>$submitterRole,'submitterName'=>$submitterName,'submitterPosition'=>$submitterRole==='team-leader'?'':$submitterPosition,'submitterPhone'=>$submitterPhone,'submitterEmail'=>$submitterEmail,'legalRepresentativeName'=>$submitterName,'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'iban'=>text_value($body['iban']??null,'IBAN',80),'bankCountry'=>text_value($body['bankCountry']??null,'bank country',80),'swift'=>$swift,'signature'=>$signature,'declaration'=>true];
+    return ['requestId'=>$body['requestId'],'organisationOid'=>optional_text($body['organisationOid']??'',40),'organisationName'=>text_value($body['organisationName']??null,'organisation name',200),'country'=>$country,'submitterRole'=>$submitterRole,'submitterName'=>$submitterName,'submitterPosition'=>$submitterRole==='team-leader'?'':$submitterPosition,'submitterPhone'=>$submitterPhone,'submitterEmail'=>$submitterEmail,'legalRepresentativeName'=>$submitterName,'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'iban'=>text_value($body['iban']??null,'IBAN',80),'bankCountry'=>text_value($body['bankCountry']??null,'bank country',80),'swift'=>$swift,'signature'=>$signature,'declaration'=>true];
 }
 
 function parse_partnership_agreement(array $body,array $countries): array {
@@ -351,5 +397,156 @@ function parse_partnership_agreement(array $body,array $countries): array {
     $bytes=base64_decode(substr($signature,22),true);if($bytes===false||!str_starts_with($bytes,"\x89PNG\r\n\x1a\n"))fail('The signature could not be read.',422);
     if(($body['declaration']??null)!==true)fail('Confirm the agreement before submitting.',422);
     $bankCurrency=strtoupper(text_value($body['bankCurrency']??null,'bank account currency',3));$allowedCurrencies=['EUR','USD','GBP','CHF','NOK','SEK','DKK','ISK','PLN','CZK','HUF','RON','BGN','TRY','UAH','RSD','ALL','BAM','MKD','MDL','GEL','AMD','AZN'];if(!in_array($bankCurrency,$allowedCurrencies,true))fail('Select a supported bank account currency.',422);
-    return ['requestId'=>$body['requestId'],'partnerName'=>text_value($body['partnerName']??null,'partner name',200),'partnerOid'=>text_value($body['partnerOid']??null,'partner OID',40),'partnerCountry'=>$country,'contactName'=>text_value($body['contactName']??null,'contact name',160),'contactEmail'=>$email,'contactPhone'=>$phone,'iban'=>text_value($body['iban']??null,'IBAN',80),'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'swift'=>$swift,'bankName'=>text_value($body['bankName']??null,'bank name',160),'bankAddress'=>text_value($body['bankAddress']??null,'bank address',500),'bankCurrency'=>$bankCurrency,'legalRepresentativeName'=>text_value($body['legalRepresentativeName']??null,'legal representative name',160),'legalRepresentativePosition'=>text_value($body['legalRepresentativePosition']??null,'legal representative position',160),'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'signature'=>$signature,'declaration'=>true];
+    $signerEmail=$body['signerEmail']??'';if(!filter_var($signerEmail,FILTER_VALIDATE_EMAIL)||strlen($signerEmail)>254)fail('Enter a valid signer email.',422);
+    return ['requestId'=>$body['requestId'],'partnerName'=>text_value($body['partnerName']??null,'partner name',200),'partnerOid'=>text_value($body['partnerOid']??null,'partner OID',40),'partnerCountry'=>$country,'contactName'=>text_value($body['contactName']??null,'contact name',160),'contactEmail'=>$email,'contactPhone'=>$phone,'iban'=>text_value($body['iban']??null,'IBAN',80),'accountHolder'=>text_value($body['accountHolder']??null,'account holder',160),'swift'=>$swift,'bankName'=>text_value($body['bankName']??null,'bank name',160),'bankAddress'=>text_value($body['bankAddress']??null,'bank address',500),'bankCurrency'=>$bankCurrency,'legalRepresentativeName'=>text_value($body['legalRepresentativeName']??null,'legal representative name',160),'legalRepresentativePosition'=>text_value($body['legalRepresentativePosition']??null,'legal representative position',160),'signerEmail'=>$signerEmail,'signaturePlace'=>text_value($body['signaturePlace']??null,'place of signature',120),'signatureDate'=>$date,'signature'=>$signature,'declaration'=>true];
+}
+
+// A submission number is a bearer secret, accepted only inside an authenticated project session.
+function reimbursement_draft(string $projectId, string $number): array {
+    $number=trim($number);if(preg_match('/^IJBK-[0-9a-f]{48}$/i',$number))$number='IJBK-'.strtolower(substr($number,5));
+    $stmt=db()->prepare('SELECT * FROM reimbursement_drafts WHERE project_id=? AND token_hash=?');
+    $stmt->execute([$projectId,hash('sha256',$number)]);$draft=$stmt->fetch();
+    if(!$draft)fail('No application found for this submission number in this project.',404);
+    if($draft['finalized'])fail('This reimbursement application has already been finalized and can no longer be accessed or edited. Kindly contact the administrator if you require any changes.',403);
+    return $draft;
+}
+function draft_payload(): array {
+    $raw=(string)($_POST['claim']??'');if(strlen($raw)>1024*1024)fail('Form information is too large.',413);
+    try{$data=json_decode($raw,true,32,JSON_THROW_ON_ERROR);}catch(Throwable){fail('Invalid saved form.',422);}
+    if(!is_array($data)||!is_array($data['participant']??null)||!is_array($data['tickets']??null)||count($data['tickets'])>30)fail('Invalid saved form.',422);
+    foreach($data['tickets'] as $t)if(!is_array($t)||!is_array($t['boardingPasses']??[])||count($t['boardingPasses']??[])>24)fail('Invalid travel segments.',422);
+    return $data;
+}
+function save_draft_files(): array {
+    $files=[];$total=0;
+    foreach($_FILES as $key=>$file){
+        if(!preg_match('/^(ticket-[0-9]+|boarding-[0-9]+-[0-9]+)$/',$key))fail('Invalid document field.',422);
+        if(($file['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE)continue;
+        if(($file['error']??-1)!==UPLOAD_ERR_OK||!is_uploaded_file($file['tmp_name']))fail('A document upload failed. Retry saving.',422);
+        $total+=(int)$file['size'];if($file['size']>10*1024*1024||$total>40*1024*1024)fail('Uploads must be at most 10 MB each and 40 MB overall.',413);
+        $name=mb_substr(basename((string)$file['name']),0,180);$type=upload_type($file['tmp_name'],$name);
+        if($type!=='application/pdf'&&!str_starts_with($type,'image/'))fail('Upload a PDF or image.',422);
+        $files[$key]=['name'=>$name,'type'=>$type,'tmp'=>$file['tmp_name']];
+    }
+    return $files;
+}
+
+function persist_draft_files(array $files): array {
+    if(!$files)return [];
+    $dir=storage_dir().'/drafts/'.bin2hex(random_bytes(24));
+    if(!mkdir($dir,0700,true))throw new RuntimeException('Could not prepare draft storage.');
+    try{foreach($files as $key=>&$file){$target=$dir.'/'.$key;if(!move_uploaded_file($file['tmp'],$target))throw new RuntimeException('Could not save document.');chmod($target,0600);unset($file['tmp']);$file['path']=$target;}unset($file);}
+    catch(Throwable $e){foreach(glob($dir.'/*')?:[] as $f)@unlink($f);@rmdir($dir);throw $e;}
+    return $files;
+}
+function delete_draft_files(array $files): void {
+    foreach($files as $file){if(isset($file['path'])){@unlink($file['path']);@rmdir(dirname($file['path']));}}
+}
+
+// Older name-based references need the participant email as an additional check.
+// A successful recovery returns a private number for all later saves and reads.
+function resume_legacy_application(string $projectId, string $reference, string $email): array {
+    $reference=trim($reference);$email=mb_strtolower(trim($email));
+    if($reference===''||strlen($reference)>500)fail('Enter your previous submission reference.',422);
+    if(!filter_var($email,FILTER_VALIDATE_EMAIL))fail('For an older submission reference, enter the email used on the application.',422);
+    db()->exec('BEGIN IMMEDIATE');
+    $stmt=db()->prepare("SELECT * FROM submissions WHERE project_id=? AND lower(trim(email))=? AND status IN ('complete','withdrawn')");$stmt->execute([$projectId,$email]);$matches=[];
+    foreach($stmt->fetchAll() as $row){$claim=json_decode($row['data'],true);$references=[$row['id'],$claim['reference']??'',claim_reference($claim)];foreach($references as $value)if($value!==''&&mb_strtolower($reference)===mb_strtolower($value)){$matches[]=[$row,$claim];break;}}
+    if(!$matches)fail('No application matches this reference and email in this project. Check both details and the selected project.',404);
+    if(count($matches)>1)fail('More than one application has this reference. Ask the administrator for the unique application ID.',409);
+    [$row,$claim]=$matches[0];
+    $stmt=db()->prepare('SELECT * FROM reimbursement_drafts WHERE project_id=? AND (legacy_submission_id=? OR claim_id=?)');$stmt->execute([$projectId,$row['id'],$row['id']]);$draft=$stmt->fetch();
+    if(!empty($claim['approvedAt'])||!empty($draft['finalized']))fail('This reimbursement application has already been finalized and can no longer be accessed or edited. Kindly contact the administrator if you require any changes.',403);
+    if($draft){
+        if(empty($draft['legacy_submission_id']))db()->prepare('UPDATE reimbursement_drafts SET legacy_submission_id=? WHERE token_hash=?')->execute([$row['id'],$draft['token_hash']]);
+        if(empty($draft['resume_number'])){
+            $number='IJBK-'.bin2hex(random_bytes(24));$hash=hash('sha256',$number);
+            db()->prepare('UPDATE reimbursement_drafts SET token_hash=?,resume_number=?,legacy_submission_id=? WHERE token_hash=?')->execute([$hash,$number,$row['id'],$draft['token_hash']]);
+            $draft['token_hash']=$hash;$draft['resume_number']=$number;
+        }
+        db()->exec('COMMIT');return $draft;
+    }
+    if($row['status']==='withdrawn')fail('This submitted version was replaced by a saved draft. Use the private submission number shown when you saved, or contact the administrator.',409);
+    $number='IJBK-'.bin2hex(random_bytes(24));$hash=hash('sha256',$number);$files=[];
+    $draftDir=storage_dir().'/drafts/'.bin2hex(random_bytes(24));
+    if(!mkdir($draftDir,0700,true))throw new RuntimeException('Could not prepare continuation storage.');
+    try{
+        foreach(($claim['tickets']??[]) as $i=>$ticket){
+            $entries=[['source'=>'ticket-'.($ticket['serial']??($i+1)),'field'=>'ticket-'.$i,'name'=>$ticket['filename']??'invoice']];
+            foreach(($ticket['boardingPasses']??[]) as $j=>$pass)$entries[]=['source'=>'boarding-'.($ticket['serial']??($i+1)).'-'.($j+1),'field'=>'boarding-'.$i.'-'.$j,'name'=>$pass['filename']??'boarding-pass'];
+            foreach($entries as $entry){
+                if(!preg_match('/^(ticket-[0-9]+|boarding-[0-9]+-[0-9]+)$/',$entry['source']))continue;
+                $paths=glob(dirname($row['pdf_path']).'/'.$entry['source'].'.*')?:[];
+                if(count($paths)!==1||!is_file($paths[0]))continue;
+                $target=$draftDir.'/'.$entry['field'];if(!copy($paths[0],$target))throw new RuntimeException('Could not restore original document.');chmod($target,0600);
+                $files[$entry['field']]=['name'=>$entry['name'],'type'=>upload_type($paths[0],$entry['name']),'path'=>$target];
+            }
+        }
+        $data=['participant'=>$claim['participant'],'tickets'=>$claim['tickets']??[],'signature'=>$claim['signature']??'','declaration'=>$claim['declaration']??false];
+        $draft=['token_hash'=>$hash,'project_id'=>$projectId,'data'=>json_encode($data),'files'=>json_encode($files),'claim_id'=>$row['status']==='complete'?$row['id']:null,'revision'=>1,'finalized'=>0,'resume_number'=>$number,'legacy_submission_id'=>$row['id']];
+        db()->prepare('INSERT INTO reimbursement_drafts(token_hash,project_id,data,files,claim_id,resume_number,legacy_submission_id)VALUES(?,?,?,?,?,?,?)')->execute([$hash,$projectId,$draft['data'],$draft['files'],$draft['claim_id'],$number,$row['id']]);
+        db()->exec('COMMIT');return $draft;
+    }catch(Throwable $e){delete_draft_files($files);@rmdir($draftDir);throw $e;}
+}
+
+function partner_access_flags(string $projectId): array {
+    $s=db()->prepare('SELECT country FROM partner_country_access WHERE project_id=?');$s->execute([$projectId]);return array_fill_keys(array_column($s->fetchAll(),'country'),true);
+}
+function partner_country(string $projectId, ?string $requested = null): string {
+    $hash=require_session($projectId,'organisation');
+    $s=db()->prepare('SELECT country FROM sessions WHERE token_hash=?');$s->execute([$hash]);$country=$s->fetchColumn();
+    $settings=enabled_settings($projectId);
+    if(!$country||!isset(partner_access_flags($projectId)[$country])||!in_array($country,json_decode($settings['countries'],true),true))fail('Sign in with the separate partner code for your country.',401);
+    if($requested!==null&&$requested!==''&&$requested!==$country)fail('Your partner access is limited to your own country.',403);
+    return $country;
+}
+function scoped_partner_settings(array $data, string $country): array {
+    $data['country']=$country;$data['countries']=[$country];
+    foreach(['countryCodes','countryLimits','expectedParticipants','partnerAccessConfigured'] as $key)if(isset($data[$key]))$data[$key]=array_intersect_key($data[$key],[$country=>true]);
+    return $data;
+}
+function update_partner_codes(string $projectId, array $countries, mixed $updates, string $participantHash, ?string $legacyHash): void {
+    if(!is_array($updates))fail('Invalid country partner codes.',422);
+    $s=db()->prepare('SELECT country,access_hash FROM partner_country_access WHERE project_id=?');$s->execute([$projectId]);$hashes=array_column($s->fetchAll(),'access_hash','country');
+    foreach($updates as $country=>$code){
+        if(!in_array($country,$countries,true))fail('Set partner codes only for participating countries.',422);
+        if($code===null){unset($hashes[$country]);continue;}
+        if(!is_string($code)||strlen($code)===0||strlen($code)>128)fail('Enter a partner code of up to 128 characters.',422);
+        if(verify_secret($code,$participantHash)||($legacyHash&&verify_secret($code,$legacyHash)))fail('Use a new partner code different from the participant code and the old shared partner code.',422);
+        $hashes[$country]=password_hash($code,PASSWORD_ARGON2ID);
+    }
+    $hashes=array_intersect_key($hashes,array_fill_keys($countries,true));
+    foreach($updates as $country=>$code)if(is_string($code))foreach($hashes as $other=>$hash)if($other!==$country&&verify_secret($code,$hash))fail('Each country must have a different partner code.',422);
+    foreach($updates as $country=>$code){
+        db()->prepare("DELETE FROM sessions WHERE project_id=? AND role='organisation' AND country=?")->execute([$projectId,$country]);
+        save_access_code($projectId,$country,$code);
+        if($code===null)db()->prepare('DELETE FROM partner_country_access WHERE project_id=? AND country=?')->execute([$projectId,$country]);
+        else db()->prepare('INSERT INTO partner_country_access(project_id,country,access_hash)VALUES(?,?,?) ON CONFLICT(project_id,country)DO UPDATE SET access_hash=excluded.access_hash')->execute([$projectId,$country,$hashes[$country]]);
+    }
+    $s=db()->prepare('SELECT country FROM partner_country_access WHERE project_id=?');$s->execute([$projectId]);
+    foreach($s->fetchAll() as $entry)if(!in_array($entry['country'],$countries,true)){save_access_code($projectId,$entry['country'],null);db()->prepare('DELETE FROM partner_country_access WHERE project_id=? AND country=?')->execute([$projectId,$entry['country']]);db()->prepare("DELETE FROM sessions WHERE project_id=? AND role='organisation' AND country=?")->execute([$projectId,$entry['country']]);}
+    db()->prepare("DELETE FROM sessions WHERE project_id=? AND role='organisation' AND country IS NULL")->execute([$projectId]);
+}
+
+// Authentication still uses password hashes. Reversible copies are available only
+// to administrators, encrypted with a key kept outside the web root.
+function access_code_key(): string {
+    $path=storage_dir().'/access-code.key';
+    if(!is_file($path)){
+        $handle=@fopen($path,'x');
+        if($handle){chmod($path,0600);fwrite($handle,random_bytes(32));fclose($handle);}
+    }
+    $key=@file_get_contents($path);if($key===false||strlen($key)!==32)throw new RuntimeException('Access-code encryption key unavailable.');
+    return $key;
+}
+function save_access_code(string $projectId,string $country,?string $code): void {
+    if($code===null){db()->prepare('DELETE FROM access_code_secrets WHERE project_id=? AND country=?')->execute([$projectId,$country]);return;}
+    $iv=random_bytes(12);$tag='';$encrypted=openssl_encrypt($code,'aes-256-gcm',access_code_key(),OPENSSL_RAW_DATA,$iv,$tag,$projectId.'|'.$country);
+    if($encrypted===false)throw new RuntimeException('Could not encrypt access code.');
+    db()->prepare('INSERT INTO access_code_secrets(project_id,country,encrypted_code)VALUES(?,?,?) ON CONFLICT(project_id,country)DO UPDATE SET encrypted_code=excluded.encrypted_code')->execute([$projectId,$country,base64_encode($iv.$tag.$encrypted)]);
+}
+function reveal_access_codes(string $projectId): array {
+    $s=db()->prepare('SELECT country,encrypted_code FROM access_code_secrets WHERE project_id=?');$s->execute([$projectId]);$codes=[];
+    foreach($s->fetchAll() as $row){$raw=base64_decode($row['encrypted_code'],true);if($raw===false||strlen($raw)<28)throw new RuntimeException('Invalid encrypted code.');$code=openssl_decrypt(substr($raw,28),'aes-256-gcm',access_code_key(),OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16),$projectId.'|'.$row['country']);if($code===false)throw new RuntimeException('Could not decrypt saved code.');$codes[$row['country']]=$code;}
+    return ['participant'=>$codes['']??null,'partners'=>(object)array_filter($codes,fn($country)=>$country!=='',ARRAY_FILTER_USE_KEY)];
 }

@@ -10,10 +10,4 @@ const credentials = { client_id: client.client_id, client_secret: client.client_
 await mkdir('.local', { recursive: true, mode: 0o700 });
 await writeFile('.local/google-drive.json', JSON.stringify(credentials), { mode: 0o600 });
 await chmod('.local/google-drive.json', 0o600);
-let env = await readFile('.dev.vars', 'utf8');
-for (const [key, value] of Object.entries({ GOOGLE_DRIVE_CLIENT_ID: credentials.client_id, GOOGLE_DRIVE_CLIENT_SECRET: credentials.client_secret, GOOGLE_DRIVE_REFRESH_TOKEN: credentials.refresh_token })) {
-  env = env.replace(new RegExp(`^${key}=.*\\n?`, 'gm'), '');
-  env += `\n${key}=${JSON.stringify(value)}\n`;
-}
-await writeFile('.dev.vars', env, { mode: 0o600 }); await chmod('.dev.vars', 0o600);
 console.log('Google Drive connection configured locally. Credentials were not copied into website assets.');

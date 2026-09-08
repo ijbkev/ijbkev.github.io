@@ -62,13 +62,12 @@ Configure PHP upload limits for the full form (`upload_max_filesize=45M`,
 `post_max_size=80M`, `max_file_uploads=800`) and sufficient request memory/time
 for PDF generation. Original uploads retain the application's 10 MB per-file and
 40 MB total limits; compatibility rendering can produce larger derived files.
-The Worker limits generated compatibility requests to 80 MB.
+
 
 On the RPTU
 server, raw uploads, generated PDFs, and the SQLite database are stored in
 `/srv/www/www-ijbk-ev/data/reimbursement`,
-outside the public document root. The optional Cloudflare deployment uses
-private R2 and D1 storage.
+outside the public document root. Local development uses the same PHP backend with a separate private SQLite database.
 
 Historical conversion uses the [Frankfurter API](https://frankfurter.dev/) with
 the ECB provider. The rate is fetched using the purchase date and verified again
@@ -80,30 +79,38 @@ project details and rates are snapshots and remain unchanged after later edits.
 
 ### Persistence and deployment
 
-`npm run build` builds the Vite frontend, an Apache/PHP API at `dist/api`, and
-the optional Cloudflare API at `dist/server/index.js`.
-`npm run typecheck` checks both frontend and server. `npm test` runs workflow,
-authorization, PDF, and exchange-rate tests against isolated D1/R2 instances;
-run the build first. A synthetic PDF is written to `tmp/pdfs` for layout QA.
-`npm run db:generate` generates SQL after changes to `db/schema.ts`.
+`npm run dev` starts Vite at **http://localhost:8080** and the PHP API on
+127.0.0.1:8787. PHP uses the same API code, document renderer, and upload limits
+as the live Apache deployment. Changes to PHP source apply on the next request;
+frontend changes reload automatically. PHP needs `pdo_sqlite`, `mbstring`,
+`fileinfo`, and `gd` extensions (plus Composer dependencies in `php-api/vendor`).
 
-Local development persists records in `.wrangler/`. Do not delete that directory
-if you want to retain local submissions. The test suite uses separate ephemeral
-storage and does not change local project settings or participant submissions.
+Local records and uploads persist in `.local/demo-reimbursement/`, separate from live
+data. The existing administrator password is retained in
+`.local/admin-credentials.txt`; its server-side hash lives in `.local/server.env`.
+Do not delete `.local` or publish it. Development and preview run with
+`IJBK_DEMO=1`: Google Drive credentials, original folders and Drive mutations are
+disabled. Only synthetic participants are seeded with
+`node scripts/seed-oasis-demo.mjs`. Original local records are retained in a
+private `.local/original-records-backup-*` directory and are not served. No live
+records are downloaded or synchronized. Live PHP uses its existing separate
+private storage; no demo database or backup is included in `dist`.
 
-The Apache build places only the one-way administrator password hash in its
-server-side PHP bootstrap. The API directory blocks direct access to bootstrap,
-configuration, and dependency files. Never put administrator or project secrets
-in `VITE_*` variables, public JavaScript, or browser storage.
+`npm run build` creates the frontend and Apache/PHP API in `dist/api`.
+`npm run preview` serves that complete build, including its PHP API, at
+**http://127.0.0.1:4173**. Preview and development share the local database;
+neither uses the live reimbursement database. `npm run dev:api` and
+`npm run dev:web` start the individual development services.
 
-For the optional Cloudflare deployment, configure a D1 binding named `DB`, a
-private R2 binding named `FILES`, and the `ADMIN_PASSWORD_HASH` server secret.
-Sites provisions these bindings from `.openai/hosting.json`.
+`npm run typecheck` checks the frontend and shared TypeScript code. `npm test`
+runs isolated PHP reimbursement, approval, privacy, and PDF regression tests
+alongside document-forensics tests. Tests never change local or live claims.
+PHP initializes its additive SQLite schema automatically in `php-api/lib.php`.
 
-`npm run dev:web` retains the original frontend-only Vite command;
-`npm run dev:api` starts just the backend. Local setup and credentials are ignored
-by Git. Public project pages remain readable when the reimbursement API is
-unavailable and display an unavailable message for the portal.
+Cloudflare, Wrangler, D1/R2, Sites publishing, and the duplicate Worker backend
+have been removed from the active project. The local migration retained the
+previous source and data in a private `.local/cloudflare-backup-*` archive.
+The live site's existing Apache deployment procedure is unchanged.
 
 ## Project info
 
@@ -204,7 +211,7 @@ The Erasmus+ logo is sourced from the [German Erasmus+ National Agency document 
 
 ### PDF regression checks
 
-`npm test` covers both PHP and Worker submission/download paths, compressed
+`npm test` covers PHP submission/download paths, compressed
 object streams, missing and corrupt boarding passes, route grouping, zero-cost
 passes, authorization, and preservation of original files. To exercise local
 real-world PDF examples without committing private documents:
@@ -240,9 +247,9 @@ only by the authenticated participant session endpoint.
    Applying a changed email revokes the previous person's personal-folder access.
 
 Country browsing is granted only after every personal folder in the selected
-project passes a privacy audit. All assigned participants receive reader access
-to Countries and its country folders, with writer access only to their assigned
-personal folder. Owners retain access. Google may show other personal folder
+project passes a privacy audit. Anyone with the link receives reader access
+to Countries and its country folders (not searchable). Each personal folder blocks
+inherited access and grants writer access only to its assigned email. Owners retain access. Google may show other personal folder
 names greyed out; their contents cannot be opened. Folders with unknown ownership,
 shortcuts, loose files in country containers, or over 500 participant items stop
 the operation rather than weakening privacy. Current enforcement requires
@@ -250,24 +257,23 @@ organizer ownership of the inspected content in My Drive; shared drives are not
 supported. External changes or new direct shares require another privacy audit;
 this is not a continuous background policy enforcement service.
 
-The backend records assignments and statuses in SQLite/D1 and serializes Drive
+The backend records assignments and statuses in SQLite and serializes Drive
 mutations. A failed operation can leave partial restrictions in place but does
 not report success; refresh and retry the same row. Do not run the older local
 Oasis pilot simultaneously with dashboard changes.
 
 #### Server connection
 
-Use the organizer's OAuth refresh token, not an API key. For local Workers:
+Use the organizer's OAuth refresh token, not an API key. For local PHP:
 
 ```sh
 node scripts/setup-drive.mjs /path/to/client.json /path/to/tokens.json
 ```
 
-This writes only ignored `.dev.vars` and `.local/google-drive.json`, with private
-file permissions. The frontend never receives Google credentials. For hosted
-Workers, set `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and
-`GOOGLE_DRIVE_REFRESH_TOKEN` as runtime secrets. For PHP, provide the same
-server environment variables, or store the JSON containing `client_id`,
+This writes only ignored `.local/google-drive.json`, with private file
+permissions. The frontend never receives Google credentials. For live PHP,
+provide `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and
+`GOOGLE_DRIVE_REFRESH_TOKEN` as server environment variables, or store JSON containing `client_id`,
 `client_secret`, and `refresh_token` at
 `/srv/www/www-ijbk-ev/data/reimbursement/google-drive.json` with permissions 0600
 and ownership allowing the PHP process to read it. Alternatively set
@@ -276,7 +282,70 @@ inside `data/http` or `dist`. Build output intentionally excludes this connectio
 OAuth consent in Google's testing mode may require reconnection when Google
 expires its refresh token.
 
-The additive `0005_project_drive.sql` migration is generated from the three Drive
-schema definitions (isolated generation avoids regenerating earlier manually
-maintained migrations). Worker and PHP initialization also create the tables
-idempotently; no existing claims or submissions are modified.
+PHP initializes Drive tables idempotently without changing existing claims.
+
+### PHP reimbursement applications and final approval
+
+The Apache/PHP portal supports **Start New Reimbursement Form**, **Continue
+Previous Application**, and **Save Form**. Save accepts incomplete fields and
+missing documents and preserves original uploads privately. The generated
+`IJBK-…` submission number is a bearer secret: participants need both their
+project access and this number to return from another session. Store and share
+it carefully. Older human-readable references (or the unique application ID) can be
+continued by entering the participant email as an additional check. Recovery
+returns a private number for future access and restores available original
+documents. Missing legacy documents remain highlighted for upload; finalized
+claims remain locked. Private continuation numbers are stored only in the
+private reimbursement database, never in public files.
+
+Set **expected participants** for each country in administrator project settings.
+An unset or zero count blocks team reimbursement. Counts use the latest formally
+submitted claim per normalized participant email within that project and country;
+drafts do not count. The dashboard shows expected, submitted, approved, pending,
+and not-submitted counts. Only **Approve and finalize application** verifies a
+claim; approving an extra amount is separate. Existing claims require this final
+approval and are not silently grandfathered in. Team submission requires exactly
+the expected number of distinct participants, all approved, and uses only those
+approved amounts. Duplicate emails do not increase the participant count.
+
+Saving edits to a pending application withdraws its previous version from review;
+it must be submitted again. Original withdrawn versions remain privately retained.
+Revision checks prevent stale tabs from overwriting newer saves. Final approval
+permanently locks that application number, including document access, even if an
+administrator later deletes the claim. Corrections remain administrator controlled
+through the existing correction controls. Already-issued organisation declarations
+are snapshots; an administrator must delete and reissue them when needed.
+
+The additive `reimbursement_drafts` SQLite table is initialized automatically by
+PHP; uploaded draft documents live in the private `reimbursement/drafts` directory.
+Back up it together with the database and claims. This workflow targets PHP.
+Local development and preview both run this same PHP workflow. Validate PHP with:
+`node --import tsx --test tests/php-workflow.test.ts tests/php-reimbursement.test.ts`.
+
+### Country-specific partner access
+
+In **Project settings & access → Partner access codes by country**, set or
+generate a distinct code for each national team. Codes are masked by default;
+**Show passwords** reveals saved participant and partner codes to authenticated
+administrators. Authentication uses password hashes; reversible copies are
+encrypted with AES-256-GCM and a separate private `access-code.key` file. Back up
+that key with the database. Older hash-only codes must be entered once again
+to enable reveal. Non-empty passwords have no minimum length. Blank fields preserve existing codes; **Disable this country’s partner
+access** revokes its code. Replacing or disabling a code signs that country out.
+Removing a participating country also revokes its partner access.
+
+Partners enter any one of the country codes; the server identifies its country automatically. Their session is bound to that
+country on the server. Country totals, participant lists, declarations, agreements,
+and PDF downloads are restricted accordingly; the administrator retains access
+to every country. The partner dashboard lists and downloads that country’s saved
+documents. Sign out to switch country, which clears cached partner information.
+
+Old project-wide partner codes and sessions no longer grant partner access.
+Existing documents are preserved; configure separate codes before inviting
+partners back. Participant reimbursement access is unchanged. Codes authorize
+a national team, so people sharing its code share access to that team’s documents.
+
+Organisation reimbursement declarations include an optional OID, retained in the
+saved declaration and printed in its PDF. Bank and submitter details come before
+the final declaration statement and signature. The printed statement and signature
+stay together when the document continues onto another page.

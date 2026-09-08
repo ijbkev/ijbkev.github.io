@@ -50,8 +50,8 @@ function add_heading(Fpdi $pdf, string $title, string $subtitle = ''): void {
 function rows_html(array $rows): string {
     $html = '<table border="0" cellspacing="0" cellpadding="3" style="font-size:9pt;width:100%">';
     foreach ($rows as [$label, $value]) {
-        $html .= '<tr><td style="color:#596273;width:34%">' . h($label) . '</td>'
-            . '<td style="width:66%">' . nl2br(h($value)) . '</td></tr>';
+        $html .= '<tr><td style="color:#667480;width:65%">' . h($label) . '</td>'
+            . '<td style="width:35%" align="right">' . nl2br(h($value)) . '</td></tr>';
     }
     return $html . '</table>';
 }
@@ -181,15 +181,22 @@ class DeclarationPdf extends Fpdi {
         $ngo=__DIR__.'/assets/ngo-logo.png'; if (!is_file($ngo)) $ngo=dirname(__DIR__).'/public/logo.png';
         $erasmus=__DIR__.'/assets/erasmus-logo.png'; if (!is_file($erasmus)) $erasmus=dirname(__DIR__).'/public/reimbursement/erasmus-logo.png';
         $eu=__DIR__.'/assets/eu-logo.png'; if (!is_file($eu)) $eu=dirname(__DIR__).'/public/reimbursement/eu-logo.png';
-        $this->Image($eu,15,10,22,0,'PNG');
-        $this->Image($ngo,42,8,16,17,'PNG');
-        $this->Image($erasmus,145,10,50,0,'PNG');
-        $this->SetTextColor(20,38,76);$this->SetFont('dejavusans','B',14);$this->SetXY(15,32);
-        $this->MultiCell(180,6,$this->declarationTitle,0,'L',false,1);
-        $this->SetFont('dejavusans','',8);$this->SetX(15);$this->MultiCell(180,5,'Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.',0,'L',false,1);
-        $this->SetDrawColor(20,38,76);$lineY=max(59,$this->GetY()+2);$this->Line(15,$lineY,195,$lineY);
+        $this->SetFillColor(18,36,53);$this->Rect(0,0,210,2,'F');
+        $this->Image($eu,15,10,20,0,'PNG');
+        $this->Image($ngo,41,9,14,15,'PNG');
+        $this->Image($erasmus,149,11,46,0,'PNG');
+        $this->SetTextColor(20,121,125);$this->SetFont('dejavusans','B',7);$this->SetXY(15,29);
+        $this->Cell(180,4,'IJBK E.V.  /  ERASMUS+  /  PROJECT DOCUMENTATION',0,1);
+        $heading = str_starts_with($this->declarationTitle,'Reimbursement Declaration - ') ? 'Reimbursement Declaration' : $this->declarationTitle;
+        $this->SetTextColor(18,36,53);$this->SetFont('dejavusans','B',18);$this->SetXY(15,36);
+        $this->MultiCell(180,8,$heading,0,'L',false,1);
+        $this->SetTextColor(102,116,128);$this->SetFont('dejavusans','',7.5);$this->SetXY(15,49);
+        $this->MultiCell(180,4,'Internationaler Jugend- und Bildungsverein Kaiserslautern e.V.',0,'L',false,1);
+        $this->SetDrawColor(222,231,235);$this->Line(15,58,195,58);
+        $this->SetDrawColor(20,121,125);$this->SetLineWidth(0.8);$this->Line(15,58,31,58);$this->SetLineWidth(0.2);
     }
     public function Footer() {
+        $this->SetDrawColor(222,231,235);$this->Line(15,$this->getPageHeight()-19,195,$this->getPageHeight()-19);
         $this->SetY(-15);$this->SetFont('dejavusans','',6);$this->SetTextColor(89,98,115);
         $this->MultiCell(145,3,'IJBK e.V. | Ref. '.$this->reference,0,'L');
         $this->SetXY(165,-15);$this->Cell(30,4,'Page '.$this->getAliasNumPage().' of '.$this->getAliasNbPages(),0,0,'R');
@@ -197,17 +204,62 @@ class DeclarationPdf extends Fpdi {
 }
 function declaration_section(DeclarationPdf $pdf, string $title): void {
     if ($pdf->GetY()>245) $pdf->AddPage();
-    $pdf->writeHTML('<h3 style="color:#125d84;font-size:10pt;border-bottom:1px solid #14264c">'.h(strtoupper($title)).'</h3>',true,false,true,false,'');
+    $pdf->writeHTML('<h3 style="color:#14797d;font-size:10pt">'.h(strtoupper($title)).'</h3>',true,false,true,false,'');
 }
 function declaration_pairs(DeclarationPdf $pdf, array $fields): void {
-    $html='<table cellpadding="4" cellspacing="0" style="font-size:9pt">';
+    $html='<table cellpadding="5" cellspacing="0" style="font-size:9pt;color:#122435">';
     foreach(array_chunk($fields,2) as $row) {
         $html.='<tr nobr="true">';
-        foreach($row as [$label,$value]) $html.='<td width="50%"><span style="font-size:7pt;color:#596273">'.h(strtoupper($label)).'</span><br>'.nl2br(h($value ?: 'Not recorded')).'</td>';
+        foreach($row as [$label,$value]) $html.='<td width="50%" style="border-bottom:0.4px solid #e5ecef"><span style="font-size:6.5pt;color:#667480">'.h(strtoupper($label)).'</span><br>'.nl2br(h($value ?: 'Not recorded')).'</td>';
         if(count($row)===1)$html.='<td width="50%"></td>';
         $html.='</tr>';
     }
     $pdf->writeHTML($html.'</table>',true,false,true,false,'');
+}
+
+function partnership_evidence_stamp(DeclarationPdf $pdf, array $e, float $x, float $y, float $width=72): float {
+    $inner=$width-8;
+    $details='SIGNED BY  '.h($e['signerName']).' - '.h($e['signerRole']).'<br>'.
+        'EMAIL  '.h($e['signerEmail']).'<br>'.
+        'SIGNED UTC  '.h($e['signedAt']).'<br>'.
+        'MASKED IP  '.h($e['maskedIp']).'<br>'.
+        'BROWSER / DEVICE  '.h($e['userAgent']).'<br>'.
+        'DOCUMENT ID  '.h($e['documentId']).'<br>'.
+        'SIGNED RECORD SHA-256  '.h($e['sha256']);
+    $pdf->SetFont('dejavusans','',5);
+    $detailsHeight=$pdf->getStringHeight($inner,$details,true,true,'');
+    $height=max(40,$detailsHeight+12);
+    $pdf->SetDrawColor(0,51,153);$pdf->SetFillColor(244,247,255);$pdf->SetLineWidth(0.45);
+    $pdf->RoundedRect($x,$y,$width,$height,2.6,'1111','DF');
+    $pdf->SetFillColor(0,51,153);$pdf->RoundedRect($x,$y,$width,10.5,2.6,'1100','F');
+    $pdf->SetTextColor(255,255,255);$pdf->SetFont('dejavusans','B',6.6);$pdf->SetXY($x+4,$y+1.8);
+    $pdf->Cell($width-20,3.2,'VERIFIED ELECTRONIC SIGNATURE',0,1,'L');
+    $pdf->SetFont('dejavusans','',4.7);$pdf->SetXY($x+4,$y+5.8);$pdf->Cell($width-20,2.4,'SERVER-RECORDED SIGNING EVIDENCE',0,1,'L');
+    $pdf->SetFillColor(255,204,0);
+    $centreX=$x+$width-8;$centreY=$y+5.3;
+    for($i=0;$i<12;$i++){$angle=deg2rad($i*30-90);$pdf->Circle($centreX+cos($angle)*3.3,$centreY+sin($angle)*3.3,0.44,0,360,'F');}
+    $pdf->SetTextColor(18,36,53);$pdf->SetFont('dejavusans','B',5);$pdf->SetXY($x+4,$y+12.8);
+    $pdf->MultiCell($inner,2.7,$e['confirmation'],0,'L',false,1);
+    $pdf->SetDrawColor(255,204,0);$pdf->SetLineWidth(0.45);$pdf->Line($x+4,$pdf->GetY()+0.8,$x+$width-4,$pdf->GetY()+0.8);
+    $pdf->SetFont('dejavusans','',5);$pdf->SetXY($x+4,$pdf->GetY()+2.3);
+    $pdf->writeHTMLCell($inner,0,$x+4,$pdf->GetY(),$details,0,1,false,true,'L',true);
+    $pdf->SetTextColor(18,36,53);$pdf->SetLineWidth(0.2);
+    return $height;
+}
+
+function coordinator_signature_stamp(DeclarationPdf $pdf, array $e, float $x, float $y, float $width=72): float {
+    $height=34;$inner=$width-8;
+    $pdf->SetDrawColor(0,51,153);$pdf->SetFillColor(244,247,255);$pdf->SetLineWidth(0.45);$pdf->RoundedRect($x,$y,$width,$height,2.6,'1111','DF');
+    $pdf->SetFillColor(0,51,153);$pdf->RoundedRect($x,$y,$width,10.5,2.6,'1100','F');
+    $pdf->SetTextColor(255,255,255);$pdf->SetFont('dejavusans','B',6.4);$pdf->SetXY($x+4,$y+1.8);$pdf->Cell($width-20,3.2,'COORDINATOR SIGNATURE RECORD',0,1,'L');
+    $pdf->SetFont('dejavusans','',4.7);$pdf->SetXY($x+4,$y+5.8);$pdf->Cell($width-20,2.4,'PRE-AUTHORISED SIGNATURE',0,1,'L');
+    $pdf->SetFillColor(255,204,0);$centreX=$x+$width-8;$centreY=$y+5.3;
+    for($i=0;$i<12;$i++){$angle=deg2rad($i*30-90);$pdf->Circle($centreX+cos($angle)*3.3,$centreY+sin($angle)*3.3,0.44,0,360,'F');}
+    $pdf->SetTextColor(18,36,53);$pdf->SetFont('dejavusans','B',5);$pdf->SetXY($x+4,$y+12.8);$pdf->MultiCell($inner,2.7,$e['statement'],0,'L',false,1);
+    $pdf->SetDrawColor(255,204,0);$pdf->SetLineWidth(0.45);$pdf->Line($x+4,$pdf->GetY()+0.8,$x+$width-4,$pdf->GetY()+0.8);
+    $details='AUTHORISED BY  '.h($e['signerName']).' - '.h($e['signerRole']).'<br>ORGANISATION  '.h($e['organisation']).'<br>ISSUED UTC  '.h($e['issuedAt']).'<br>DOCUMENT ID  '.h($e['documentId']);
+    $pdf->SetFont('dejavusans','',5);$pdf->SetXY($x+4,$pdf->GetY()+2.3);$pdf->writeHTMLCell($inner,0,$x+4,$pdf->GetY(),$details,0,1,false,true,'L',true);
+    $pdf->SetTextColor(18,36,53);$pdf->SetLineWidth(0.2);return $height;
 }
 function generate_claim_pdf(array $claim, array $files, string $claimDir, array &$warnings=[]): string {
     foreach($files as $file) if(str_starts_with($file['key']??'', 'boarding-') && (empty($file['path']) || !is_file($file['path']) || filesize($file['path'])===0)) fail('Upload all selected boarding passes before generating the PDF.',422);
@@ -224,7 +276,7 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
     $pdf->declarationTitle=$title;$pdf->reference=claim_reference($claim);
     // Reserve enough header space for long international names and countries.
     $pdf->SetFont('dejavusans','B',14);
-    $headerHeight=max(65,32+$pdf->getStringHeight(180,$title)+14);
+    $headerHeight=65;
     $pdf->SetMargins(15,$headerHeight,15);$pdf->SetAutoPageBreak(true,20);
     $pdf->SetTitle($title);$pdf->SetAuthor('IJBK e.V.');$pdf->SetFont('dejavusans','',9);$pdf->AddPage();
     declaration_section($pdf,'Project');
@@ -233,17 +285,21 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
     declaration_pairs($pdf,[['Full name (as in ID)',$p['name']],['Country of residence',$p['team']],['Citizenship',$p['citizenship']],['Date of birth',$p['dateOfBirth']],['Role',$p['role']??'Not recorded'],['Email',$p['email']],['Phone',$p['phone']],['Home address',$p['address']],['City of residence',$p['city']??'Not recorded'],['Arrival in destination country',$p['arrivalDate']??'Not recorded'],['Departure from destination country',$p['departureDate']??'Not recorded']]);
     declaration_section($pdf,'Bank details for the transfer');
     declaration_pairs($pdf,[['Account holder',$p['accountHolder']??'Not recorded'],['Bank name',$p['bankName']??'Not recorded'],['Account / IBAN',$p['bankAccount']],['BIC / SWIFT',$p['bic']],['Green travel',!empty($p['greenTravel'])?'Yes':'No']]);
-    $pdf->AddPage();declaration_section($pdf,'Travel');
+    $pdf->AddPage();
     $attachmentLinks=[];
-    foreach($claim['tickets'] as $t) {
+    foreach([false,true] as $receipts) {
+    $entries=array_filter($claim['tickets'],fn($ticket)=>in_array($ticket['mode'],['Food','Accommodation'],true)===$receipts);
+    if(!$entries)continue;
+    declaration_section($pdf,$receipts?'Food / accommodation invoices':'Transport tickets');
+    foreach($entries as $t) {
         // Keep each ticket's details together and reserve a line for its page link.
         if($pdf->GetY()>205)$pdf->AddPage();
-        $widths=[4,21,12,12,15,10,13,13];
-        $labels=['#','FROM / TO','PURCHASE DATE','TRAVEL DATE','TRANSPORT / FORMAT','PURCHASE CURRENCY','AMOUNT IN LOCAL CURRENCY','AMOUNT IN EUR'];
-        $values=[(string)$t['serial'],flight_route($t),$t['purchaseDate'],$t['travelDate'],$t['mode'].' / '.($t['ticketType']??'Format not recorded'),$t['currency'],number_format($t['amount'],2,'.',''),number_format($t['euroCents']/100,2,'.','')];
-        $html='<table cellpadding="3" cellspacing="0" style="font-size:7pt"><thead><tr style="background-color:#14264c;color:#ffffff;font-size:6.5pt">';
+        $widths=$receipts?[4,19,12,17,12,10,13,13]:[4,21,12,12,15,10,13,13];
+        $labels=$receipts?['#','PLACE','PURCHASE DATE','CATEGORY','TICKET FORMAT','PURCHASE CURRENCY','AMOUNT IN LOCAL CURRENCY','AMOUNT IN EUR']:['#','FROM / TO','PURCHASE DATE','TRAVEL DATE','TYPE / FORMAT','PURCHASE CURRENCY','AMOUNT IN LOCAL CURRENCY','AMOUNT IN EUR'];
+        $values=[(string)$t['serial'],($receipts?$t['from']:flight_route($t)),$t['purchaseDate'],($receipts?$t['mode']:$t['travelDate']),($receipts?($t['ticketType']??'Format not recorded'):$t['mode'].' / '.($t['ticketType']??'Format not recorded')),$t['currency'],number_format($t['amount'],2,'.',''),number_format($t['euroCents']/100,2,'.','')];
+        $html='<table cellpadding="3" cellspacing="0" style="font-size:7pt"><thead><tr style="background-color:#122435;color:#ffffff;font-size:6.5pt">';
         foreach($labels as $i=>$label)$html.='<th width="'.$widths[$i].'%">'.h($label).'</th>';
-        $html.='</tr></thead><tr nobr="true" style="background-color:#f0f4f8">';
+        $html.='</tr></thead><tr nobr="true" style="background-color:#f3f7f8">';
         foreach($values as $i=>$value)$html.='<td width="'.$widths[$i].'%"'.($i>=6?' align="right"':'').'>'.h($value).'</td>';
         $pdf->writeHTML($html.'</tr></table>',true,false,true,false,'');
         $pdf->SetFont('dejavusans','',7);
@@ -261,10 +317,16 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
             $attachmentLinks[$key]=['page'=>$pdf->getPage(),'y'=>$pdf->GetY(),'link'=>$pdf->AddLink()];$pdf->SetY($pdf->GetY()+8);
         }
     }
+    }
     if($pdf->GetY()>195)$pdf->AddPage();declaration_section($pdf,'Reimbursement calculation');
     $totals=reimbursement_totals($claim);
     $pdf->writeHTML(rows_html([['Total eligible / submitted expenses',money_eur($claim['totalCents'])],['Country reimbursement limit',isset($claim['countryLimitCents'])?money_eur($claim['countryLimitCents']):'Not recorded (legacy claim)'],['Extra reimbursement (admin approved)',money_eur($totals['extraCents'])]]),true,false,true,false,'');
-    $pdf->writeHTML('<div style="background-color:#e8edf5;font-size:12pt"><b>Final reimbursement amount: '.money_eur($totals['finalCents']).'</b></div>',true,false,true,false,'');
+    $pdf->writeHTML('<table cellpadding="10" cellspacing="0"><tr style="background-color:#122435;color:#ffffff"><td width="60%" style="font-size:9pt">FINAL REIMBURSEMENT</td><td width="40%" align="right" style="font-size:16pt"><b>'.money_eur($totals['finalCents']).'</b></td></tr></table>',true,false,true,false,'');
+    if(!empty($claim['greenTravelCorrections'])){
+        declaration_section($pdf,'Administrator correction - green travel');
+        foreach($claim['greenTravelCorrections'] as $correction)$pdf->writeHTML('<p>'.h(substr($correction['correctedAt'],0,10).': '.($correction['previous']?'Yes':'No').' to '.($correction['value']?'Yes':'No').'. '.$correction['reason']).'</p>',true,false,true,false,'');
+        $pdf->writeHTML('<p>The original submission signature is retained. This correction was entered by the administrator after submission.</p>',true,false,true,false,'');
+    }
     if(!empty($p['notes'])){declaration_section($pdf,'Notes from the participant');$pdf->writeHTML('<p>'.nl2br(h($p['notes'])).'</p>',true,false,true,false,'');}
     if(str_contains($claim['declarationText']??'',"\n\n")||$pdf->GetY()>190)$pdf->AddPage();declaration_section($pdf,'Declaration and signature');
     $declaration=$claim['declarationText']??'I confirm that these details are accurate, these expenses were incurred for this project, and the uploaded tickets correspond to the listed journeys. I authorize IJBK to use these details to process my reimbursement.';
@@ -272,6 +334,7 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
         $text=h($point);
         $text=preg_replace('/^([^:]+:)/u','<b>$1</b>',$text);
         $pdf->writeHTML('<p>'.($index===0?'':$index.'. ').$text.'</p>',true,false,true,false,'');
+        $pdf->Ln(2);
     }
     if($pdf->GetY()>230)$pdf->AddPage();$y=$pdf->GetY();if($signatureReadable)$pdf->Image($signaturePath,15,$y,70,22,'JPEG');else{$pdf->SetTextColor(185,28,28);$pdf->MultiCell(180,6,'Signature could not be displayed. Manual review required.',0,'L',false,1);$pdf->SetTextColor(20,24,35);}$pdf->SetY($y+27);
     declaration_pairs($pdf,[['Signed by',$p['name']],['Place / date (UTC)',($p['signaturePlace']??'Place not recorded').', '.substr($claim['createdAt'],0,10)]]);
@@ -301,10 +364,10 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
         $pdf->Ln(3);$formSection('Travel details');
         $formRow([['Arrival in destination country',$p['arrivalDate']??''],['Departure from destination country',$p['departureDate']??'']]);
         // Preserve recorded ticket legs; do not infer a journey direction or arrival date.
-        foreach($claim['tickets'] as $ticket)$formRow([['Departure city / place',$ticket['from']],['Arrival city / place',$ticket['to']],['Travel date / transport',$ticket['travelDate'].' / '.$ticket['mode']]]);
+        foreach(array_filter($claim['tickets'],fn($ticket)=>!in_array($ticket['mode'],['Food','Accommodation'],true)) as $ticket)$formRow([['Departure city / place',$ticket['from']],['Arrival city / place',$ticket['to']],['Travel date / transport',$ticket['travelDate'].' / '.$ticket['mode']]]);
         if($pdf->GetY()>205)$pdf->AddPage();
         $pdf->Ln(3);$formSection('Declaration');
-        $pdf->writeHTML('<p><b>[X] I confirm that I used green means of transport for my travel related to this Erasmus+ activity.</b></p><p>I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using eligible low-emission means of transport, such as train, bus, car-sharing or bicycle.</p><p>I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered.</p>',true,false,true,false,'');
+        $pdf->writeHTML('<p><b>[X] I confirm that my entire journey to and from this activity was by car, bus, or train, without using any flight.</b></p><p>I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using car, bus, or train for the entire journey, without any flights.</p><p>I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered.</p>',true,false,true,false,'');
         $pdf->Ln(2);$pdf->SetFont('dejavusans','',7);$pdf->Cell(180,5,'PARTICIPANT SIGNATURE',0,1);
         $y=$pdf->GetY();
         if($signatureReadable)$pdf->Image($signaturePath,17,$y,65,17,'JPEG');
@@ -357,28 +420,30 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
 function generate_organisation_declaration_pdf(array $data): string {
     $pdf=new DeclarationPdf('P','mm','A4',true,'UTF-8',false);
     $pdf->declarationTitle='Reimbursement Declaration';$pdf->reference=$data['projectCode'].' | '.$data['country'];
-    $pdf->SetMargins(15,65,15);$pdf->SetAutoPageBreak(false);$pdf->SetTitle('Reimbursement Declaration - '.$data['organisationName'].' - '.$data['country']);$pdf->SetAuthor('IJBK e.V.');$pdf->SetFont('dejavusans','',8);$pdf->AddPage();
+    $pdf->SetMargins(15,65,15);$pdf->SetAutoPageBreak(true,18);$pdf->SetTitle('Reimbursement Declaration - '.$data['organisationName'].' - '.$data['country']);$pdf->SetAuthor('IJBK e.V.');$pdf->SetFont('dejavusans','',8);$pdf->AddPage();
     declaration_section($pdf,'Project and organisation');
-    declaration_pairs($pdf,[['Project',$data['projectName']],['Project code',$data['projectCode']],['Destination',$data['destinationCity']],['Activity dates',$data['activityStartDate'].' to '.$data['activityEndDate']],['Organisation',$data['organisationName']],['Country',$data['country']]]);
+    declaration_pairs($pdf,[['Project',$data['projectName']],['Project code',$data['projectCode']],['Destination',$data['destinationCity']],['Activity dates',$data['activityStartDate'].' to '.$data['activityEndDate']],['Organisation',$data['organisationName']],['OID',$data['organisationOid']??'Not recorded'],['Country',$data['country']]]);
     declaration_section($pdf,'Participants and reimbursement');
-    $html='<table border="1" cellpadding="3" cellspacing="0" style="font-size:8pt;border-color:#aeb9c9"><thead><tr style="background-color:#14264c;color:#ffffff"><th width="18%">ROLE</th><th width="52%">NAME</th><th width="30%" align="right">REIMBURSEMENT TO BE PAID</th></tr></thead><tbody>';
+    $html='<table border="0" cellpadding="5" cellspacing="0" style="font-size:8pt;color:#122435"><thead><tr style="background-color:#122435;color:#ffffff"><th width="18%">ROLE</th><th width="52%">NAME</th><th width="30%" align="right">REIMBURSEMENT TO BE PAID</th></tr></thead><tbody>';
     foreach($data['participants'] as $index=>$person)$html.='<tr nobr="true" style="background-color:'.($index%2?'#f7f9fc':'#ffffff').'"><td width="18%">'.h($person['label']).'</td><td width="52%">'.h($person['name']).'</td><td width="30%" align="right">'.h(money_eur($person['reimbursementCents'])).'</td></tr>';
     $html.='<tr style="background-color:#e8edf5;font-size:9pt"><td width="70%" colspan="2"><b>TOTAL REIMBURSEMENT TO BE PAID BY BANK TRANSFER</b></td><td width="30%" align="right"><b>'.h(money_eur($data['totalCents'])).'</b></td></tr></tbody></table>';
     $pdf->writeHTML($html,true,false,true,false,'');
-    declaration_section($pdf,'Declaration');
-    $declaration='I declare that a payment of '.money_eur($data['totalCents']).' will be paid by bank transfer to the bank account below after the required participant reporting has been completed and all original travel documents for the EU project '.$data['projectName'].' ('.$data['projectCode'].') held in '.$data['destinationCity'].', between '.$data['activityStartDate'].' and '.$data['activityEndDate'].', have been delivered and checked.';
-    $pdf->writeHTML('<p>'.h($declaration).'</p>',true,false,true,false,'');
+        declaration_section($pdf,'Bank details');
+        declaration_pairs($pdf,[['Account holder',$data['accountHolder']],['IBAN',$data['iban']],['Bank country',$data['bankCountry']],['SWIFT / BIC',$data['swift']]]);
+    $declaration='I declare that a payment of '.money_eur($data['totalCents']).' will be paid by bank transfer to the bank account above after the required participant reporting has been completed and all original travel documents for the EU project '.$data['projectName'].' ('.$data['projectCode'].') held in '.$data['destinationCity'].', between '.$data['activityStartDate'].' and '.$data['activityEndDate'].', have been delivered and checked.';
     $submitterRole=$data['submitterRole']??'sending-organisation-member';$submitterName=$data['submitterName']??$data['legalRepresentativeName'];
     $role=$submitterRole==='team-leader'?'Team leader':'Member of the sending organisation';
-    declaration_pairs($pdf,[['Submitted by',$role],['Name',$submitterName]]);
-    if($submitterRole==='sending-organisation-member')declaration_pairs($pdf,[['Position',$data['submitterPosition']??'Not recorded'],['Contact',$data['submitterPhone']??'Not recorded'],['Email',$data['submitterEmail']??'Not recorded'],['Date and place',$data['signatureDate'].', '.$data['signaturePlace']]]);
-    else declaration_pairs($pdf,[['Contact',$data['submitterPhone']],['Email',$data['submitterEmail']],['Date and place',$data['signatureDate'].', '.$data['signaturePlace']]]);
+    $submitterFields=[['Submitted by',$role],['Name',$submitterName]];
+    if($submitterRole==='sending-organisation-member')$submitterFields[]=['Position',$data['submitterPosition']??'Not recorded'];
+    $submitterFields[]=['Contact',$data['submitterPhone']??'Not recorded'];$submitterFields[]=['Email',$data['submitterEmail']??'Not recorded'];$submitterFields[]=['Date and place',$data['signatureDate'].', '.$data['signaturePlace']];
+    declaration_pairs($pdf,$submitterFields);
+    if($pdf->GetY()+$pdf->getStringHeight(180,$declaration)+40>$pdf->getPageHeight()-18)$pdf->AddPage();
+    declaration_section($pdf,'Declaration');
+    $pdf->writeHTML('<p>'.h($declaration).'</p>',true,false,true,false,'');
     $signaturePath=tempnam(sys_get_temp_dir(),'ijbk-org-signature-');
     try {
         $pdf->Cell(0,5,'Signature of the '.($submitterRole==='team-leader'?'team leader':'sending organisation member').' - '.$submitterName,0,1,'L');
         file_put_contents($signaturePath,base64_decode(substr($data['signature'],22),true));$y=$pdf->GetY();$pdf->Image($signaturePath,15,$y,58,16,'PNG');$pdf->SetY($y+19);
-        declaration_section($pdf,'Bank details');
-        declaration_pairs($pdf,[['Account holder',$data['accountHolder']],['IBAN',$data['iban']],['Bank country',$data['bankCountry']],['SWIFT / BIC',$data['swift']]]);
         return $pdf->Output('','S');
     } finally { if(is_file($signaturePath))@unlink($signaturePath); }
 }
@@ -401,6 +466,16 @@ function generate_partnership_agreement_pdf(array $d): string {
       'Article 10 - Force majeure, disputes and applicable law'=>'10.1. A Party is not in breach to the extent performance is prevented by an unforeseeable and unavoidable event beyond its reasonable control, provided it promptly informs the other Party and takes reasonable steps to reduce the impact. Financial eligibility remains subject to the Grant Agreement and the National Agency’s decision.<br>10.2. The Parties shall first attempt to resolve disputes through good-faith written consultation between their authorised representatives. If no solution is reached within fifteen business days, the matter shall be escalated to their legal representatives or governing bodies.<br>10.3. This Agreement is governed by German law to the extent permitted by mandatory law. Where legally permissible, the courts competent for the Coordinator’s registered office shall have jurisdiction.',
       'Article 11 - Final provisions'=>'11.1. Amendments must be made in writing and approved by authorised representatives of both Parties. If any provision is invalid or unenforceable, the remaining provisions remain effective and the Parties shall replace the affected provision with a lawful provision closest to its intended purpose.<br>11.2. Electronic signatures and counterparts are permitted where legally valid. The working language is English.'
     ];foreach($sections as $title=>$body){if($title==='Article 10 - Force majeure, disputes and applicable law')$pdf->AddPage();declaration_section($pdf,$title);$pdf->writeHTML('<p>'.$body.'</p>',true,false,true,false,'');}
+    $e=$d['signingEvidence']??null;if(is_array($e)&&$pdf->GetY()>145)$pdf->AddPage();
     declaration_section($pdf,'Signatures');declaration_pairs($pdf,[['For the Coordinator','IJBK e.V.'],['For the Partner',$d['partnerName']],['Name','Vidit Goyal'],['Name',$d['legalRepresentativeName']],['Position','Chairman'],['Position',$d['legalRepresentativePosition']],['Place and date','Kaiserslautern, Germany, 7 September 2026'],['Place and date',$d['signaturePlace'].', '.$d['signatureDate']]]);
-    $signaturePath=tempnam(sys_get_temp_dir(),'ijbk-partner-signature-');try{file_put_contents($signaturePath,base64_decode(substr($d['signature'],22),true));$signatureY=$pdf->GetY();$coordinatorSignature=__DIR__.'/assets/coordinator-signature.png';if(is_file($coordinatorSignature))$pdf->Image($coordinatorSignature,25,$signatureY,68,27,'PNG');$pdf->SetXY(105,$signatureY);$pdf->Cell(0,5,'Signature for the Partner',0,1,'L');$pdf->Image($signaturePath,105,$pdf->GetY(),58,16,'PNG');return $pdf->Output('','S');}finally{if(is_file($signaturePath))@unlink($signaturePath);}
+    $signaturePath=tempnam(sys_get_temp_dir(),'ijbk-partner-signature-');try{
+        file_put_contents($signaturePath,base64_decode(substr($d['signature'],22),true));$signatureY=$pdf->GetY();
+        $coordinatorSignature=__DIR__.'/assets/coordinator-signature.png';if(!is_file($coordinatorSignature))$coordinatorSignature=dirname(__DIR__).'/public/reimbursement/coordinator-signature.png';
+        if(is_file($coordinatorSignature))$pdf->Image($coordinatorSignature,25,$signatureY,68,27,'PNG');
+        $pdf->SetXY(105,$signatureY);$pdf->SetFont('dejavusans','',8);$pdf->Cell(0,5,'Signature for the Partner',0,1,'L');$pdf->Image($signaturePath,105,$pdf->GetY(),58,16,'PNG');
+        $stampY=$signatureY+32;$bottom=$signatureY+29;
+        $coordinatorEvidence=$d['coordinatorSignatureEvidence']??null;if(is_array($coordinatorEvidence))$bottom=max($bottom,$stampY+coordinator_signature_stamp($pdf,$coordinatorEvidence,15,$stampY));
+        if(is_array($e))$bottom=max($bottom,$stampY+partnership_evidence_stamp($pdf,$e,123,$stampY));
+        $pdf->SetY($bottom+2);return $pdf->Output('','S');
+    }finally{if(is_file($signaturePath))@unlink($signaturePath);}
 }

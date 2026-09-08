@@ -12,6 +12,7 @@ export type Project = {
   coverAlt: string;
   applicationLink?: string;
   applicationLabel?: string;
+  availability?: "full" | "available";
 };
 
 export const acceptsReimbursements = (project: Project) =>
@@ -20,11 +21,29 @@ export const acceptsReimbursements = (project: Project) =>
 
 export const projects: Project[] = [
     {
+      id: "connected-not-consumed",
+      title: "Connected, Not Consumed",
+      category: "Erasmus+ Youth Exchange",
+      status: "Upcoming",
+      statusTone: "warning",
+      availability: "available",
+      date: "1–10 December 2026",
+      location: "Germany",
+      description:
+        "Exploring digital well-being, media literacy, and conscious online participation together across Europe.",
+      highlights: ["Digital well-being", "Media literacy", "Online participation", "7 partner countries"],
+      applicationLink: "https://canva.link/ijbk-cnc",
+      applicationLabel: "View infopack",
+      coverImage: "https://flagcdn.com/w640/de.png",
+      coverAlt: "German flag",
+    },
+    {
       id: "oasis",
       title: "OASIS: Online Safety and Awareness in the Society",
       category: "Erasmus+ Youth Exchange",
       status: "Upcoming",
       statusTone: "warning",
+      availability: "full",
       date: "31 October–8 November 2026",
       location: "Hammamet, Tunisia",
       description:
@@ -41,6 +60,7 @@ export const projects: Project[] = [
       category: "Erasmus+ Youth Exchange",
       status: "Upcoming",
       statusTone: "warning",
+      availability: "full",
       date: "2–10 October 2026",
       location: "Austria",
       description:
@@ -50,22 +70,6 @@ export const projects: Project[] = [
       applicationLabel: "View infopack",
       coverImage: "https://flagcdn.com/w640/at.png",
       coverAlt: "Austrian flag",
-    },
-    {
-      id: "connected-not-consumed",
-      title: "Connected, Not Consumed",
-      category: "Erasmus+ Youth Exchange",
-      status: "Upcoming",
-      statusTone: "warning",
-      date: "1–10 December 2026",
-      location: "Germany",
-      description:
-        "Exploring digital well-being, media literacy, and conscious online participation together across Europe.",
-      highlights: ["Digital well-being", "Media literacy", "Online participation", "7 partner countries"],
-      applicationLink: "https://canva.link/ijbk-cnc",
-      applicationLabel: "View infopack",
-      coverImage: "https://flagcdn.com/w640/de.png",
-      coverAlt: "German flag",
     },
     {
       id: "green-stage-sustainable-future",

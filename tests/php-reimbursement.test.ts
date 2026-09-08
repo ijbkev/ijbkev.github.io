@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PDFArray, PDFDict, PDFName, PDFDocument } from 'pdf-lib';
 import { expandPdfObjects } from '../shared/pdf-compatibility';
-import { hashPassword } from '../server/auth';
+import { hashPassword } from './helpers/auth';
 
 test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeout: 60000 }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'ijbk-php-test-'));
@@ -17,7 +17,7 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
   const apiPath = path.resolve('php-api');
   const password = 'test-admin-secret';
   // Load source directly with a synthetic administrator and isolated storage.
-  await writeFile(path.join(dir, 'router.php'), `<?php define('IJBK_ADMIN_PASSWORD_HASH', '${await hashPassword(password)}'); require '${apiPath}/lib.php'; require '${apiPath}/pdf.php'; $source=file_get_contents('${apiPath}/index.php'); $source=str_replace("require_once __DIR__ . '/bootstrap.php';", '', $source); $source=str_replace("__DIR__ . '/lib.php'", "'${apiPath}/lib.php'", $source); $source=str_replace("__DIR__ . '/project-drive.php'", "'${apiPath}/project-drive.php'", $source); $source=str_replace("__DIR__ . '/pdf.php'", "'${apiPath}/pdf.php'", $source); eval(substr($source,5));`);
+  await writeFile(path.join(dir, 'router.php'), `<?php define('IJBK_ADMIN_PASSWORD_HASH', '${await hashPassword(password)}'); require '${apiPath}/lib.php'; require '${apiPath}/pdf.php'; $source=file_get_contents('${apiPath}/index.php'); $source=str_replace("if (!defined('IJBK_ADMIN_PASSWORD_HASH')) require_once __DIR__ . '/bootstrap.php';", '', $source); $source=str_replace("__DIR__ . '/lib.php'", "'${apiPath}/lib.php'", $source); $source=str_replace("__DIR__ . '/project-drive.php'", "'${apiPath}/project-drive.php'", $source); $source=str_replace("__DIR__ . '/pdf.php'", "'${apiPath}/pdf.php'", $source); eval(substr($source,5));`);
   const child = spawn('php', ['-S', `127.0.0.1:${port}`, path.join(dir, 'router.php')], { env: { ...process.env, IJBK_STORAGE_DIR: dir }, stdio: ['ignore', 'ignore', 'pipe'] });
   let log = ''; child.stderr.on('data', data => { log += data.toString(); });
   try {
@@ -29,7 +29,7 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     assert.equal((await req('/admin/projects/oasis/drive/participants','POST',{})).status,401);
     let response = await req('/admin/login', 'POST', { password }); assert.equal(response.status, 200, log);
     const admin = response.headers.get('set-cookie')!.split(';')[0];
-    const settings = { projectCode: 'TEST-2026', shortName: 'OASIS', activityStartDate: '2026-09-20', activityEndDate: '2026-09-27', destinationCity: 'Vienna', countryLimits: { Germany: 30900 }, countries: ['Germany'], enabled: true, accessCode: 'participant-test-code', organisationAccessCode: 'organisation-test-code' };
+    const settings = { projectCode: 'TEST-2026', shortName: 'OASIS', activityStartDate: '2026-09-20', activityEndDate: '2026-09-27', destinationCity: 'Vienna', countryLimits: { Germany: 30900 }, expectedParticipants: { Germany: 1 }, countries: ['Germany'], enabled: true, accessCode: 'participant-test-code', partnerAccessCodes: { Germany: 'organisation-test-code' } };
     response = await req('/admin/projects/oasis', 'PUT', settings, admin); assert.equal(response.status, 200, await response.text());
     assert.equal((await (await req('/projects/oasis')).json()).countryLimits.Germany, 30900);
     response = await req('/projects/oasis/unlock', 'POST', { code: settings.accessCode }); const participantCookie = response.headers.get('set-cookie')!.split(';')[0];
@@ -43,6 +43,28 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     const claim = { requestId: crypto.randomUUID(), participant, declaration: true, signature: `data:image/png;base64,${(await readFile('tests/fixtures/signature.png')).toString('base64')}`, tickets: [{ purchaseDate: '2026-09-04', travelDate: '2026-09-20', from: 'Berlin', to: 'Vienna', mode: 'Train', ticketType: 'Paper ticket', currency: 'EUR', amount: 349 }], extraCents: 90000, countryLimitCents: 90000, destinationCity: 'Forged destination' };
     function form(input = claim, file: Uint8Array = ticket, type = 'image/jpeg', filename = 'train.jpg') { const f = new FormData(); f.append('claim', JSON.stringify(input)); f.append('ticket-0', new Blob([file], { type }), filename); return f; }
     const ticket = await readFile('tests/fixtures/ticket.jpg');
+
+    // Receipts require a genuine travel ticket, green travel, and no flights.
+    const receiptTickets = [claim.tickets[0], { ...claim.tickets[0], mode: 'Food', from: 'Vienna', to: 'Food', travelDate: '', amount: 12 }, { ...claim.tickets[0], mode: 'Accommodation', from: 'Vienna', to: 'Accommodation', travelDate: '', amount: 60 }];
+    const receiptInput = { participant: { ...participant, greenTravel: true }, tickets: receiptTickets };
+    function receiptForm(input = receiptInput) { const f = form({ ...claim, ...input, requestId: crypto.randomUUID() }); f.append('ticket-1', new Blob([ticket], { type: 'image/jpeg' }), 'food.jpg'); f.append('ticket-2', new Blob([ticket], { type: 'image/jpeg' }), 'hotel.jpg'); return f; }
+    for (const invalid of [{ ...receiptInput, participant: { ...participant, greenTravel: false } }, { ...receiptInput, tickets: [{ ...claim.tickets[0], mode: 'Flight' }, ...receiptTickets.slice(1)] }, { ...receiptInput, tickets: receiptTickets.slice(1) }]) {
+      assert.equal((await req('/projects/oasis/submissions', 'POST', receiptForm(invalid), participantCookie)).status, 422);
+    }
+    const receiptResponse = await req('/projects/oasis/submissions', 'POST', receiptForm(), participantCookie);
+    assert.equal(receiptResponse.status, 201);
+    const receiptSaved = await receiptResponse.json();
+    const receiptDetails = await (await req(`/admin/submissions/${receiptSaved.id}`, 'GET', undefined, admin)).json();
+    assert.equal(receiptDetails.totalCents, 42100);
+    assert.deepEqual(receiptDetails.tickets.map((t: { mode: string }) => t.mode), ['Train', 'Food', 'Accommodation']);
+    assert.deepEqual(receiptDetails.tickets.slice(1).map((t: { travelDate: string; to: string }) => [t.travelDate, t.to]), [['', 'Food'], ['', 'Accommodation']]);
+    const receiptPdfResponse = await req(`/admin/submissions/${receiptSaved.id}/pdf`, 'GET', undefined, admin);
+    assert.equal(receiptPdfResponse.status, 200);
+    const receiptPdfBytes = new Uint8Array(await receiptPdfResponse.arrayBuffer());
+    const receiptPdf = await PDFDocument.load(receiptPdfBytes); assert.ok(receiptPdf.getPageCount() >= 5);
+    await mkdir('tmp/pdfs', { recursive: true }); await writeFile('tmp/pdfs/green-receipts-php.pdf', receiptPdfBytes);
+    assert.equal((await req(`/admin/submissions/${receiptSaved.id}`, 'DELETE', undefined, admin)).status, 200);
+
     response = await req('/projects/oasis/submissions', 'POST', form(), participantCookie); const receipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(receipt) + log); assert.equal(receipt.finalCents, 30900); assert.match(receipt.reference, /^OASIS_DE_TUGAY_ÖZKAN_\d{4}_\d{2}_\d{2}$/);
     response = await req('/projects/oasis/submissions', 'POST', form(), participantCookie); assert.equal((await response.json()).reference, receipt.reference);
     const id = receipt.id;
@@ -57,10 +79,12 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     const saved = await (await req(`/admin/submissions/${id}`, 'GET', undefined, admin)).json(); assert.equal(saved.extraCents, 4000); assert.equal(saved.destinationCity, 'Vienna');
     const list = await (await req('/admin/projects/oasis/submissions', 'GET', undefined, admin)).json(); assert.equal(list[0].finalCents, 34900);
     assert.equal((await req('/projects/oasis/organisation-form?country=Germany', 'GET', undefined, participantCookie)).status, 401);
-    response = await req('/projects/oasis/organisation-unlock', 'POST', { code: settings.organisationAccessCode }); const organisationCookie = response.headers.get('set-cookie')!.split(';')[0];
+    response = await req('/projects/oasis/organisation-unlock', 'POST', { country: 'Germany', code: settings.partnerAccessCodes.Germany }); const organisationCookie = response.headers.get('set-cookie')!.split(';')[0];
+    assert.equal((await req(`/admin/submissions/${id}/finalize`, 'PUT', {}, participantCookie)).status, 401);
+    assert.equal((await req(`/admin/submissions/${id}/finalize`, 'PUT', {}, admin)).status, 200);
     const organisationForm = await (await req('/projects/oasis/organisation-form?country=Germany', 'GET', undefined, organisationCookie)).json();
     assert.deepEqual(organisationForm.participants, [{ label: 'Participant 1', name: 'Tugay Özkan', role: 'Facilitator', reimbursementCents: 34900 }]);
-    const organisationInput = { requestId: crypto.randomUUID(), organisationName: 'Test Youth Organisation', country: 'Germany', submitterRole: 'sending-organisation-member', submitterName: 'Alex Member', submitterPosition: 'Project Coordinator', submitterPhone: '+49 123456789', submitterEmail: 'member@example.test', signaturePlace: 'Berlin', signatureDate: '2026-09-06', accountHolder: 'Test Youth Organisation', iban: 'DE89370400440532013000', bankCountry: 'Germany', swift: 'COBADEFFXXX', signature: claim.signature, declaration: true };
+    const organisationInput = { requestId: crypto.randomUUID(), organisationName: 'Test Youth Organisation', organisationOid: 'E12345678', country: 'Germany', submitterRole: 'sending-organisation-member', submitterName: 'Alex Member', submitterPosition: 'Project Coordinator', submitterPhone: '+49 123456789', submitterEmail: 'member@example.test', signaturePlace: 'Berlin', signatureDate: '2026-09-06', accountHolder: 'Test Youth Organisation', iban: 'DE89370400440532013000', bankCountry: 'Germany', swift: 'COBADEFFXXX', signature: claim.signature, declaration: true };
     response = await req('/projects/oasis/organisation-declarations', 'POST', organisationInput, organisationCookie);
     const organisationReceipt = await response.json(); assert.equal(response.status, 201, JSON.stringify(organisationReceipt) + log); assert.equal(organisationReceipt.totalCents, 34900);
     assert.equal((await req('/projects/oasis/organisation-declarations', 'POST', { ...organisationInput, requestId: crypto.randomUUID() }, organisationCookie)).status, 409);

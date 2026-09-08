@@ -11,6 +11,8 @@ export const currencies = [
   { code: 'TRY', name: 'Turkish lira' },
 ] as const;
 export const travelModes = ['Car', 'Bus', 'Train', 'Flight'] as const;
+export const receiptTypes = ['Food', 'Accommodation'] as const;
+export const isReceipt = (ticket: { mode?: string }) => receiptTypes.some(type => type === ticket.mode);
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export const MAX_TOTAL_SIZE = 40 * 1024 * 1024;
 export const MAX_TICKETS = 30;
@@ -33,9 +35,9 @@ export const ticketSchema = z.object({
   connections: z.boolean().optional(),
   boardingPasses: z.array(boardingPassSchema).max(24).optional(),
   purchaseDate: purchaseDateSchema,
-  travelDate: calendarDate,
+  travelDate: z.union([calendarDate, z.literal('')]),
   from: text('Departure', 120), to: text('Destination', 120),
-  mode: z.enum(travelModes),
+  mode: z.enum([...travelModes, ...receiptTypes]),
   ticketType: z.enum(['Paper ticket', 'Electronic ticket']),
   currency: z.enum(['EUR', 'CZK', 'DKK', 'HUF', 'PLN', 'RON', 'NOK', 'SEK', 'TRY']),
   amount: z.number().finite().positive('Enter an amount greater than zero').max(100000000).refine(v => Math.abs(v * 100 - Math.round(v * 100)) < 0.00001, 'Use at most two decimal places'),
@@ -43,8 +45,9 @@ export const ticketSchema = z.object({
   if (ticket.mode !== 'Flight' && ticket.boardingPasses?.length) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Boarding passes must belong to a flight' });
   if (ticket.journeyType !== 'round-trip' && ticket.boardingPasses?.some(p => p.journey === 'return')) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Choose a round trip to add return flights' });
   for (const journey of ['outbound', 'return']) if ((ticket.boardingPasses?.filter(p => p.journey === journey).length ?? 0) > 12) ctx.addIssue({ code: 'custom', path: ['boardingPasses'], message: 'Use at most 12 segments per journey' });
-  if (ticket.travelDate < ticket.purchaseDate) ctx.addIssue({ code: 'custom', path: ['travelDate'], message: 'Travel date cannot be before the purchase date' });
-});
+  if (!isReceipt(ticket) && !ticket.travelDate) ctx.addIssue({ code: 'custom', path: ['travelDate'], message: 'Travel date is required' });
+  if (!isReceipt(ticket) && ticket.travelDate < ticket.purchaseDate) ctx.addIssue({ code: 'custom', path: ['travelDate'], message: 'Travel date cannot be before the purchase date' });
+}).transform(ticket => isReceipt(ticket) ? { ...ticket, travelDate: '', to: ticket.mode } : ticket);
 export const participantSchema = z.object({
   firstName: text('First name', 80), lastName: text('Last name', 80),
   name: z.string().optional(), citizenship: text('Citizenship', 80),
@@ -67,6 +70,8 @@ export const claimSchema = z.object({
   signature: z.string().max(300000).startsWith('data:image/png;base64,'),
   declaration: z.literal(true, { errorMap: () => ({ message: 'Confirm the declaration before submitting' }) }),
 }).superRefine((claim, ctx) => {
+  if (!claim.tickets.some(ticket => !isReceipt(ticket))) ctx.addIssue({ code: 'custom', path: ['tickets'], message: 'Add at least one travel ticket' });
+  if (claim.tickets.some(isReceipt) && (!claim.participant.greenTravel || claim.tickets.some(ticket => ticket.mode === 'Flight'))) ctx.addIssue({ code: 'custom', path: ['tickets'], message: 'Food and accommodation receipts require green travel with no flights' });
   if (claim.participant.greenTravel && claim.tickets.some(ticket => ticket.mode === 'Flight')) {
     ctx.addIssue({ code: 'custom', path: ['participant', 'greenTravel'], message: 'Green travel cannot be selected when any mode of travel is Flight' });
   }
@@ -80,11 +85,12 @@ export const projectDetailsSchema = z.object({
 });
 export const extraSchema = z.object({ extraCents: centsSchema, note: z.string().trim().max(1000) });
 export const settingsSchema = z.object({
+  expectedParticipants: z.record(z.number().int().min(0).max(1000)).optional(),
   ...projectDetailsSchema.shape,
   projectCode: text('Project code', 120),
   countries: z.array(text('Country', 80)).min(1, 'Add participating countries').max(40).refine(v => new Set(v.map(x => x.toLowerCase())).size === v.length, 'Remove duplicate countries'),
-  accessCode: z.string().min(8, 'Use at least 8 characters').max(128).optional(),
-  organisationAccessCode: z.string().min(8, 'Use at least 8 characters for the partner organisation code').max(128).optional(),
+  accessCode: z.string().max(128).optional(),
+  partnerAccessCodes: z.record(z.string().max(128).nullable()).optional(),
   enabled: z.boolean(),
 }).superRefine((s, ctx) => {
   for (const country of s.countries) {
@@ -100,13 +106,15 @@ export type ClaimInput = z.infer<typeof claimSchema>;
 export type Rate = { currency: string; requestedDate: string; rateDate: string; rate: number; source: string };
 export type CalculatedTicket = TicketInput & Rate & { serial: number; euroCents: number; filename: string };
 export type ProjectDetails = z.infer<typeof projectDetailsSchema>;
-export type ProjectSettings = Partial<ProjectDetails> & { projectCode: string; countries: string[]; enabled: boolean; organisationEnabled: boolean; hasAccessCode: boolean; hasOrganisationAccessCode: boolean };
-export type SavedClaim = { projectShortName?: string; activityStartDate?: string; activityEndDate?: string; declarationText?: string; reference?: string; activityDuration?: string; destinationCity?: string; countryLimitCents?: number; extraCents?: number; extraNote?: string; extraApprovedAt?: string; id: string; projectId: string; projectName: string; projectCode: string; participant: Participant; tickets: CalculatedTicket[]; totalCents: number; signature: string; createdAt: string; declaration: true };
-export type ClaimSummary = { reference?: string; finalCents?: number; id: string; name: string; team: string; email: string; totalCents: number; createdAt: string };
+export type ProjectSettings = Partial<ProjectDetails> & { demo?: boolean; country?: string; partnerAccessConfigured?: Record<string, boolean>; expectedParticipants?: Record<string, number>; projectCode: string; countries: string[]; enabled: boolean; organisationEnabled: boolean; hasAccessCode: boolean; hasOrganisationAccessCode: boolean };
+export type GreenTravelCorrection = { previous: boolean; value: boolean; reason: string; correctedAt: string };
+export type SavedClaim = { approvedAt?: string; greenTravelCorrections?: GreenTravelCorrection[]; projectShortName?: string; activityStartDate?: string; activityEndDate?: string; declarationText?: string; reference?: string; activityDuration?: string; destinationCity?: string; countryLimitCents?: number; extraCents?: number; extraNote?: string; extraApprovedAt?: string; id: string; projectId: string; projectName: string; projectCode: string; participant: Participant; tickets: CalculatedTicket[]; totalCents: number; signature: string; createdAt: string; declaration: true };
+export type ClaimSummary = { approvedAt?: string; reference?: string; finalCents?: number; id: string; name: string; team: string; email: string; totalCents: number; createdAt: string };
 
 export const organisationDeclarationSchema = z.object({
   requestId: z.string().uuid(),
   organisationName: text('Organisation name', 200),
+  organisationOid: z.string().trim().max(40).default(''),
   country: text('Country', 80),
   submitterRole: z.enum(['team-leader', 'sending-organisation-member']),
   submitterName: text('Submitter name', 160),
@@ -126,7 +134,7 @@ export const organisationDeclarationSchema = z.object({
 }).transform(value => ({ ...value, submitterPosition: value.submitterRole === 'team-leader' ? '' : value.submitterPosition, legalRepresentativeName: value.submitterName }));
 export type OrganisationDeclarationInput = z.infer<typeof organisationDeclarationSchema>;
 export type OrganisationParticipant = { label: string; name: string; role: Participant['role']; reimbursementCents: number };
-export type OrganisationFormData = ProjectDetails & { projectName: string; projectCode: string; countries: string[]; country: string; participants: OrganisationParticipant[]; totalCents: number };
+export type OrganisationFormData = ProjectDetails & { progress?: { expected: number | null; submitted: number; approved: number; pending: number; missing: number | null; ready: boolean }; projectName: string; projectCode: string; countries: string[]; country: string; participants: OrganisationParticipant[]; totalCents: number };
 export type SavedOrganisationDeclaration = OrganisationDeclarationInput & OrganisationFormData & { id: string; projectId: string; createdAt: string };
 export type OrganisationDeclarationSummary = { id: string; projectId: string; country: string; organisationName: string; legalRepresentativeName: string; totalCents: number; createdAt: string };
 
@@ -147,13 +155,16 @@ export const partnershipAgreementSchema = z.object({
   bankCurrency: z.enum(partnershipCurrencies),
   legalRepresentativeName: text('Legal representative name', 160),
   legalRepresentativePosition: text('Legal representative position', 160),
+  signerEmail: z.string().trim().email('Enter a valid signer email').max(254),
   signaturePlace: text('Place of signature', 120),
   signatureDate: calendarDate.refine(value => value <= today(), 'Signature date cannot be in the future'),
   signature: z.string().max(300000).startsWith('data:image/png;base64,'),
   declaration: z.literal(true, { errorMap: () => ({ message: 'Confirm the agreement before submitting' }) }),
 });
 export type PartnershipAgreementInput = z.infer<typeof partnershipAgreementSchema>;
-export type SavedPartnershipAgreement = PartnershipAgreementInput & { id: string; projectId: string; projectName: string; projectCode: string; createdAt: string };
+export type SigningEvidence = { signerName: string; signerRole: string; signerEmail: string; signedAt: string; maskedIp: string; userAgent: string; documentId: string; confirmation: string; sha256: string };
+export type CoordinatorSignatureEvidence = { signerName: string; signerRole: string; organisation: string; issuedAt: string; documentId: string; statement: string };
+export type SavedPartnershipAgreement = PartnershipAgreementInput & { id: string; projectId: string; projectName: string; projectCode: string; createdAt: string; signingEvidence: SigningEvidence; coordinatorSignatureEvidence: CoordinatorSignatureEvidence };
 export type PartnershipAgreementSummary = { id: string; projectId: string; partnerCountry: string; partnerName: string; legalRepresentativeName: string; createdAt: string };
 
 export const partnershipAgreementArticles = [
@@ -220,7 +231,7 @@ export const partnershipAgreementArticles = [
 ] as const;
 
 export function organisationPaymentDeclaration(data: Pick<SavedOrganisationDeclaration, 'totalCents' | 'projectName' | 'projectCode' | 'destinationCity' | 'activityStartDate' | 'activityEndDate'>) {
-  return `I declare that a payment of ${euro(data.totalCents)} will be paid by bank transfer to the bank account below after the required participant reporting has been completed and all original travel documents for the EU project ${data.projectName} (${data.projectCode}) held in ${data.destinationCity}, between ${data.activityStartDate} and ${data.activityEndDate}, have been delivered and checked.`;
+  return `I declare that a payment of ${euro(data.totalCents)} will be paid by bank transfer to the bank account above after the required participant reporting has been completed and all original travel documents for the EU project ${data.projectName} (${data.projectCode}) held in ${data.destinationCity}, between ${data.activityStartDate} and ${data.activityEndDate}, have been delivered and checked.`;
 }
 export const euroCents = (amount: number, rate: number) => Math.round((amount * rate + Number.EPSILON) * 100);
 export const euro = (cents: number) => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
@@ -260,26 +271,40 @@ export const declarationPoints = [
 ];
 export const declarationText = [declarationIntro, ...declarationPoints].join("\n\n");
 
-export const greenTravelConfirmation = "I confirm that I used green means of transport for my travel related to this Erasmus+ activity.";
+export const greenTravelConfirmation = "I confirm that my entire journey to and from this activity was by car, bus, or train, without using any flight.";
 export const greenTravelDeclaration = [
-  "I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using eligible low-emission means of transport, such as train, bus, car-sharing or bicycle.",
+  "I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using car, bus, or train for the entire journey, without any flights.",
   "I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered."
 ];
 
 export const legacyDeclarationText = 'I confirm that these details are accurate, these expenses were incurred for this project, and the uploaded tickets correspond to the listed journeys. I authorize IJBK to use these details to process my reimbursement.';
 
 export const flightRoute = (ticket: Pick<TicketInput, 'from' | 'to' | 'mode' | 'journeyType'>) =>
-  `${ticket.from} → ${ticket.to}${ticket.mode === 'Flight' && ticket.journeyType === 'round-trip' ? ` → ${ticket.from}` : ''}`;
+  isReceipt(ticket) ? `${ticket.from} / ${ticket.to}` : `${ticket.from} → ${ticket.to}${ticket.mode === 'Flight' && ticket.journeyType === 'round-trip' ? ` → ${ticket.from}` : ''}`;
 
 // A single ordered list drives storage, review, tables and PDF attachment pages.
 // Boarding passes never participate in reimbursement totals.
 export function supportingDocuments(claim: Pick<SavedClaim, 'tickets'>) {
   return claim.tickets.flatMap(ticket => [
-    { key: `ticket-${ticket.serial}`, label: `Ticket ${ticket.serial}`, ticket, filename: ticket.filename, from: ticket.from, to: ticket.to, route: flightRoute(ticket), amount: ticket.amount, currency: ticket.currency, euroCents: ticket.euroCents, isBoardingPass: false },
+    { key: `ticket-${ticket.serial}`, label: `${isReceipt(ticket) ? ticket.mode + " receipt" : "Ticket"} ${ticket.serial}`, ticket, filename: ticket.filename, from: ticket.from, to: ticket.to, route: flightRoute(ticket), amount: ticket.amount, currency: ticket.currency, euroCents: ticket.euroCents, isBoardingPass: false },
     ...(ticket.mode === 'Flight' ? ticket.boardingPasses ?? [] : []).map((pass, i) => ({
       key: `boarding-${ticket.serial}-${i + 1}`, label: `Flight ${ticket.serial} / ${pass.journey === 'return' ? 'Return' : 'Outbound'} boarding pass ${i + 1}`,
       ticket, filename: pass.filename ?? '', from: pass.from, to: pass.to, route: `${pass.from || 'Airport not recorded'} → ${pass.to || 'Airport not recorded'}`,
       amount: 0, currency: 'EUR', euroCents: 0, isBoardingPass: true,
     })),
   ]);
+}
+
+export function allGreenTransport(tickets: { mode?: string }[]): boolean {
+  const transport = tickets.filter(ticket => !isReceipt(ticket));
+  return transport.length > 0 && transport.every(ticket => ['Car', 'Bus', 'Train'].includes(ticket.mode ?? ''));
+}
+
+export const greenTravelCorrectionSchema = z.object({ greenTravel: z.boolean(), reason: z.string().trim().min(1, 'Enter a reason for the correction.').max(500) });
+export function correctGreenTravel(claim: SavedClaim, input: z.infer<typeof greenTravelCorrectionSchema>, correctedAt: string): SavedClaim {
+  if (input.greenTravel && claim.tickets.some(ticket => ticket.mode === 'Flight')) throw new Error('Green travel cannot be selected when the claim contains flights.');
+  if (!input.greenTravel && claim.tickets.some(isReceipt)) throw new Error('Food and accommodation receipts require green travel. Review those expenses before changing this option.');
+  if (!input.greenTravel && allGreenTransport(claim.tickets)) throw new Error('Green travel cannot be disabled when all transport is by car, bus, or train.');
+  if (input.greenTravel === claim.participant.greenTravel) return claim;
+  return { ...claim, participant: { ...claim.participant, greenTravel: input.greenTravel }, greenTravelCorrections: [...(claim.greenTravelCorrections ?? []), { previous: claim.participant.greenTravel, value: input.greenTravel, reason: input.reason, correctedAt }] };
 }

@@ -1,11 +1,18 @@
-import { useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Eraser } from 'lucide-react';
 
-export default function SignaturePad({ onChange, disabled }: { onChange: (value: string) => void; disabled?: boolean }) {
+export default function SignaturePad({ onChange, disabled, initialValue = '' }: { initialValue?: string; onChange: (value: string) => void; disabled?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const [signed, setSigned] = useState(false);
+  useEffect(() => {
+    if (!initialValue) return;
+    const img = new Image(); img.onload = () => { ref.current?.getContext('2d')?.drawImage(img, 0, 0, 1000, 240); setSigned(true); }; img.src = initialValue;
+    return () => { img.onload = null; };
+    // Restore only on mount; drawing and clearing are managed by the canvas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const point = (event: PointerEvent<HTMLCanvasElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     return [(event.clientX - bounds.left) * 1000 / bounds.width, (event.clientY - bounds.top) * 240 / bounds.height];

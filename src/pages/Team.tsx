@@ -31,24 +31,6 @@ const Team = () => {
       skills: ["Software Engineering", "Project Planning", "Implementation", "Finance Tracking"],
     },
     {
-      name: "Om Tiwari",
-      email: "shivendra@ijbk-de.org",
-      role: "Founding Member",
-      expertise: "Data Science & Social Advocacy",
-      country: "India",
-      bio: "Data scientist and sustainability advocate leading social media and PR across youth initiatives.",
-      skills: ["Data Science", "Sustainability", "Social Justice", "Communications"],
-    },
-    {
-      name: "Rishibha Goyal",
-      email: "rishibha@ijbk-de.org",
-      role: "Team Member",
-      expertise: "Participant Selection",
-      country: "India",
-      bio: "Designs inclusive participant selection, coordinates with partners, and safeguards diverse cohorts.",
-      skills: ["Selection", "Application Review", "Partner Coordination", "Program Management"],
-    },
-    {
       name: "Marta Rudzate",
       email: "marta@ijbk-de.org",
       role: "Founding Member",
@@ -65,6 +47,15 @@ const Team = () => {
       country: "Slovakia",
       bio: "Psychology student supporting Erasmus+ co-creation, refugee aid, sports, mindfulness, and acro yoga.",
       skills: ["Psychology", "Youth Work", "Refugee Support", "Mindfulness"],
+    },
+    {
+      name: "Om Tiwari",
+      email: "shivendra@ijbk-de.org",
+      role: "Founding Member",
+      expertise: "Data Science & Social Advocacy",
+      country: "India",
+      bio: "Data scientist and sustainability advocate leading social media and PR across youth initiatives.",
+      skills: ["Data Science", "Sustainability", "Social Justice", "Communications"],
     },
     {
       name: "Prateek Kumar Sharma",
@@ -98,7 +89,6 @@ const Team = () => {
     if (name === "Yeliena Bemeshchuk") return <img src="/lovable-uploads/lenochka.png" alt={name} {...commonProps} />;
     if (name === "Rohit Singh Negi") return <img src="/lovable-uploads/baba.png" alt={name} {...commonProps} />;
     if (name === "Prateek Kumar Sharma") return <img src="/lovable-uploads/prateek.png" alt={name} {...commonProps} />;
-    if (name === "Rishibha Goyal") return <img src="/lovable-uploads/rishibha.jpeg" alt={name} {...commonProps} />;
     if (name === "Marta Rudzate") return <img src="/lovable-uploads/marta.jpeg" alt={name} {...commonProps} />;
     if (name === "Tamara Suniarová") return <img src="/lovable-uploads/tamara.jpeg" alt={name} {...commonProps} />;
     return (
@@ -131,7 +121,7 @@ const Team = () => {
             <Card key={member.name} className="panel-strong holo-card hover-lift transition-transform duration-300">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-medium flex-shrink-0">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-medium flex-shrink-0">
                     {renderAvatar(member.name)}
                   </div>
                   <div className="space-y-1">

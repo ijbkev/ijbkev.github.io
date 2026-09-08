@@ -1,20 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-const d1Directory = path.resolve('.wrangler/state/v3/d1/miniflare-D1DatabaseObject');
-const candidates = existsSync(d1Directory)
-  ? readdirSync(d1Directory).filter(file => file.endsWith('.sqlite')).map(file => path.join(d1Directory, file))
-  : [];
-const databasePath = process.argv[2] || candidates.find(file => {
-  try {
-    const candidate = new DatabaseSync(file, { readOnly: true });
-    const found = candidate.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='project_details'").get();
-    candidate.close();
-    return Boolean(found);
-  } catch { return false; }
-});
-if (!databasePath) throw new Error('The local reimbursement D1 database was not found. Start the development server once and retry.');
+const databasePath = process.argv[2] || path.resolve('.local/demo-reimbursement/reimbursement.sqlite3');
+if (!existsSync(databasePath)) throw new Error('Start npm run dev once to initialize the local PHP database.');
 
 const db = new DatabaseSync(databasePath);
 const project = db.prepare("SELECT project_code AS projectCode FROM project_settings WHERE project_id='oasis'").get();
@@ -23,8 +12,24 @@ if (!project || !detailsRow) throw new Error('Configure the OASIS reimbursement 
 const details = JSON.parse(detailsRow.data);
 const createdAt = new Date().toISOString();
 const signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Xw2ZAAAAAElFTkSuQmCC';
+const germanDemoTickets = [
+  ['2026-09-04', '2026-09-20', 'Berlin', 'Vienna', 'Train', 'Electronic ticket', 'EUR', 89.90],
+  ['2026-09-04', '2026-09-20', 'Vienna', 'Bratislava', 'Train', 'Electronic ticket', 'EUR', 18.50],
+  ['2026-09-05', '2026-09-21', 'Bratislava', 'Vienna', 'Bus', 'Electronic ticket', 'EUR', 12.00],
+  ['2026-09-06', '2026-09-22', 'Vienna', 'Graz', 'Train', 'Electronic ticket', 'EUR', 24.90],
+  ['2026-09-07', '2026-09-23', 'Graz', 'Vienna', 'Train', 'Electronic ticket', 'EUR', 24.90],
+  ['2026-09-08', '2026-09-24', 'Vienna', 'Bratislava', 'Bus', 'Electronic ticket', 'EUR', 12.00],
+  ['2026-09-09', '2026-09-25', 'Bratislava', 'Vienna', 'Train', 'Electronic ticket', 'EUR', 18.50],
+  ['2026-09-10', '2026-09-27', 'Vienna', 'Berlin', 'Train', 'Electronic ticket', 'EUR', 94.90],
+  ['2026-09-20', '', 'Vienna', 'Food', 'Food', 'Paper ticket', 'EUR', 26.40],
+  ['2026-09-20', '', 'Vienna', 'Accommodation', 'Accommodation', 'Paper ticket', 'EUR', 118.00],
+].map(([purchaseDate, travelDate, from, to, mode, ticketType, currency, amount], index) => ({
+  serial: index + 1, purchaseDate, travelDate, from, to, mode, ticketType, currency, amount,
+  euroCents: Math.round(amount * 100), rate: 1, rateDate: purchaseDate, requestedDate: purchaseDate,
+  source: 'Demo data', filename: `demo-germany-${index + 1}.jpg`,
+}));
 const people = [
-  ['demo-oasis-de-leader', 'Anna Keller', 'Germany', 'Team Leader', 'anna.keller@demo.ijbk.local', 28640, 2260],
+  ['demo-oasis-de-leader', 'Anna Keller', 'Germany', 'Team Leader', 'anna.keller@demo.ijbk.local', 44000, 0],
   ['demo-oasis-de-p1', 'Lukas Weber', 'Germany', 'Participant', 'lukas.weber@demo.ijbk.local', 24890, 0],
   ['demo-oasis-de-p2', 'Mia Hoffmann', 'Germany', 'Participant', 'mia.hoffmann@demo.ijbk.local', 31750, 0],
   ['demo-oasis-de-p3', 'Noah Fischer', 'Germany', 'Participant', 'noah.fischer@demo.ijbk.local', 19450, 1250],
@@ -34,8 +39,8 @@ const people = [
   ['demo-oasis-ee-p3', 'Rasmus Põder', 'Estonia', 'Participant', 'rasmus.poder@demo.ijbk.local', 30900, 0],
 ];
 const insert = db.prepare(`INSERT OR REPLACE INTO submissions
-  (id, project_id, request_id, session_hash, status, name, team, email, total_cents, data, pdf_key, created_at)
-  VALUES (?, 'oasis', ?, 'demo-seed', 'complete', ?, ?, ?, ?, ?, '', ?)`);
+  (id, project_id, request_id, session_hash, status, name, team, email, total_cents, data, pdf_path, created_at)
+  VALUES (?, 'oasis', ?, 'demo-seed', 'complete', ?, ?, ?, ?, ?, ?, ?)`);
 db.exec('BEGIN');
 try {
   for (const [id, name, team, role, email, totalCents, extraCents] of people) {
@@ -52,9 +57,11 @@ try {
         city: team === 'Germany' ? 'Berlin' : 'Tallinn', sendingOrganisation: `${team} Youth Network`,
         arrivalDate: details.activityStartDate, departureDate: details.activityEndDate,
       },
-      tickets: [], signature, declaration: true, createdAt,
+      tickets: id === 'demo-oasis-de-leader' ? germanDemoTickets : [], signature, declaration: true, createdAt,
     };
-    insert.run(id, id, name, team, email, totalCents, JSON.stringify(claim), createdAt);
+    const claimDirectory = path.join(path.dirname(databasePath), 'claims', 'oasis', id);
+    mkdirSync(claimDirectory, { recursive: true, mode: 0o700 });
+    insert.run(id, id, name, team, email, totalCents, JSON.stringify(claim), path.join(claimDirectory, 'complete.pdf'), createdAt);
   }
   db.exec('COMMIT');
 } catch (error) {

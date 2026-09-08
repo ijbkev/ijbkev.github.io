@@ -9,7 +9,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    proxy: { "/api": { target: "http://127.0.0.1:8787", changeOrigin: true } },
+    fs: { deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "**/.local/**", "**/.dev.vars", "**/php-api/**"] },
+    proxy: { "/api": { target: "http://127.0.0.1:8787", changeOrigin: false } },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

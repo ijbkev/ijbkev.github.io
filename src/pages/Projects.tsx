@@ -81,7 +81,7 @@ const Projects = () => {
                 <p className="text-muted-foreground leading-relaxed">
                   These are structured educational programmes with learning objectives, daily schedules, and active participation requirements. To understand what an Erasmus+ project truly involves and ensure it aligns with your expectations, please visit our{" "}
                   <Link to="/erasmus-plus" className="text-primary hover:underline font-semibold">
-                    What is E+
+                    What is Erasmus +
                   </Link>
                   {" "}section first.
                 </p>
@@ -151,10 +151,11 @@ const Projects = () => {
                 </div>
 
                 {acceptsReimbursements(project) ? (
-                  <div className="pt-3 border-t border-border mt-auto">
+                  <div className="pt-3 border-t border-border mt-auto flex flex-wrap items-center gap-3">
                     <Link to={`/projects/${project.id}`} className="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2 font-semibold after:absolute after:inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4" aria-label={`View ${project.title}`}>
                       View project <ArrowRight className="w-4 h-4" />
                     </Link>
+                    {project.availability && <span className={`rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${project.availability === "full" ? "bg-red-600 text-white" : "bg-emerald-500 text-white"}`}>{project.availability === "full" ? "Spots full" : "Spots available"}</span>}
                   </div>
                 ) : project.applicationLink && (
                   <div className="pt-3 border-t border-border mt-auto">
