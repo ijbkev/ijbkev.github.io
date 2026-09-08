@@ -17,7 +17,7 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
   const apiPath = path.resolve('php-api');
   const password = 'test-admin-secret';
   // Load source directly with a synthetic administrator and isolated storage.
-  await writeFile(path.join(dir, 'router.php'), `<?php define('IJBK_ADMIN_PASSWORD_HASH', '${await hashPassword(password)}'); require '${apiPath}/lib.php'; require '${apiPath}/pdf.php'; $source=file_get_contents('${apiPath}/index.php'); $source=str_replace("require_once __DIR__ . '/bootstrap.php';", '', $source); $source=str_replace("__DIR__ . '/lib.php'", "'${apiPath}/lib.php'", $source); $source=str_replace("__DIR__ . '/pdf.php'", "'${apiPath}/pdf.php'", $source); eval(substr($source,5));`);
+  await writeFile(path.join(dir, 'router.php'), `<?php define('IJBK_ADMIN_PASSWORD_HASH', '${await hashPassword(password)}'); require '${apiPath}/lib.php'; require '${apiPath}/pdf.php'; $source=file_get_contents('${apiPath}/index.php'); $source=str_replace("require_once __DIR__ . '/bootstrap.php';", '', $source); $source=str_replace("__DIR__ . '/lib.php'", "'${apiPath}/lib.php'", $source); $source=str_replace("__DIR__ . '/project-drive.php'", "'${apiPath}/project-drive.php'", $source); $source=str_replace("__DIR__ . '/pdf.php'", "'${apiPath}/pdf.php'", $source); eval(substr($source,5));`);
   const child = spawn('php', ['-S', `127.0.0.1:${port}`, path.join(dir, 'router.php')], { env: { ...process.env, IJBK_STORAGE_DIR: dir }, stdio: ['ignore', 'ignore', 'pipe'] });
   let log = ''; child.stderr.on('data', data => { log += data.toString(); });
   try {
@@ -25,12 +25,20 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     async function req(route: string, method = 'GET', body?: unknown, cookie = '') {
       return fetch(`${base}/api${route}`, { method, headers: { Origin: base, Cookie: cookie, ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }) }, body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined });
     }
+    assert.equal((await req('/admin/projects/oasis/drive')).status,401);
+    assert.equal((await req('/admin/projects/oasis/drive/participants','POST',{})).status,401);
     let response = await req('/admin/login', 'POST', { password }); assert.equal(response.status, 200, log);
     const admin = response.headers.get('set-cookie')!.split(';')[0];
     const settings = { projectCode: 'TEST-2026', shortName: 'OASIS', activityStartDate: '2026-09-20', activityEndDate: '2026-09-27', destinationCity: 'Vienna', countryLimits: { Germany: 30900 }, countries: ['Germany'], enabled: true, accessCode: 'participant-test-code', organisationAccessCode: 'organisation-test-code' };
     response = await req('/admin/projects/oasis', 'PUT', settings, admin); assert.equal(response.status, 200, await response.text());
     assert.equal((await (await req('/projects/oasis')).json()).countryLimits.Germany, 30900);
     response = await req('/projects/oasis/unlock', 'POST', { code: settings.accessCode }); const participantCookie = response.headers.get('set-cookie')!.split(';')[0];
+    assert.equal((await req('/projects/oasis/session')).status, 401);
+    assert.equal((await (await req('/projects/oasis')).json()).reimbursementDriveUrl, undefined);
+    assert.equal((await (await req('/projects/oasis/session', 'GET', undefined, participantCookie)).json()).reimbursementDriveUrl, 'https://drive.google.com/drive/folders/10zUrdflJQt9--SfnFL_D70Dpreg8Ak-k');
+    assert.equal((await req('/admin/projects/oasis/drive','GET',undefined,participantCookie)).status,401);
+    const driveDashboard=await (await req('/admin/projects/oasis/drive','GET',undefined,admin)).json();
+    assert.equal(driveDashboard.configured,true);assert.equal(driveDashboard.connected,false);
     const participant = { firstName: 'Tugay', lastName: 'Özkan', citizenship: 'Turkish', team: 'Germany', residenceCountry: 'Germany', city: 'Berlin', role: 'Facilitator', arrivalDate: '2026-09-20', departureDate: '2026-09-27', dateOfBirth: '2000-03-22', email: 'participant@example.test', phone: '+49 123456789', address: 'Example Street 12', accountHolder: 'Tugay Özkan', bankName: 'Test Bank', bankAccount: 'DE89370400440532013000', bic: 'COBADEFFXXX', bankAddress: 'Berlin', signaturePlace: 'Berlin', notes: 'Test notes', sendingOrganisation: 'Test youth organisation', greenTravel: true };
     const claim = { requestId: crypto.randomUUID(), participant, declaration: true, signature: `data:image/png;base64,${(await readFile('tests/fixtures/signature.png')).toString('base64')}`, tickets: [{ purchaseDate: '2026-09-04', travelDate: '2026-09-20', from: 'Berlin', to: 'Vienna', mode: 'Train', ticketType: 'Paper ticket', currency: 'EUR', amount: 349 }], extraCents: 90000, countryLimitCents: 90000, destinationCity: 'Forged destination' };
     function form(input = claim, file: Uint8Array = ticket, type = 'image/jpeg', filename = 'train.jpg') { const f = new FormData(); f.append('claim', JSON.stringify(input)); f.append('ticket-0', new Blob([file], { type }), filename); return f; }
@@ -94,9 +102,12 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     assert.equal(response.status, 200, log); assert.ok((await PDFDocument.load(await response.arrayBuffer())).getPageCount() >= 3);
     assert.equal((await req(`/admin/submissions/${modernReceipt.id}`, 'DELETE', undefined, admin)).status, 200);
     // One invoice, separate outbound and return passes, missing files rejected, corrupt files retained for review.
-    const flight = { ...claim, requestId: crypto.randomUUID(), tickets: [{ ...claim.tickets[0], mode: 'Flight', journeyType: 'round-trip', connections: true, from: 'FRA', to: 'TLL', boardingPasses: [
+    const flight = { ...claim, participant: { ...participant, greenTravel: false }, requestId: crypto.randomUUID(), tickets: [{ ...claim.tickets[0], mode: 'Flight', journeyType: 'round-trip', connections: true, from: 'FRA', to: 'TLL', boardingPasses: [
       { journey: 'outbound', from: 'FRA', to: 'MUC' }, { journey: 'outbound', from: 'MUC', to: 'TLL' }, { journey: 'return', from: 'TLL', to: 'FRA' },
     ] }] };
+    const rejectedGreenFlight = await req('/projects/oasis/submissions', 'POST', form({ ...flight, participant: { ...participant, greenTravel: true } }, modernPdf, 'application/pdf', 'invoice.pdf'), modernParticipantCookie);
+    assert.equal(rejectedGreenFlight.status, 422);
+    assert.match(await rejectedGreenFlight.text(), /Green travel cannot be selected/);
     const flightForm = form(flight, modernPdf, 'application/pdf', 'invoice.pdf');
     flightForm.append('boarding-0-0', new Blob([modernPdf], { type: 'application/pdf' }), 'outbound.pdf');
     flightForm.append('boarding-0-2', new Blob(['%PDF-1.7 broken content'], { type: 'application/pdf' }), 'return-unreadable.pdf');

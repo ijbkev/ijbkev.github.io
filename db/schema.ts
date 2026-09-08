@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const projectSettings = sqliteTable('project_settings', {
@@ -29,3 +30,14 @@ export const organisationDeclarations = sqliteTable('organisation_declarations',
   organisationName: text('organisation_name').notNull(), legalRepresentativeName: text('legal_representative_name').notNull(),
   totalCents: integer('total_cents').notNull(), data: text('data').notNull(), createdAt: text('created_at').notNull(),
 }, table => [uniqueIndex('idx_organisation_declarations_project_country').on(table.projectId, table.country)]);
+
+export const driveProjects = sqliteTable('drive_projects', {
+  projectId: text('project_id').primaryKey(), countriesFolderId: text('countries_folder_id').notNull().unique(),
+});
+export const driveParticipants = sqliteTable('drive_participants', {
+  folderId: text('folder_id').primaryKey(), projectId: text('project_id').notNull(), countryId: text('country_id').notNull(),
+  country: text('country').notNull(), name: text('name').notNull(), email: text('email').notNull().default(''), status: text('status').notNull().default('Needs privacy setup'),
+}, table => [uniqueIndex('drive_participant_identity').on(table.projectId, table.countryId, table.email).where(sql`${table.email} <> ''`)]);
+export const driveLocks = sqliteTable('drive_locks', {
+  lockKey: text('lock_key').primaryKey(), token: text('token').notNull(), expiresAt: integer('expires_at').notNull(),
+});

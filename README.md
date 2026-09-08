@@ -216,3 +216,67 @@ IJBK_TEST_DB_PDF='/path/to/DB.pdf' IJBK_TEST_ALIISA_PDF='/path/to/ALIISA.pdf' np
 QA PDFs are written only into ignored `tmp/pdfs/`. Browser verification should
 also run with `IJBK_QPDF_BINARY` pointing to an unavailable executable to confirm
 that the deployment does not depend on a server-installed converter.
+
+### Project participant Drive folders
+
+The bottom of each project's reimbursement admin dashboard lists countries and
+personal folders directly from the configured Google Drive. Oasis, Who Am AI,
+and Connected Not Consumed have default Countries links. Other projects can
+connect a project folder (Countries is detected inside) or directly select a
+Countries folder with any name. Existing connections stay selected; use
+Change Drive link only when intentionally replacing one. Saving a link reads
+folders and does not create folders or change Google permissions. Participant links are returned
+only by the authenticated participant session endpoint.
+
+1. Enter each existing participant's email on their row. Existing Drive shares
+   are displayed as hints, never silently treated as verified assignments.
+2. Choose **Apply all emails & enable country browsing**. Blank emails make the
+   corresponding folders owner-only. This removes other direct shares and
+   public links from personal folders and their current contents. It preserves
+   files, applies limited access, disables editor resharing, and verifies access.
+3. Add future participants using country, name, and email. Countries are reused;
+   identity is project + country folder ID + normalized email. A matching name
+   alone never authorizes reassigning an existing folder: use its explicit row.
+   Applying a changed email revokes the previous person's personal-folder access.
+
+Country browsing is granted only after every personal folder in the selected
+project passes a privacy audit. All assigned participants receive reader access
+to Countries and its country folders, with writer access only to their assigned
+personal folder. Owners retain access. Google may show other personal folder
+names greyed out; their contents cannot be opened. Folders with unknown ownership,
+shortcuts, loose files in country containers, or over 500 participant items stop
+the operation rather than weakening privacy. Current enforcement requires
+organizer ownership of the inspected content in My Drive; shared drives are not
+supported. External changes or new direct shares require another privacy audit;
+this is not a continuous background policy enforcement service.
+
+The backend records assignments and statuses in SQLite/D1 and serializes Drive
+mutations. A failed operation can leave partial restrictions in place but does
+not report success; refresh and retry the same row. Do not run the older local
+Oasis pilot simultaneously with dashboard changes.
+
+#### Server connection
+
+Use the organizer's OAuth refresh token, not an API key. For local Workers:
+
+```sh
+node scripts/setup-drive.mjs /path/to/client.json /path/to/tokens.json
+```
+
+This writes only ignored `.dev.vars` and `.local/google-drive.json`, with private
+file permissions. The frontend never receives Google credentials. For hosted
+Workers, set `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and
+`GOOGLE_DRIVE_REFRESH_TOKEN` as runtime secrets. For PHP, provide the same
+server environment variables, or store the JSON containing `client_id`,
+`client_secret`, and `refresh_token` at
+`/srv/www/www-ijbk-ev/data/reimbursement/google-drive.json` with permissions 0600
+and ownership allowing the PHP process to read it. Alternatively set
+`IJBK_GOOGLE_DRIVE_CREDENTIALS` to an absolute private path. Never put this file
+inside `data/http` or `dist`. Build output intentionally excludes this connection.
+OAuth consent in Google's testing mode may require reconnection when Google
+expires its refresh token.
+
+The additive `0005_project_drive.sql` migration is generated from the three Drive
+schema definitions (isolated generation avoids regenerating earlier manually
+maintained migrations). Worker and PHP initialization also create the tables
+idempotently; no existing claims or submissions are modified.

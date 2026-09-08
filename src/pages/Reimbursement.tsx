@@ -1,7 +1,7 @@
 import { useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Plus, Trash2, CheckCircle2, FileText, LockKeyhole, Send, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FolderOpen, ExternalLink, Plus, Trash2, CheckCircle2, FileText, LockKeyhole, Send, RefreshCw } from 'lucide-react';
 import { acceptsReimbursements, projects } from '@/data/projects';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,14 +23,26 @@ const participantForProject = (projectId: string): Participant => projectId === 
 
 export default function Reimbursement() {
   const { projectId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const project = projects.find(p => p.id === projectId && acceptsReimbursements(p));
   const client = useQueryClient();
-  const session = useQuery({ queryKey: ['participant-session', projectId], queryFn: () => api<ProjectSettings>(`/projects/${projectId}/session`), enabled: !!project, retry: false, refetchOnWindowFocus: false });
+  const session = useQuery({ queryKey: ['participant-session', projectId], queryFn: () => api<ProjectSettings & { reimbursementDriveUrl?: string }>(`/projects/${projectId}/session`), enabled: !!project, retry: false, refetchOnWindowFocus: false });
+  const showMenu = !!session.data?.reimbursementDriveUrl && searchParams.get('view') !== 'form';
   if (!project) return <NotFound />;
   return <div className="page-shell py-10 md:py-16 space-y-8">
     <Link to={`/projects/${project.id}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" />Back to {project.title}</Link>
-    <header className="space-y-3"><p className="text-sm uppercase tracking-[0.18em] text-primary">{project.title}</p><h1 className="text-3xl md:text-4xl font-semibold">Travel reimbursement</h1><p className="text-muted-foreground max-w-2xl">All your travel details, tickets, and signature in one place.</p></header>
-    {session.isPending ? <p role="status">Checking participant access…</p> : session.isError ? (session.error instanceof ApiError && session.error.status === 401 ? <AccessGate projectId={project.id} onUnlocked={() => client.invalidateQueries({ queryKey: ['participant-session', projectId] })} /> : <div className="rounded-xl border bg-card p-6 space-y-4"><p role="alert">{session.error.message}</p><Button variant="outline" onClick={() => session.refetch()}>Try again</Button></div>) : <ClaimForm key={project.id} projectId={project.id} settings={session.data} />}
+    <header className="space-y-3"><p className="text-sm uppercase tracking-[0.18em] text-primary">{project.title}</p><h1 className="text-3xl md:text-4xl font-semibold">{showMenu ? 'Participant Dashboard' : 'Travel reimbursement'}</h1><p className="text-muted-foreground max-w-2xl">{showMenu ? 'Access your reimbursement Drive or complete your travel reimbursement form.' : 'All your travel details, tickets, and signature in one place.'}</p></header>
+    {session.isPending ? <p role="status">Checking participant access…</p> : session.isError ? (session.error instanceof ApiError && session.error.status === 401 ? <AccessGate destination="dashboard" projectId={project.id} onUnlocked={() => client.invalidateQueries({ queryKey: ['participant-session', projectId] })} /> : <div className="rounded-xl border bg-card p-6 space-y-4"><p role="alert">{session.error.message}</p><Button variant="outline" onClick={() => session.refetch()}>Try again</Button></div>) : showMenu ? <section aria-label="Reimbursement options" className="grid gap-5 md:grid-cols-2 max-w-4xl">
+      <a href={session.data.reimbursementDriveUrl} target="_blank" rel="noopener noreferrer" className="group rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 space-y-4 transition hover:border-emerald-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <FolderOpen className="h-8 w-8 text-emerald-700" /><h2 className="text-xl font-semibold">Reimbursement Drive</h2><p className="text-sm text-muted-foreground">Open the project’s Countries folder in Google Drive for travel tickets. Sign in with the Google account your organizer has granted access to.</p><span className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">Open Drive<ExternalLink className="h-4 w-4" /><span className="sr-only"> (opens in a new tab)</span></span>
+      </a>
+      <Link to="?view=form" className="group rounded-2xl border border-blue-200 bg-blue-50/60 p-6 space-y-4 transition hover:border-blue-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <FileText className="h-8 w-8 text-blue-700" /><h2 className="text-xl font-semibold">Reimbursement form</h2><p className="text-sm text-muted-foreground">Submit your travel costs, tickets, bank details, and signature for reimbursement.</p><span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-800">Continue to form<ArrowRight className="h-4 w-4" /></span>
+      </Link>
+    </section> : <>
+      {session.data.reimbursementDriveUrl && <Button variant="outline" onClick={() => setSearchParams({})}><ArrowLeft className="mr-2 h-4 w-4" />Back to reimbursement options</Button>}
+      <ClaimForm key={project.id} projectId={project.id} settings={session.data} />
+    </>}
   </div>;
 }
 

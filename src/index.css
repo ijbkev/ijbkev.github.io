@@ -610,8 +610,125 @@
 /* Cream postcard frames retain the original two moving photo ribbons. */
 .postcard-gallery .marquee-track {
   padding-block: 18px 24px;
-  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  border-radius: 16px;
+}
+/* The projector occupies only the spare desktop gutter, preserving ribbon width. */
+.postcard-projector {
+  display: none;
+  position: absolute;
+  right: calc(100% - 12px);
+  top: 50%;
+  width: clamp(88px, calc((100vw - 1280px) / 2 - 24px), 156px);
+  aspect-ratio: 1 / 1.25;
+  transform: translateY(-50%) rotate(-3deg);
+  pointer-events: none;
+  isolation: isolate;
+}
+@media (min-width: 1440px) {
+  .postcard-projector { display: block; }
+}
+.postcard-projector-body {
+  position: absolute;
+  inset: 32% 14% 24% 6%;
+  border: 2px solid #8a816f;
+  border-radius: 12% 18% 12% 12%;
+  background: linear-gradient(145deg, #f3ebda, #cabea5);
+  box-shadow: inset 0 3px 0 #fff8e9, 0 7px 12px -9px #263342;
+  z-index: 2;
+}
+.postcard-projector-label {
+  position: absolute;
+  top: 18%;
+  left: 11%;
+  font-size: clamp(5px, 0.5vw, 8px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #454b4b;
+}
+.postcard-projector-vents {
+  position: absolute;
+  left: 12%;
+  bottom: 18%;
+  width: 40%;
+  height: 29%;
+  background: repeating-linear-gradient(to right, #686b63 0 2px, transparent 2px 6px);
+  border-radius: 2px;
+}
+.postcard-projector-switch {
+  position: absolute;
+  right: 13%;
+  bottom: 20%;
+  width: 13%;
+  aspect-ratio: 1;
+  border: 2px solid #f6ebcf;
+  border-radius: 50%;
+  background: #a95238;
+  box-shadow: 0 0 0 1px #a18f75;
+}
+.postcard-projector-reel {
+  position: absolute;
+  top: 4%;
+  width: 48%;
+  aspect-ratio: 1;
+  border: 3px solid #5f6d72;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #36444d 0 8%, transparent 9%),
+    radial-gradient(circle at 50% 22%, #344650 0 12%, transparent 13%),
+    radial-gradient(circle at 77% 42%, #344650 0 12%, transparent 13%),
+    radial-gradient(circle at 67% 75%, #344650 0 12%, transparent 13%),
+    radial-gradient(circle at 33% 75%, #344650 0 12%, transparent 13%),
+    radial-gradient(circle at 23% 42%, #344650 0 12%, transparent 13%), #b8c1bf;
+  box-shadow: inset 0 0 0 2px #e4e7dc;
+  animation: postcard-reel-turn 20s linear infinite;
+  z-index: 3;
+}
+.postcard-projector-reel-back { left: 0; }
+.postcard-projector-reel-front { left: 49%; top: 8%; animation-direction: reverse; }
+.postcard-projector-lens {
+  position: absolute;
+  right: 0;
+  top: 43%;
+  width: 20%;
+  height: 19%;
+  border: 2px solid #4e5a60;
+  border-right: 5px solid #f6db92;
+  border-radius: 3px;
+  background: repeating-linear-gradient(to right, #35434d 0 4px, #68757a 4px 6px);
+  z-index: 3;
+}
+.postcard-projector-beam {
+  position: absolute;
+  left: 96%;
+  top: 7%;
+  width: 130%;
+  height: 90%;
+  clip-path: polygon(0 42%, 100% 0, 100% 100%, 0 61%);
+  background: linear-gradient(to right, rgba(246, 210, 125, 0.35), rgba(246, 210, 125, 0));
+  z-index: -1;
+}
+.postcard-projector-stand {
+  position: absolute;
+  left: 35%;
+  bottom: 9%;
+  width: 18%;
+  height: 21%;
+  background: #59656a;
+  transform: skewX(-12deg);
+}
+.postcard-projector-foot {
+  position: absolute;
+  left: 13%;
+  bottom: 6%;
+  width: 64%;
+  height: 7%;
+  border-radius: 50% 50% 3px 3px;
+  background: #34434c;
+  box-shadow: 0 5px 7px -4px #7a7f79;
+}
+@keyframes postcard-reel-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .postcard-projector-reel { animation: none; }
 }
 .journey-postcard {
   transform: rotate(var(--postcard-tilt, 0deg));
@@ -641,4 +758,38 @@
   background-image: radial-gradient(circle, #fff 2px, transparent 3px), linear-gradient(25deg, transparent 48.8%, #bfdbfe 49.5% 50%, transparent 50.7%);
   background-size: 48px 48px, 96px 96px;
   mask-image: linear-gradient(110deg, transparent 5%, black);
+}
+
+/* A quiet map motif on editorial page introductions only. */
+.map-page-hero {
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(115deg, #061b49 0%, #003399 65%, #082557 100%);
+}
+.map-page-accent {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+}
+.map-page-accent img {
+  position: absolute;
+  width: clamp(540px, 70vw, 1000px);
+  max-width: none;
+  height: auto;
+  right: -5%;
+  top: 50%;
+  transform: translateY(-54%);
+  opacity: 0.28;
+}
+.map-page-accent-subtle img { opacity: 0.16; }
+.map-page-accent-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(6, 27, 73, 0.65), rgba(6, 27, 73, 0.2) 65%, transparent);
+}
+@media (max-width: 640px) {
+  .map-page-accent img { right: -220px; opacity: 0.17; }
+  .map-page-accent-subtle img { opacity: 0.1; }
 }

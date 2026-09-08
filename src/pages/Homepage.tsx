@@ -557,7 +557,20 @@ const Homepage = () => {
             </div>
           </div>
 
-          <div className="postcard-gallery page-shell mt-10 space-y-1">
+          <div className="postcard-gallery page-shell relative mt-10 space-y-1">
+            <div className="postcard-projector" aria-hidden="true">
+              <div className="postcard-projector-beam" />
+              <div className="postcard-projector-reel postcard-projector-reel-back" />
+              <div className="postcard-projector-reel postcard-projector-reel-front" />
+              <div className="postcard-projector-body">
+                <span className="postcard-projector-label">FIELD NOTES</span>
+                <span className="postcard-projector-vents" />
+                <span className="postcard-projector-switch" />
+              </div>
+              <div className="postcard-projector-lens" />
+              <div className="postcard-projector-stand" />
+              <div className="postcard-projector-foot" />
+            </div>
             <div className="marquee-track">
               <div
                 className="marquee-row marquee-left gap-6 px-3"

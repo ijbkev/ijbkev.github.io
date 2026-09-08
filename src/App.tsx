@@ -14,6 +14,7 @@ import Contact from "./pages/Contact";
 import ErasmusPlus from "./pages/ErasmusPlus";
 import NotFound from "./pages/NotFound";
 import WhatsAppWidget from "./components/WhatsAppWidget";
+const PartnerDashboard = lazy(() => import("./pages/PartnerDashboard"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Reimbursement = lazy(() => import("./pages/Reimbursement"));
 const ReimbursementAdmin = lazy(() => import("./pages/ReimbursementAdmin"));
@@ -53,6 +54,7 @@ const App = () => (
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
+                <Route path="/projects/:projectId/partner-dashboard" element={<PartnerDashboard />} />
                 <Route path="/projects/:projectId/reimbursement" element={<Reimbursement />} />
                 <Route path="/projects/:projectId/organisation-reimbursement" element={<OrganisationReimbursement />} />
                 <Route path="/projects/:projectId/partnership-agreement" element={<PartnershipAgreement />} />

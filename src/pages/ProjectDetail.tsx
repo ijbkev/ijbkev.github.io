@@ -1,6 +1,7 @@
+import MapHeroAccent from "@/components/MapHeroAccent";
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Calendar, MapPin, ExternalLink, FileCheck2, LockKeyhole, UserRound, Landmark, Handshake } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, MapPin, ExternalLink, FileCheck2, LockKeyhole, UserRound, Handshake } from 'lucide-react';
 import { acceptsReimbursements, projects } from '@/data/projects';
 import { api } from '@/lib/reimbursement-api';
 import type { ProjectSettings } from '../../shared/reimbursement';
@@ -13,8 +14,9 @@ export default function ProjectDetail() {
   const settings = useQuery({ queryKey: ['project-settings', projectId], queryFn: () => api<ProjectSettings>(`/projects/${projectId}`), enabled: !!project, retry: 1 });
   if (!project) return <NotFound />;
   return <div className="pb-20">
-    <section className="relative bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white">
-      <div className="page-shell py-12 md:py-20 space-y-7">
+    <section className="map-page-hero relative bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white">
+        <MapHeroAccent />
+      <div className="page-shell relative py-12 md:py-20 space-y-7">
         <Link to="/projects" className="inline-flex items-center text-sm gap-2 text-white/80 hover:text-white"><ArrowLeft className="w-4 h-4" />All projects</Link>
         <div className="flex flex-wrap gap-3 text-xs font-semibold"><span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-full">{project.status}</span><span className="border border-white/30 px-3 py-1 rounded-full">{project.category}</span></div>
         <h1 className="text-4xl md:text-6xl font-semibold">{project.title}</h1>
@@ -32,7 +34,7 @@ export default function ProjectDetail() {
       </div>
       <aside className="rounded-3xl border bg-card p-6 md:p-8 space-y-6 shadow-sm">
         <div className="flex items-start gap-4"><span className="rounded-2xl bg-primary/10 p-3"><FileCheck2 className="w-7 h-7 text-primary" /></span><div><h2 className="text-2xl font-semibold">Participant and Partner Toolkit</h2><p className="mt-1 text-sm text-muted-foreground">Choose the document or portal that matches your role.</p></div></div>
-        {settings.data?.enabled ? <div className="space-y-3"><ToolkitLink to={`/projects/${project.id}/reimbursement`} icon={UserRound} title="Participant Reimbursement" description="Submit travel costs, tickets, bank details and signature." tone="blue" /><ToolkitLink to={`/projects/${project.id}/organisation-reimbursement`} icon={Landmark} title="Reimbursement Declaration" description="For partner organisations after participant reimbursements are finalized." tone="violet" /><ToolkitLink to={`/projects/${project.id}/partnership-agreement`} icon={Handshake} title="Partnership Agreement" description="Review, complete and sign the full project partnership agreement." tone="emerald" /></div> : <p className="rounded-lg bg-muted p-3 text-sm">{settings.isError ? 'The toolkit is temporarily unavailable.' : 'The toolkit will open when the organizer has configured this project.'}</p>}
+        {settings.data?.enabled ? <div className="space-y-3"><ToolkitLink to={`/projects/${project.id}/reimbursement`} icon={UserRound} title="Participant Dashboard" description="Open participant reimbursement tools and submit your travel costs, tickets, bank details and signature." tone="blue" /><ToolkitLink to={`/projects/${project.id}/partner-dashboard`} icon={Handshake} title="Partner Dashboard" description="Complete your reimbursement declaration and partnership agreement." tone="violet" /></div> : <p className="rounded-lg bg-muted p-3 text-sm">{settings.isError ? 'The toolkit is temporarily unavailable.' : 'The toolkit will open when the organizer has configured this project.'}</p>}
         <p className="flex items-start gap-2 text-xs text-muted-foreground"><LockKeyhole className="w-4 h-4 shrink-0" />You’ll need the secret access code from your project organizer.</p>
       </aside>
     </div>

@@ -1,3 +1,4 @@
+import MapHeroAccent from "@/components/MapHeroAccent";
 import { useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -229,7 +230,8 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+      <section className="map-page-hero relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <MapHeroAccent subtle />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 grid gap-8 xl:grid-cols-[1.05fr_0.95fr] items-center">
           <div className="space-y-6 text-center xl:text-left">

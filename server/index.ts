@@ -1,3 +1,6 @@
+import { countriesFolder, driveDashboard, configureDrive, renameDriveFolder, saveDrivePerson, enableCountryBrowsing, driveLock } from './project-drive';
+import { drivePersonSchema } from '../shared/project-drive';
+import driveSchemaSql from '../drizzle/0005_project_drive.sql';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
@@ -15,7 +18,7 @@ import organisationSchemaSql from '../drizzle/0002_organisation_declarations.sql
 import partnershipSchemaSql from '../drizzle/0004_partnership_agreements.sql';
 import { generateOrganisationDeclarationPdf } from './organisation-pdf';
 import { generatePartnershipAgreementPdf } from './partnership-pdf';
-const schemaSql = [baseSchemaSql, detailsSchemaSql, organisationSchemaSql, partnershipSchemaSql].join('\n--> statement-breakpoint\n');
+const schemaSql = [baseSchemaSql, detailsSchemaSql, organisationSchemaSql, partnershipSchemaSql, driveSchemaSql].join('\n--> statement-breakpoint\n');
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 const initialized = new WeakMap<D1Database, Promise<unknown>>();
@@ -90,6 +93,29 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 app.use('/api/*', bodyLimit({ maxSize: 80 * 1024 * 1024, onError: c => c.json({ error: 'This request exceeds the 80 MB processing limit.' }, 413) }));
+app.get('/api/admin/projects/:id/drive', async c => {
+  await requireSession(c); projectById(c.req.param('id'));
+  return c.json(await driveDashboard(c.env.DB, c.env, c.req.param('id')));
+});
+app.put('/api/admin/projects/:id/drive', async c => {
+  await requireSession(c); projectById(c.req.param('id'));
+  const { url, folderType } = z.object({ url: z.string().trim().min(1).max(500), folderType: z.enum(['auto', 'project', 'countries']).default('auto') }).parse(await c.req.json());
+  return c.json(await driveLock(c.env.DB, () => configureDrive(c.env.DB, c.env, c.req.param('id'), url, folderType)));
+});
+app.post('/api/admin/projects/:id/drive/participants', async c => {
+  await requireSession(c); projectById(c.req.param('id'));
+  const input = drivePersonSchema.parse(await c.req.json());
+  return c.json(await driveLock(c.env.DB, () => saveDrivePerson(c.env.DB, c.env, c.req.param('id'), input)));
+});
+app.post('/api/admin/projects/:id/drive/rename', async c => {
+  await requireSession(c); projectById(c.req.param('id'));
+  const { name, folderId } = z.object({ name: z.string().trim().min(1).max(160), folderId: z.string().regex(/^[\w-]+$/) }).parse(await c.req.json());
+  return c.json(await driveLock(c.env.DB, () => renameDriveFolder(c.env.DB, c.env, c.req.param('id'), name, folderId)));
+});
+app.post('/api/admin/projects/:id/drive/browsing', async c => {
+  await requireSession(c); projectById(c.req.param('id'));
+  return c.json(await driveLock(c.env.DB, () => enableCountryBrowsing(c.env.DB, c.env, c.req.param('id'))));
+});
 app.get('/api/projects/:id', async c => c.json(publicSettings(await settings(c.env.DB, c.req.param('id')))));
 app.post('/api/projects/:id/unlock', async c => {
   const id = c.req.param('id');
@@ -111,7 +137,9 @@ app.post('/api/projects/:id/organisation-unlock', async c => {
 });
 app.get('/api/projects/:id/session', async c => {
   await requireSession(c, c.req.param('id'));
-  return c.json(publicSettings(await enabledSettings(c.env.DB, c.req.param('id'))));
+  const settings = publicSettings(await enabledSettings(c.env.DB, c.req.param('id')));
+  const folderId = await countriesFolder(c.env.DB, c.req.param('id'));
+  return c.json({ ...settings, ...(folderId ? { reimbursementDriveUrl: `https://drive.google.com/drive/folders/${folderId}` } : {}) });
 });
 app.get('/api/projects/:id/organisation-session', async c => {
   await requireSession(c, c.req.param('id'), 'organisation');

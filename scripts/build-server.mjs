@@ -5,6 +5,7 @@ await build({ entryPoints: ['server/index.ts'], outfile: 'dist/server/index.js',
 await rm('dist/api', { recursive: true, force: true });
 await cp('php-api', 'dist/api', { recursive: true });
 await cp('shared/countries.json', 'dist/api/countries.json');
+await cp('server/drive-defaults.json', 'dist/api/drive-defaults.json');
 await mkdir('dist/api/assets', { recursive: true });
 await cp('public/reimbursement/eu-logo.png', 'dist/api/assets/eu-logo.png');
 await cp('public/logo.png', 'dist/api/assets/ngo-logo.png');

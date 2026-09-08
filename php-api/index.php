@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/pdf.php';
+require_once __DIR__ . '/project-drive.php';
 
 header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff'); header('Referrer-Policy: no-referrer');
 origin_guard();
@@ -24,7 +25,7 @@ try {
         if(!is_string($code)||strlen($code)>128||empty($row['organisation_access_hash'])||!verify_secret($code,$row['organisation_access_hash']))fail('Incorrect partner organisation access code.',401);
         new_session('organisation',$id);respond(['ok'=>true]);
     }
-    if ($method==='GET' && preg_match('#^/projects/([^/]+)/session$#',$path,$m)) { $id=rawurldecode($m[1]); require_session($id); respond(public_settings(enabled_settings($id))); }
+    if ($method==='GET' && preg_match('#^/projects/([^/]+)/session$#',$path,$m)) { $id=rawurldecode($m[1]); require_session($id); $data=public_settings(enabled_settings($id)); $folderId=drive_folder($id); if($folderId)$data['reimbursementDriveUrl']='https://drive.google.com/drive/folders/'.$folderId; respond($data); }
     if ($method==='GET' && preg_match('#^/projects/([^/]+)/organisation-session$#',$path,$m)) { $id=rawurldecode($m[1]);require_session($id,'organisation');respond(public_settings(enabled_settings($id))); }
     if ($method==='GET' && preg_match('#^/projects/([^/]+)/organisation-form$#',$path,$m)) { $id=rawurldecode($m[1]);require_session($id,'organisation');respond(organisation_form_data($id,(string)($_GET['country']??''))); }
     if ($method==='GET' && preg_match('#^/projects/([^/]+)/rate$#',$path,$m)) { $id=rawurldecode($m[1]); require_session($id); enabled_settings($id); rate_limit('rates',300); respond(historical_rate((string)($_GET['currency']??''),(string)($_GET['date']??''))); }
@@ -84,6 +85,16 @@ try {
 
     if($method==='POST'&&$path==='/admin/login'){rate_limit('admin-login',8);$body=request_json();$pw=$body['password']??'';if(!is_string($pw)||!verify_secret($pw,IJBK_ADMIN_PASSWORD_HASH))fail('Incorrect administrator password.',401);new_session('admin');respond(['ok'=>true]);}
     if(str_starts_with($path,'/admin/'))$adminHash=require_session();
+    if(preg_match('#^/admin/projects/([^/]+)/drive(?:/(participants|browsing|rename))?$#',$path,$m)) {
+        $id=rawurldecode($m[1]);project($id);$action=$m[2]??'';
+        try {
+            if($method==='GET'&&$action==='')respond(drive_dashboard($id));
+            if($method==='PUT'&&$action===''){$body=request_json();respond(drive_locked(fn()=>drive_configure($id,trim((string)($body['url']??'')),(string)($body['folderType']??'auto'))));}
+            if($method==='POST'&&$action==='participants'){$body=request_json();respond(drive_locked(fn()=>drive_save_person($id,$body)));}
+            if($method==='POST'&&$action==='rename'){$body=request_json();respond(drive_locked(fn()=>drive_rename($id,$body)));}
+            if($method==='POST'&&$action==='browsing')respond(drive_locked(fn()=>drive_browsing($id)));
+        } catch(RuntimeException $e) { fail($e->getMessage(),409); }
+    }
     if($method==='GET'&&$path==='/admin/session')respond(['ok'=>true]);
     if($method==='POST'&&$path==='/admin/logout'){db()->prepare('DELETE FROM sessions WHERE token_hash=?')->execute([$adminHash]);setcookie(cookie_name(),'',time()-3600,'/api');respond(['ok'=>true]);}
     if($method==='GET'&&$path==='/admin/projects'){$rows=db()->query('SELECT * FROM project_settings')->fetchAll();$map=[];foreach($rows as $r)$map[$r['project_id']]=$r;$out=[];foreach(projects() as $p)$out[]=array_merge($p,['category'=>'Erasmus+ Youth Exchange','status'=>'Upcoming','statusTone'=>'warning','date'=>'','location'=>'','description'=>'','highlights'=>[],'coverImage'=>'','coverAlt'=>'','settings'=>public_settings($map[$p['id']]??null)]);respond($out);}

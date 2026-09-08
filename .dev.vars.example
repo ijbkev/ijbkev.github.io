@@ -2,3 +2,8 @@
 # Set ADMIN_PASSWORD_HASH as a server secret for hosted environments.
 ADMIN_PASSWORD_HASH=""
 APP_ORIGIN="http://localhost:8080"
+
+# Organizer OAuth connection; server-only. Never use VITE_ for these values.
+GOOGLE_DRIVE_CLIENT_ID=""
+GOOGLE_DRIVE_CLIENT_SECRET=""
+GOOGLE_DRIVE_REFRESH_TOKEN=""

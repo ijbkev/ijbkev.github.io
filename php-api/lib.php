@@ -27,6 +27,10 @@ function db(): PDO {
     ]);
     $db->exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=15000');
     $schema = [
+        'CREATE TABLE IF NOT EXISTS drive_projects (project_id TEXT PRIMARY KEY NOT NULL, countries_folder_id TEXT NOT NULL UNIQUE)',
+        "CREATE TABLE IF NOT EXISTS drive_participants (folder_id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, country_id TEXT NOT NULL, country TEXT NOT NULL, name TEXT NOT NULL, email TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Needs privacy setup')",
+        "CREATE UNIQUE INDEX IF NOT EXISTS drive_participant_identity ON drive_participants(project_id,country_id,email) WHERE email <> ''",
+        'CREATE TABLE IF NOT EXISTS drive_locks (lock_key TEXT PRIMARY KEY NOT NULL, token TEXT NOT NULL, expires_at INTEGER NOT NULL)',
         'CREATE TABLE IF NOT EXISTS project_details (project_id TEXT PRIMARY KEY, data TEXT NOT NULL)',
         'CREATE TABLE IF NOT EXISTS project_settings (project_id TEXT PRIMARY KEY, project_code TEXT NOT NULL, countries TEXT NOT NULL, access_hash TEXT, enabled INTEGER NOT NULL DEFAULT 0)',
         'CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, role TEXT NOT NULL, project_id TEXT, expires_at INTEGER NOT NULL)',

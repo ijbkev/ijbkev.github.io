@@ -1,3 +1,4 @@
+import MapHeroAccent from "@/components/MapHeroAccent";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, Target, Sparkles, ArrowRight, Lightbulb, Globe, Leaf, Palette } from "lucide-react";
@@ -41,7 +42,8 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+      <section className="map-page-hero relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
+        <MapHeroAccent />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
         <div className="page-shell relative py-16 md:py-20 text-center space-y-6">
           <Badge className="mx-auto bg-white/15 text-white border-white/20 w-fit">Registered Non-Profit e.V.</Badge>

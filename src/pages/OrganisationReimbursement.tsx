@@ -18,7 +18,7 @@ export default function OrganisationReimbursement() {
   const session = useQuery({ queryKey: ['organisation-session', projectId], queryFn: () => api<ProjectSettings>(`/projects/${projectId}/organisation-session`), enabled: !!project, retry: false, refetchOnWindowFocus: false });
   if (!project) return <NotFound />;
   return <div className="page-shell py-10 md:py-16 space-y-8">
-    <Link to={`/projects/${project.id}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" />Back to {project.title}</Link>
+    <Link to={`/projects/${project.id}/partner-dashboard`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" />Back to Partner Dashboard</Link>
     <header className="max-w-4xl space-y-3"><p className="text-sm uppercase tracking-[0.18em] text-primary">{project.title}</p><h1 className="text-3xl md:text-4xl font-semibold">Reimbursement Declaration</h1><p className="text-sm text-muted-foreground">To be filled by the team leader or a member of the sending organisation after participant reimbursements and any extra amounts have been approved.</p></header>
     {session.isPending ? <p role="status">Checking project access…</p> : session.isError ? (session.error instanceof ApiError && session.error.status === 401 ? <AccessGate audience="organisation" projectId={project.id} onUnlocked={() => client.invalidateQueries({ queryKey: ['organisation-session', projectId] })} /> : <p role="alert">{session.error.message}</p>) : <OrganisationForm projectId={project.id} settings={session.data} />}
   </div>;

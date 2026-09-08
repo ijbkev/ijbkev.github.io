@@ -17,7 +17,7 @@ let organisationCookie = '';
 let signature: string;
 let jpeg: Uint8Array;
 let multiPdf: Uint8Array;
-const participant = { name: 'Zoë Müller-Łukasz', firstName: 'Zoë', lastName: 'Müller-Łukasz', city: 'Berlin', residenceCountry: 'Germany', sendingOrganisation: 'Example youth organisation', notes: 'Regional train and onward connection.', greenTravel: true, arrivalDate: '2026-09-20', departureDate: '2026-09-27', role: 'Team Leader', bankName: 'Test Bank', accountHolder: 'Zoë Müller-Łukasz', signaturePlace: 'Berlin', citizenship: 'German', team: 'Germany', dateOfBirth: '2000-03-22', email: 'participant@example.test', phone: '+49 123 456 789', bankAccount: 'DE89370400440532013000', bic: 'COBADEFFXXX', bankAddress: 'Test Bank\nBerlin, Germany', address: 'Example Street 12\nBerlin, Germany' };
+const participant = { name: 'Zoë Müller-Łukasz', firstName: 'Zoë', lastName: 'Müller-Łukasz', city: 'Berlin', residenceCountry: 'Germany', sendingOrganisation: 'Example youth organisation', notes: 'Regional train and onward connection.', greenTravel: false, arrivalDate: '2026-09-20', departureDate: '2026-09-27', role: 'Team Leader', bankName: 'Test Bank', accountHolder: 'Zoë Müller-Łukasz', signaturePlace: 'Berlin', citizenship: 'German', team: 'Germany', dateOfBirth: '2000-03-22', email: 'participant@example.test', phone: '+49 123 456 789', bankAccount: 'DE89370400440532013000', bic: 'COBADEFFXXX', bankAddress: 'Test Bank\nBerlin, Germany', address: 'Example Street 12\nBerlin, Germany' };
 
 async function request(path: string, method = 'GET', body?: unknown, cookie = '') {
   const req = new Request(`${origin}/api${path}`, { method, headers: { Origin: origin, ...(cookie ? { Cookie: cookie } : {}), ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}) }, body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined });
@@ -49,6 +49,8 @@ test('complete reimbursement workflow and access isolation', async () => {
   let response = await request('/projects/oasis');
   assert.equal(response.status, 200); assert.deepEqual(await response.json(), { projectCode: '', countries: [], enabled: false, organisationEnabled: false, hasAccessCode: false, hasOrganisationAccessCode: false });
   assert.equal((await request('/admin/projects')).status, 401);
+  assert.equal((await request('/admin/projects/oasis/drive')).status, 401);
+  assert.equal((await request('/admin/projects/oasis/drive/participants', 'POST', {})).status, 401);
   assert.equal((await request('/admin/submissions/unknown/pdf')).status, 401);
   assert.equal((await request('/projects/oasis/submissions', 'POST', {})).status, 401);
   assert.equal((await request('/projects/KA152')).status, 404);
@@ -59,13 +61,24 @@ test('complete reimbursement workflow and access isolation', async () => {
   assert.match(response.headers.get('set-cookie')!, /HttpOnly/); assert.match(response.headers.get('set-cookie')!, /Secure/); assert.match(response.headers.get('set-cookie')!, /SameSite=Strict/);
   response = await request('/admin/projects/oasis', 'PUT', { ...details, projectCode: '2026-1-DE04-KA152-OASIS', countries: ['Germany', 'Italy', 'Latvia', 'Estonia'], accessCode: 'participant-test-code', organisationAccessCode: 'organisation-test-code', enabled: true }, adminCookie);
   assert.equal(response.status, 200);
+  const driveDashboard = await (await request('/admin/projects/oasis/drive', 'GET', undefined, adminCookie)).json() as { configured: boolean; connected: boolean };
+  assert.equal(driveDashboard.configured, true); assert.equal(driveDashboard.connected, false);
   const publicText = await (await request('/projects/oasis')).text(); assert.ok(!publicText.includes('participant-test-code')); assert.ok(!publicText.includes('access_hash'));
   assert.equal((await request('/projects/oasis/unlock', 'POST', { code: 'wrong' })).status, 401);
   response = await request('/projects/oasis/unlock', 'POST', { code: 'participant-test-code' }); assert.equal(response.status, 200); participantCookie = cookieFrom(response);
+  assert.equal((await request('/projects/oasis/session')).status, 401);
+  assert.ok(!publicText.includes('reimbursementDriveUrl'));
+  const participantSession = await (await request('/projects/oasis/session', 'GET', undefined, participantCookie)).json() as { reimbursementDriveUrl: string };
+  assert.equal(participantSession.reimbursementDriveUrl, 'https://drive.google.com/drive/folders/10zUrdflJQt9--SfnFL_D70Dpreg8Ak-k');
   assert.equal((await request('/projects/who-am-ai/session', 'GET', undefined, participantCookie)).status, 401);
   assert.equal((await request('/admin/projects', 'GET', undefined, participantCookie)).status, 401);
+  assert.equal((await request('/admin/projects/oasis/drive', 'GET', undefined, participantCookie)).status, 401);
+  assert.equal((await request('/admin/projects/oasis/drive/browsing', 'POST', undefined, participantCookie)).status, 401);
   await db.prepare('INSERT INTO rate_cache (key, rate, rate_date, source) VALUES (?, ?, ?, ?)').bind('HUF:2026-09-04', 0.00275, '2026-09-04', 'European Central Bank via Frankfurter').run();
   response = await request('/projects/oasis/rate?currency=HUF&date=2026-09-04', 'GET', undefined, participantCookie); assert.equal(response.status, 200); assert.equal((await response.json() as {rate:number}).rate, 0.00275);
+  const rejectedGreenFlight = await request('/projects/oasis/submissions', 'POST', claimForm({ participant: { ...participant, greenTravel: true } }), participantCookie);
+  assert.equal(rejectedGreenFlight.status, 422);
+  assert.match(await rejectedGreenFlight.text(), /Green travel cannot be selected/);
   const requestId = crypto.randomUUID();
   response = await request('/projects/oasis/submissions', 'POST', claimForm({ requestId }), participantCookie);
   const receipt = await response.json() as { id: string; totalCents: number; error?: string };
@@ -147,6 +160,7 @@ test('complete reimbursement workflow and access isolation', async () => {
 test('validation rejects bad dates, currencies, money and missing declaration', () => {
   const base = { requestId: crypto.randomUUID(), participant, signature: 'data:image/png;base64,test', declaration: true, tickets: [baseTicket] };
   assert.equal(claimSchema.safeParse(base).success, true);
+  assert.equal(claimSchema.safeParse({ ...base, participant: { ...participant, greenTravel: true } }).success, true, 'train travel can qualify as green travel');
   for (const ticket of [{ ...baseTicket, purchaseDate: '2026-02-30' }, { ...baseTicket, purchaseDate: '2099-01-01' }, { ...baseTicket, amount: -1 }, { ...baseTicket, amount: 1.001 }, { ...baseTicket, travelDate: '2026-01-01' }, { ...baseTicket, currency: 'USD' }, { ...baseTicket, currency: 'BGN' }]) assert.equal(claimSchema.safeParse({ ...base, tickets: [ticket] }).success, false);
   assert.equal(claimSchema.safeParse({ ...base, declaration: false }).success, false);
   assert.equal(claimSchema.safeParse({ ...base, participant: { ...participant, greenTravel: true }, tickets: [{ ...baseTicket, mode: 'Flight' }] }).success, false);
