@@ -1,6 +1,7 @@
 {
     "require": {
         "tecnickcom/tcpdf": "^6.10",
-        "setasign/fpdi": "^2.6"
+        "setasign/fpdi": "^2.6",
+        "lbuchs/webauthn": "^2.2"
     }
 }

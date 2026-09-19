@@ -13,8 +13,18 @@ function fail(string $message, int $status = 400): never { respond(['error' => $
 function storage_dir(): string {
     $override = getenv('IJBK_STORAGE_DIR');
     $dir = $override !== false && $override !== '' ? $override : dirname(__DIR__, 2) . '/reimbursement';
+    if (!str_starts_with($dir, '/')) fail('Storage must be an absolute private directory.', 503);
+    // Resolve existing ancestors before creating anything, including symlinks.
+    $ancestor=$dir;
+    while (!file_exists($ancestor) && dirname($ancestor)!==$ancestor) $ancestor=dirname($ancestor);
+    $root=realpath($_SERVER['DOCUMENT_ROOT'] ?? '');
+    $resolvedAncestor=realpath($ancestor);
+    if ($root && $resolvedAncestor && ($resolvedAncestor===$root || str_starts_with($resolvedAncestor,$root.'/'))) fail('Storage must be outside the public document root.',503);
     if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) fail('The reimbursement storage could not be initialized.', 503);
-    return $dir;
+    $resolved=realpath($dir);
+    if (!$resolved || ($root && ($resolved===$root || str_starts_with($resolved,$root.'/')))) fail('Storage must be outside the public document root.',503);
+    if (!chmod($resolved,0700)) fail('Private storage permissions could not be secured.',503);
+    return $resolved;
 }
 
 function db(): PDO {
@@ -27,11 +37,16 @@ function db(): PDO {
     ]);
     $db->exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=15000');
     $schema = [
+        'CREATE TABLE IF NOT EXISTS partner_profiles (project_id TEXT NOT NULL, country TEXT NOT NULL, name TEXT NOT NULL, oid TEXT NOT NULL, PRIMARY KEY(project_id,country))',
+        'CREATE TABLE IF NOT EXISTS planner_tasks (id TEXT PRIMARY KEY, data TEXT NOT NULL)',
+        'CREATE TABLE IF NOT EXISTS planner_settings (id INTEGER PRIMARY KEY CHECK (id=1), urgency_days INTEGER NOT NULL DEFAULT 2)',
+
         'CREATE TABLE IF NOT EXISTS access_code_secrets (project_id TEXT NOT NULL, country TEXT NOT NULL, encrypted_code TEXT NOT NULL, PRIMARY KEY(project_id,country))',
         'CREATE TABLE IF NOT EXISTS partner_country_access (project_id TEXT NOT NULL, country TEXT NOT NULL, access_hash TEXT NOT NULL, PRIMARY KEY(project_id,country))',
         'CREATE TABLE IF NOT EXISTS reimbursement_drafts (token_hash TEXT PRIMARY KEY, project_id TEXT NOT NULL, data TEXT NOT NULL, files TEXT NOT NULL, claim_id TEXT, revision INTEGER NOT NULL DEFAULT 1, finalized INTEGER NOT NULL DEFAULT 0)',
         'CREATE TABLE IF NOT EXISTS drive_projects (project_id TEXT PRIMARY KEY NOT NULL, countries_folder_id TEXT NOT NULL UNIQUE)',
         "CREATE TABLE IF NOT EXISTS drive_participants (folder_id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, country_id TEXT NOT NULL, country TEXT NOT NULL, name TEXT NOT NULL, email TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Needs privacy setup')",
+        "CREATE TABLE IF NOT EXISTS project_participant_sheets (project_id TEXT PRIMARY KEY NOT NULL, columns_json TEXT NOT NULL, rows_json TEXT NOT NULL, updated_at TEXT NOT NULL)",
         "CREATE UNIQUE INDEX IF NOT EXISTS drive_participant_identity ON drive_participants(project_id,country_id,email) WHERE email <> ''",
         'CREATE TABLE IF NOT EXISTS drive_locks (lock_key TEXT PRIMARY KEY NOT NULL, token TEXT NOT NULL, expires_at INTEGER NOT NULL)',
         'CREATE TABLE IF NOT EXISTS project_details (project_id TEXT PRIMARY KEY, data TEXT NOT NULL)',
@@ -49,6 +64,7 @@ function db(): PDO {
         'CREATE TABLE IF NOT EXISTS rate_limits (limit_key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL)',
     ];
     foreach ($schema as $sql) $db->exec($sql);
+    if(!in_array('privacy_error',array_column($db->query('PRAGMA table_info(drive_participants)')->fetchAll(),'name'),true))$db->exec("ALTER TABLE drive_participants ADD COLUMN privacy_error TEXT NOT NULL DEFAULT ''");
     if(!in_array('country',array_column($db->query('PRAGMA table_info(sessions)')->fetchAll(),'name'),true))$db->exec('ALTER TABLE sessions ADD COLUMN country TEXT');
     $draftColumns=array_column($db->query('PRAGMA table_info(reimbursement_drafts)')->fetchAll(),'name');
     foreach(['resume_number','legacy_submission_id'] as $column)if(!in_array($column,$draftColumns,true))$db->exec('ALTER TABLE reimbursement_drafts ADD COLUMN '.$column.' TEXT');
@@ -74,7 +90,12 @@ function project(string $id): array {
 }
 
 function request_json(): array {
-    try { $body = json_decode((string) file_get_contents('php://input'), true, 32, JSON_THROW_ON_ERROR); }
+    // Bound actual reads as well as Content-Length (which may be absent).
+    $limit=8*1024*1024;
+    if ((int)($_SERVER['CONTENT_LENGTH']??0)>$limit) fail('Request too large.',413);
+    $raw=file_get_contents('php://input',false,null,0,$limit+1);
+    if ($raw===false || strlen($raw)>$limit) fail('Request too large.',413);
+    try { $body = json_decode($raw, true, 32, JSON_THROW_ON_ERROR); }
     catch (Throwable) { fail('The request could not be read.', 400); }
     if (!is_array($body)) fail('The request could not be read.', 400);
     return $body;
@@ -111,7 +132,7 @@ function verify_secret(string $value, string $stored): bool {
 
 function request_is_https(): bool {
     return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+        || (getenv('IJBK_TRUST_PROXY')==='1' && strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
 }
 
 function masked_client_ip(): string {
@@ -152,10 +173,11 @@ function new_session(string $role, ?string $projectId = null, ?string $country =
     $stmt = db()->prepare('INSERT INTO sessions(token_hash, role, project_id, expires_at, country) VALUES(?, ?, ?, ?, ?)');
     $stmt->execute([hash('sha256', $token), $role, $projectId, time() + 28800, $country]);
     setcookie(cookie_name($projectId,$role), $token, ['expires' => time() + 28800, 'path' => '/api', 'secure' => request_is_https(), 'httponly' => true, 'samesite' => 'Strict']);
+    if($role==='admin'&&$projectId===null)setcookie('ijbk_site_admin',$token,['expires'=>time()+28800,'path'=>'/','secure'=>request_is_https(),'httponly'=>true,'samesite'=>'Strict']);
 }
 
 function require_session(?string $projectId = null, string $projectRole = 'participant'): string {
-    $token = $_COOKIE[cookie_name($projectId,$projectRole)] ?? '';
+    $token = $projectId ? ($_COOKIE[cookie_name($projectId,$projectRole)] ?? '') : ($_COOKIE['ijbk_site_admin'] ?? $_COOKIE[cookie_name()] ?? '');
     if (!is_string($token) || strlen($token) !== 96) fail($projectId ? 'Enter the project access code to continue.' : 'Administrator sign-in required.', 401);
     $hash = hash('sha256', $token);
     $stmt = db()->prepare('SELECT role, project_id, expires_at FROM sessions WHERE token_hash = ?'); $stmt->execute([$hash]); $session = $stmt->fetch();
@@ -443,9 +465,10 @@ function delete_draft_files(array $files): void {
     foreach($files as $file){if(isset($file['path'])){@unlink($file['path']);@rmdir(dirname($file['path']));}}
 }
 
-// Older name-based references need the participant email as an additional check.
+// References and email addresses are identifiers, not proof of identity.
 // A successful recovery returns a private number for all later saves and reads.
 function resume_legacy_application(string $projectId, string $reference, string $email): array {
+    require_session(); // Legacy recovery is an administrator-assisted operation.
     $reference=trim($reference);$email=mb_strtolower(trim($email));
     if($reference===''||strlen($reference)>500)fail('Enter your previous submission reference.',422);
     if(!filter_var($email,FILTER_VALIDATE_EMAIL))fail('For an older submission reference, enter the email used on the application.',422);
@@ -549,4 +572,28 @@ function reveal_access_codes(string $projectId): array {
     $s=db()->prepare('SELECT country,encrypted_code FROM access_code_secrets WHERE project_id=?');$s->execute([$projectId]);$codes=[];
     foreach($s->fetchAll() as $row){$raw=base64_decode($row['encrypted_code'],true);if($raw===false||strlen($raw)<28)throw new RuntimeException('Invalid encrypted code.');$code=openssl_decrypt(substr($raw,28),'aes-256-gcm',access_code_key(),OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16),$projectId.'|'.$row['country']);if($code===false)throw new RuntimeException('Could not decrypt saved code.');$codes[$row['country']]=$code;}
     return ['participant'=>$codes['']??null,'partners'=>(object)array_filter($codes,fn($country)=>$country!=='',ARRAY_FILTER_USE_KEY)];
+}
+
+
+function handle_passkey_routes(string $method,string $path): never {
+    require_once __DIR__.'/passkeys.php';
+    passkey_routes($method,$path);
+}
+
+
+// Shared by the main website and standalone tools. Never trusts a UI flag.
+function site_admin_authenticated(): bool {
+    $token=$_COOKIE['ijbk_site_admin']??'';
+    if(!is_string($token)||strlen($token)!==96)return false;
+    $stmt=db()->prepare('SELECT role,project_id,expires_at FROM sessions WHERE token_hash=?');
+    $stmt->execute([hash('sha256',$token)]);$session=$stmt->fetch();
+    return $session&&$session['role']==='admin'&&$session['project_id']===null&&(int)$session['expires_at']>=time();
+}
+function site_admin_logout(): void {
+    foreach(['ijbk_site_admin',cookie_name()] as $name){
+        $token=$_COOKIE[$name]??'';
+        if(is_string($token)&&strlen($token)===96)db()->prepare("DELETE FROM sessions WHERE token_hash=? AND role='admin'")->execute([hash('sha256',$token)]);
+    }
+    setcookie(cookie_name(),'',['expires'=>time()-3600,'path'=>'/api','secure'=>request_is_https(),'httponly'=>true,'samesite'=>'Strict']);
+    setcookie('ijbk_site_admin','',['expires'=>time()-3600,'path'=>'/','secure'=>request_is_https(),'httponly'=>true,'samesite'=>'Strict']);
 }

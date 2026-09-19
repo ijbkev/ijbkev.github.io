@@ -8,9 +8,12 @@ import { api } from '@/lib/reimbursement-api';
 import { projects } from '@/data/projects';
 import { driveInvitationMessage, drivePersonSchema, type DriveDashboard, type DriveParticipant } from '../../../shared/project-drive';
 
+type DriveConnection = Pick<DriveDashboard, 'configured' | 'connected' | 'countriesFolderId'>;
+
 export default function ProjectDriveAdmin({ projectId }: { projectId: string }) {
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ['admin-drive', projectId], queryFn: () => api<DriveDashboard>(`/admin/projects/${projectId}/drive`, { cache: 'no-store' }), retry: false, refetchOnWindowFocus: false });
+  const connectionQuery = useQuery({ queryKey: ['admin-drive-connection', projectId], queryFn: () => api<DriveConnection>(`/admin/projects/${projectId}/drive/connection`, { cache: 'no-store' }), retry: false, refetchOnWindowFocus: false });
+  const query = useQuery({ queryKey: ['admin-drive', projectId], queryFn: () => api<DriveDashboard>(`/admin/projects/${projectId}/drive`, { cache: 'no-store' }), enabled: !connectionQuery.isPending, retry: false, refetchOnWindowFocus: false });
   const [activeTab, setActiveTab] = useState('folders');
   const [search, setSearch] = useState('');
   const [url, setUrl] = useState('');
@@ -36,12 +39,14 @@ export default function ProjectDriveAdmin({ projectId }: { projectId: string }) 
     }
   }
   const [emails, setEmails] = useState<Record<string, string>>({});
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const endpoint = `/admin/projects/${projectId}/drive`;
   const currentEmail = (row: DriveParticipant) => emails[row.folderId] ?? row.email;
   const invalidate = async () => {
+    await client.invalidateQueries({ queryKey: ['admin-drive-connection', projectId] });
     await client.invalidateQueries({ queryKey: ['admin-drive', projectId] });
     await client.invalidateQueries({ queryKey: ['participant-session', projectId] });
   };
@@ -67,8 +72,17 @@ export default function ProjectDriveAdmin({ projectId }: { projectId: string }) 
   }
   async function savePerson(row: DriveParticipant) {
     const input = drivePersonSchema.safeParse({ folderId: row.folderId, country: row.country, name: row.name, email: currentEmail(row).trim().toLowerCase() });
-    if (!input.success) throw new Error('Enter a country, name and valid email. Existing folders may have an empty email for owner-only access.');
-    await api(`${endpoint}/participants`, { method: 'POST', body: JSON.stringify(input.data) });
+    if (!input.success) {
+      const detail = 'Enter a country, name and valid email. Existing folders may have an empty email for owner-only access.';
+      setRowErrors(previous => ({ ...previous, [row.folderId]: detail }));
+      throw new Error(detail);
+    }
+    setRowErrors(previous => ({ ...previous, [row.folderId]: '' }));
+    try { await api(`${endpoint}/participants`, { method: 'POST', body: JSON.stringify(input.data) }); }
+    catch (reason) {
+      setRowErrors(previous => ({ ...previous, [row.folderId]: (reason as Error).message }));
+      throw reason;
+    }
   }
   async function browsing() { await api(`${endpoint}/browsing`, { method: 'POST' }); }
   async function add(event: FormEvent) {
@@ -108,24 +122,31 @@ export default function ProjectDriveAdmin({ projectId }: { projectId: string }) 
   async function saveRow(row: DriveParticipant) {
     await run(`Applying access for ${row.name}…`, async () => {
       await savePerson(row); setMessage(`Private access applied to ${row.name}.`);
-      try { await browsing(); setMessage(`Private access applied to ${row.name}. Country folders are viewable by anyone with the link. Personal folders remain private.`); }
-      catch (reason) { setMessage(`Private access applied to ${row.name}. Country browsing is not updated yet.`); throw reason; }
     });
   }
   async function applyAll() {
     const rows = query.data?.participants ?? [];
     // Validate every email before making the first external change.
-    if (rows.some(row => !drivePersonSchema.safeParse({ folderId: row.folderId, country: row.country, name: row.name, email: currentEmail(row).trim().toLowerCase() }).success)) { setError('Correct invalid emails before applying access.'); return; }
+    const invalid = rows.filter(row => !drivePersonSchema.safeParse({ folderId: row.folderId, country: row.country, name: row.name, email: currentEmail(row).trim().toLowerCase() }).success);
+    if (invalid.length) {
+      setRowErrors(Object.fromEntries(invalid.map(row => [row.folderId, 'Check this folder’s name, country and email. Leave the email blank for owner-only access.'])));
+      setError('Correct the highlighted participant details before applying access.'); return;
+    }
     await run('Applying private access…', async () => {
-      for (const [index, row] of rows.entries()) { setBusy(`Protecting ${index + 1} of ${rows.length}: ${row.name}…`); await savePerson(row); }
-      setBusy('Verifying folders and enabling country browsing…'); await browsing();
-      setMessage('Private access applied. Anyone with the link can browse country folders. Only the assigned participant and owner can open each personal folder.');
+      let saved = 0;
+      for (const [index, row] of rows.entries()) {
+        setBusy(`Protecting ${index + 1} of ${rows.length}: ${row.name}…`);
+        try { await savePerson(row); saved++; }
+        catch { /* Keep the folder's error visible and continue with the remaining folders. */ }
+      }
+      setMessage(`Private access applied to ${saved} of ${rows.length} participant folders.`);
+      if (saved < rows.length) setError(`${rows.length - saved} folder(s) could not be updated. See the error beside each affected folder.`);
     });
   }
   const disabled = !!busy || !query.data?.connected;
   const rows = query.data?.participants ?? [];
   const unsaved = rows.filter(row => currentEmail(row) !== row.email).length;
-  const needsSetup = rows.filter(row => row.status === 'Needs privacy setup').length;
+  const needsSetup = rows.filter(row => !['Private access applied', 'Owner only'].includes(row.status)).length;
   const term = search.trim().toLocaleLowerCase();
   const groups = (query.data?.countries ?? []).map(item => ({
     ...item,
@@ -148,6 +169,7 @@ export default function ProjectDriveAdmin({ projectId }: { projectId: string }) 
       {busy && <p role="status" className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"><RefreshCw className="h-4 w-4 shrink-0 animate-spin" />{busy}</p>}
       {message && <p role="status" className="rounded-xl border bg-muted/40 p-4 text-sm">{message}</p>}
       {error && <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">{error}</p>}
+      {query.isPending && connectionQuery.data?.configured && <div className="rounded-xl border bg-muted/30 p-4 space-y-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Drive settings</p><p className="text-sm font-medium">This project’s Drive is connected</p><a href={`https://drive.google.com/drive/folders/${connectionQuery.data.countriesFolderId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-primary underline">Open connected Countries folder<ExternalLink className="h-4 w-4" /></a><p className="text-xs text-muted-foreground">The saved link is ready while folders refresh in the background.</p></div>}
       {query.isPending && <p role="status">Reading project folders…</p>}
       {query.isError && <p role="alert" className="text-sm text-destructive">{query.error.message}</p>}
       {query.data && !query.data.connected && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">The organizer’s Google Drive connection must be configured on this server before folders can be managed.</p>}
@@ -172,25 +194,26 @@ export default function ProjectDriveAdmin({ projectId }: { projectId: string }) 
               {!group.rows.length && <p className="border-t p-4 text-sm text-muted-foreground">{term ? 'No matching participants.' : 'No participants yet. Add people to this country to get started.'}</p>}
               {group.rows.map(row => {
                 const changed = currentEmail(row) !== row.email;
-                const pending = row.status === 'Needs privacy setup';
+                const rowError = rowErrors[row.folderId] || row.privacyError;
+                const pending = !!rowError || !['Private access applied', 'Owner only'].includes(row.status);
                 return <div key={row.folderId} className="grid gap-4 border-t p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] lg:items-start">
                   <div className="min-w-0 space-y-2">
                     <a href={`https://drive.google.com/drive/folders/${row.folderId}`} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-start gap-2 font-medium hover:text-primary"><LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" /><span className="break-words">{row.name}</span><ExternalLink className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" /></a>
-                    <div><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${changed || pending ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`}>{changed || pending ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}{changed ? 'Unsaved email' : pending ? 'Needs privacy setup' : row.status}</span></div>
+                    <div><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${changed || pending ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`}>{changed || pending ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}{rowError ? 'Access setup blocked' : changed ? 'Unsaved email' : row.status}</span></div>
                     <button type="button" disabled={disabled} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary disabled:opacity-50" onClick={() => { setRenameTarget(row.folderId); setFolderName(row.name); setActiveTab('settings'); }}><Pencil className="h-3 w-3" />Rename</button>
                   </div>
                   <div className="min-w-0 space-y-2">
                     <Field id={`drive-email-${row.folderId}`} label="Assigned email" type="email" maxLength={254} placeholder="Blank for owner-only access" disabled={disabled} value={currentEmail(row)} onChange={event => setEmails(old => ({ ...old, [row.folderId]: event.target.value }))} />
                     {!row.email && row.existingEmails.length > 0 && <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">Use an existing Drive share</summary><div className="mt-2 flex flex-wrap gap-2">{row.existingEmails.map(existingEmail => <Button key={existingEmail} type="button" size="sm" variant="outline" className="h-auto max-w-full whitespace-normal break-all text-xs" disabled={disabled} onClick={() => setEmails(old => ({ ...old, [row.folderId]: existingEmail }))}>{existingEmail}</Button>)}</div></details>}
                   </div>
-                  <Button size="sm" variant="outline" className="lg:mt-7" disabled={disabled} onClick={() => saveRow(row)}>Save &amp; apply access</Button>
+                  <div className="space-y-2 lg:mt-7"><Button type="button" size="sm" variant="outline" disabled={disabled} onClick={() => saveRow(row)}>Save &amp; apply access</Button>{rowError && <p role="alert" className="max-w-sm text-sm text-destructive">{rowError}</p>}</div>
                 </div>;
               })}
             </details>)}
             {!groups.length && <div className="rounded-xl border border-dashed p-8 text-center"><FolderOpen className="mx-auto mb-3 h-8 w-8 text-slate-400" /><p className="font-medium">{term ? 'No matching folders' : 'Your first country starts here'}</p><p className="mt-1 text-sm text-muted-foreground">{term ? 'Try another name or email address.' : 'Add participants and their country folder will be created automatically.'}</p></div>}
           </div>
           <div className="grid gap-4 border-t pt-5 xl:grid-cols-2">
-            <div className="rounded-xl border p-4 space-y-3"><h4 className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-primary" />Save participant access</h4><p className="text-xs leading-relaxed text-muted-foreground">Save all emails across every country, apply private access, then enable public country browsing. Other direct shares are removed; a blank email keeps owner-only access.</p><Button className="h-auto w-full whitespace-normal" disabled={disabled || !rows.length} onClick={applyAll}>Save all emails &amp; apply access{unsaved ? ` (${unsaved} edited)` : ''}</Button></div>
+            <div className="rounded-xl border p-4 space-y-3"><h4 className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-primary" />Save participant access</h4><p className="text-xs leading-relaxed text-muted-foreground">Save all emails across every country and apply private access. Other direct shares are removed; a blank email keeps owner-only access.</p><Button className="h-auto w-full whitespace-normal" disabled={disabled || !rows.length} onClick={applyAll}>Save all emails &amp; apply access{unsaved ? ` (${unsaved} edited)` : ''}</Button>{busy && <p role="status" className="text-sm">{busy}</p>}{message && <p role="status" className="text-sm">{message}</p>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>
             <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 space-y-3"><h4 className="flex items-center gap-2 text-sm font-semibold"><Globe className="h-4 w-4 text-blue-700" />Make countries visible</h4><p className="text-xs leading-relaxed text-muted-foreground">Verify all personal folders are private, then let anyone with the link browse country folders. Unsaved email edits are not applied by this check.</p><Button className="h-auto w-full whitespace-normal" variant="outline" disabled={disabled} onClick={() => run('Verifying country browsing…', async () => { await browsing(); setMessage('Country folders are public by link. Every personal folder passed the privacy check.'); })}>Check privacy &amp; make countries public</Button></div>
           </div>
         </TabsContent>

@@ -11,12 +11,20 @@ class ComposerStaticInit96fadef294f9f56342c71f99a866eb3d
         array (
             'setasign\\Fpdi\\' => 14,
         ),
+        'l' =>
+        array (
+            'lbuchs\\WebAuthn\\' => 16,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
         'setasign\\Fpdi\\' =>
         array (
             0 => __DIR__ . '/..' . '/setasign/fpdi/src',
+        ),
+        'lbuchs\\WebAuthn\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/lbuchs/webauthn/src',
         ),
     );
 

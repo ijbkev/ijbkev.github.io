@@ -1,3 +1,4 @@
+import './build-passkey-client.mjs';
 import { spawn } from 'node:child_process';
 import { startPhp } from './php-server.mjs';
 const children = [startPhp(), spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', 'localhost', '--port', '8080', '--strictPort'], { stdio: 'inherit' })];

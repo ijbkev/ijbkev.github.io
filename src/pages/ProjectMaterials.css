@@ -1,0 +1,43 @@
+/* Scoped styles preserve the materials artwork without affecting shared navigation. */
+.project-materials-page{--ink:#1a1b23;--primary:#2563eb;--accent:#facc15;--line:#e2e8f0;--muted:#626a7e;color:var(--ink);max-width:1200px;margin:auto;padding:55px 34px 80px;min-height:75vh}
+.project-materials-page h1{font-size:clamp(42px,5.8vw,76px);line-height:1.04;letter-spacing:-3.5px;font-weight:600;margin:25px 0}
+.project-materials-page h2{font-size:28px;letter-spacing:-1px;margin:0 0 15px;line-height:1.2}
+.project-materials-page p{line-height:1.65;color:var(--muted);margin:1em 0}
+.project-materials-page .eyebrow{font:11px monospace;letter-spacing:2px;color:var(--primary);text-transform:uppercase;display:flex;align-items:center;gap:9px}
+.project-materials-page .dot{width:7px;height:7px;background:#2563eb;border-radius:50%;display:inline-block}
+.project-materials-page .hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:65px;align-items:center;padding:15px 0 55px;background:radial-gradient(ellipse at top right,#dbeafe66,transparent 65%)}
+.project-materials-page .serif{font-family:Georgia,serif;font-style:italic;font-weight:400;color:var(--primary)}
+.project-materials-page .meta{display:flex;flex-wrap:wrap;gap:22px;font:11px monospace;color:var(--muted);margin-top:25px}
+.project-materials-page .art{position:relative;min-height:335px;display:grid;place-items:center;background:radial-gradient(ellipse,#dbeafe 0,transparent 68%)}
+.project-materials-page .dossier{transform:rotate(-8deg);background:#e5ddc4;border:1px solid #c5bca2;border-radius:8px;width:280px;min-height:280px;padding:32px;box-shadow:12px 20px 0 #dbeafe80,0 22px 30px #1e3a8a20;position:relative}
+.project-materials-page .dossier:before{content:'';position:absolute;width:110px;height:18px;top:-17px;left:0;background:#e5ddc4;border:1px solid #c5bca2;border-bottom:0;border-radius:8px 8px 0 0}
+.project-materials-page .stamp{display:inline-block;border:2px solid #b65b3f;color:#b65b3f;font:12px monospace;padding:6px;letter-spacing:2px;transform:rotate(5deg)}
+.project-materials-page .silhouette{margin:23px auto 17px;width:90px;height:90px;border-radius:50%;background:var(--primary);display:grid;place-items:center;color:var(--accent);font:58px Georgia}
+.project-materials-page .dossier strong{display:block;font:24px Georgia}
+.project-materials-page .dossier small{font:9px monospace;letter-spacing:1px}
+.project-materials-page .section-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:20px 0}
+.project-materials-page .pill{display:inline-flex;align-items:center;gap:7px;background:#eef2ff;padding:7px 10px;border-radius:30px;font:10px monospace;text-transform:uppercase;letter-spacing:1px}
+.project-materials-page .pill.live{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+.project-materials-page .room{background:#fff;border:1px solid var(--line);border-radius:12px;padding:25px;display:flex;flex-direction:column;gap:17px;min-height:230px}
+.project-materials-page .room:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
+.project-materials-page .room:hover{border-color:#93c5fd}
+.project-materials-page .room .room-icon{font-size:26px}
+.project-materials-page .room p{margin:0;font-size:13px}
+.project-materials-page .room .room-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px solid var(--line);padding-top:17px}
+@media(max-width:800px){.project-materials-page .hero{gap:20px}}
+@media(max-width:600px){.project-materials-page{padding:35px 20px 55px}.project-materials-page .hero{grid-template-columns:1fr;gap:22px;padding-bottom:30px}.project-materials-page h1{letter-spacing:-2px}.project-materials-page .art{min-height:260px}.project-materials-page .dossier{min-height:225px;width:230px;padding:24px}.project-materials-page .silhouette{width:65px;height:65px;font-size:40px;margin:15px auto}.project-materials-page .room{min-height:190px}.project-materials-page .section-head{align-items:flex-start}.project-materials-page .meta{gap:14px;font-size:10px}}
+
+/* Alternating companion artwork for the Project Materials tools. */
+.project-materials-page .planner-hero{grid-template-columns:1fr 1.2fr;margin-top:2rem;background:radial-gradient(ellipse at top left,#dbeafe66,transparent 65%)}
+.project-materials-page .planner-dossier{transform:rotate(7deg);background:#edf3ff;border-color:#b8cae9;box-shadow:-12px 20px 0 #dbeafe80,0 22px 30px #1e3a8a20}
+.project-materials-page .planner-dossier:before{background:#edf3ff;border-color:#b8cae9}
+.project-materials-page .planner-dossier .stamp{color:#1e40af;border-color:#1e40af;transform:rotate(-5deg);font-size:10px}
+.project-materials-page .mini-matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:22px 0}
+.project-materials-page .mini-matrix span{min-height:65px;padding:9px;border-radius:5px;background:#ffe1df;color:#8b3425;font:8px monospace;letter-spacing:.5px}
+.project-materials-page .mini-matrix span:nth-child(2){background:#dbeafe;color:#1e40af}
+.project-materials-page .mini-matrix span:nth-child(3){background:#fef3c7;color:#92400e}
+.project-materials-page .mini-matrix span:nth-child(4){background:#e2e8f0;color:#475569}
+.project-materials-page .mini-matrix b{display:block;margin-top:5px;font:24px Georgia}
+.project-materials-page .planner-dossier strong{font-size:24px;line-height:1.15;margin-bottom:9px}
+.project-materials-page .planner-dossier small{font-size:8px}
+@media(max-width:600px){.project-materials-page .planner-hero{grid-template-columns:1fr}.project-materials-page .planner-art{min-height:350px}.project-materials-page .planner-dossier{width:250px}.project-materials-page .planner-hero .room{min-width:0}}

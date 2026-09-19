@@ -217,6 +217,26 @@ function declaration_pairs(DeclarationPdf $pdf, array $fields): void {
     $pdf->writeHTML($html.'</table>',true,false,true,false,'');
 }
 
+/**
+ * A neutral signing mark: a handwritten-style tick with an open trail of dots.
+ * It deliberately avoids a twelve-point circular arrangement, which can be
+ * confused with the European Union emblem at small sizes.
+ */
+function electronic_signature_mark(DeclarationPdf $pdf, float $x, float $y): void {
+    $pdf->SetDrawColor(255,255,255);
+    $pdf->SetLineWidth(0.9);
+    $pdf->Line($x,$y+4.4,$x+2.2,$y+2.2);
+    $pdf->Line($x+2.2,$y+2.2,$x+4.3,$y+4.2);
+    $pdf->Line($x+4.3,$y+4.2,$x+8.2,$y+0.8);
+
+    // An open, ascending dot trail keeps the mark recognisable as a signature,
+    // rather than as a flag or seal.
+    $pdf->SetFillColor(174,224,247);
+    foreach ([[0.5,0.4,0.42],[2.2,-0.6,0.34],[4.1,-1.1,0.28],[6.0,-0.8,0.22]] as [$dx,$dy,$radius]) {
+        $pdf->Circle($x+$dx,$y+$dy,$radius,0,360,'F');
+    }
+}
+
 function partnership_evidence_stamp(DeclarationPdf $pdf, array $e, float $x, float $y, float $width=72): float {
     $inner=$width-8;
     $details='SIGNED BY  '.h($e['signerName']).' - '.h($e['signerRole']).'<br>'.
@@ -235,9 +255,7 @@ function partnership_evidence_stamp(DeclarationPdf $pdf, array $e, float $x, flo
     $pdf->SetTextColor(255,255,255);$pdf->SetFont('dejavusans','B',6.6);$pdf->SetXY($x+4,$y+1.8);
     $pdf->Cell($width-20,3.2,'VERIFIED ELECTRONIC SIGNATURE',0,1,'L');
     $pdf->SetFont('dejavusans','',4.7);$pdf->SetXY($x+4,$y+5.8);$pdf->Cell($width-20,2.4,'SERVER-RECORDED SIGNING EVIDENCE',0,1,'L');
-    $pdf->SetFillColor(255,204,0);
-    $centreX=$x+$width-8;$centreY=$y+5.3;
-    for($i=0;$i<12;$i++){$angle=deg2rad($i*30-90);$pdf->Circle($centreX+cos($angle)*3.3,$centreY+sin($angle)*3.3,0.44,0,360,'F');}
+    electronic_signature_mark($pdf,$x+$width-13,$y+3.3);
     $pdf->SetTextColor(18,36,53);$pdf->SetFont('dejavusans','B',5);$pdf->SetXY($x+4,$y+12.8);
     $pdf->MultiCell($inner,2.7,$e['confirmation'],0,'L',false,1);
     $pdf->SetDrawColor(255,204,0);$pdf->SetLineWidth(0.45);$pdf->Line($x+4,$pdf->GetY()+0.8,$x+$width-4,$pdf->GetY()+0.8);
@@ -253,8 +271,7 @@ function coordinator_signature_stamp(DeclarationPdf $pdf, array $e, float $x, fl
     $pdf->SetFillColor(0,51,153);$pdf->RoundedRect($x,$y,$width,10.5,2.6,'1100','F');
     $pdf->SetTextColor(255,255,255);$pdf->SetFont('dejavusans','B',6.4);$pdf->SetXY($x+4,$y+1.8);$pdf->Cell($width-20,3.2,'COORDINATOR SIGNATURE RECORD',0,1,'L');
     $pdf->SetFont('dejavusans','',4.7);$pdf->SetXY($x+4,$y+5.8);$pdf->Cell($width-20,2.4,'PRE-AUTHORISED SIGNATURE',0,1,'L');
-    $pdf->SetFillColor(255,204,0);$centreX=$x+$width-8;$centreY=$y+5.3;
-    for($i=0;$i<12;$i++){$angle=deg2rad($i*30-90);$pdf->Circle($centreX+cos($angle)*3.3,$centreY+sin($angle)*3.3,0.44,0,360,'F');}
+    electronic_signature_mark($pdf,$x+$width-13,$y+3.3);
     $pdf->SetTextColor(18,36,53);$pdf->SetFont('dejavusans','B',5);$pdf->SetXY($x+4,$y+12.8);$pdf->MultiCell($inner,2.7,$e['statement'],0,'L',false,1);
     $pdf->SetDrawColor(255,204,0);$pdf->SetLineWidth(0.45);$pdf->Line($x+4,$pdf->GetY()+0.8,$x+$width-4,$pdf->GetY()+0.8);
     $details='AUTHORISED BY  '.h($e['signerName']).' - '.h($e['signerRole']).'<br>ORGANISATION  '.h($e['organisation']).'<br>ISSUED UTC  '.h($e['issuedAt']).'<br>DOCUMENT ID  '.h($e['documentId']);
@@ -322,11 +339,6 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
     $totals=reimbursement_totals($claim);
     $pdf->writeHTML(rows_html([['Total eligible / submitted expenses',money_eur($claim['totalCents'])],['Country reimbursement limit',isset($claim['countryLimitCents'])?money_eur($claim['countryLimitCents']):'Not recorded (legacy claim)'],['Extra reimbursement (admin approved)',money_eur($totals['extraCents'])]]),true,false,true,false,'');
     $pdf->writeHTML('<table cellpadding="10" cellspacing="0"><tr style="background-color:#122435;color:#ffffff"><td width="60%" style="font-size:9pt">FINAL REIMBURSEMENT</td><td width="40%" align="right" style="font-size:16pt"><b>'.money_eur($totals['finalCents']).'</b></td></tr></table>',true,false,true,false,'');
-    if(!empty($claim['greenTravelCorrections'])){
-        declaration_section($pdf,'Administrator correction - green travel');
-        foreach($claim['greenTravelCorrections'] as $correction)$pdf->writeHTML('<p>'.h(substr($correction['correctedAt'],0,10).': '.($correction['previous']?'Yes':'No').' to '.($correction['value']?'Yes':'No').'. '.$correction['reason']).'</p>',true,false,true,false,'');
-        $pdf->writeHTML('<p>The original submission signature is retained. This correction was entered by the administrator after submission.</p>',true,false,true,false,'');
-    }
     if(!empty($p['notes'])){declaration_section($pdf,'Notes from the participant');$pdf->writeHTML('<p>'.nl2br(h($p['notes'])).'</p>',true,false,true,false,'');}
     if(str_contains($claim['declarationText']??'',"\n\n")||$pdf->GetY()>190)$pdf->AddPage();declaration_section($pdf,'Declaration and signature');
     $declaration=$claim['declarationText']??'I confirm that these details are accurate, these expenses were incurred for this project, and the uploaded tickets correspond to the listed journeys. I authorize IJBK to use these details to process my reimbursement.';
@@ -336,7 +348,8 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
         $pdf->writeHTML('<p>'.($index===0?'':$index.'. ').$text.'</p>',true,false,true,false,'');
         $pdf->Ln(2);
     }
-    if($pdf->GetY()>230)$pdf->AddPage();$y=$pdf->GetY();if($signatureReadable)$pdf->Image($signaturePath,15,$y,70,22,'JPEG');else{$pdf->SetTextColor(185,28,28);$pdf->MultiCell(180,6,'Signature could not be displayed. Manual review required.',0,'L',false,1);$pdf->SetTextColor(20,24,35);}$pdf->SetY($y+27);
+    $evidence=$claim['signingEvidence']??null;
+    if($pdf->GetY()>195)$pdf->AddPage();$y=$pdf->GetY();if($signatureReadable)$pdf->Image($signaturePath,15,$y,70,22,'JPEG');else{$pdf->SetTextColor(185,28,28);$pdf->MultiCell(180,6,'Signature could not be displayed. Manual review required.',0,'L',false,1);$pdf->SetTextColor(20,24,35);}$height=is_array($evidence)?partnership_evidence_stamp($pdf,$evidence,105,$y,90):22;$pdf->SetY($y+max(27,$height+4));
     declaration_pairs($pdf,[['Signed by',$p['name']],['Place / date (UTC)',($p['signaturePlace']??'Place not recorded').', '.substr($claim['createdAt'],0,10)]]);
     if(!empty($p['greenTravel'])){
         $pdf->declarationTitle='Erasmus+ Green Travel Declaration';
@@ -368,11 +381,12 @@ function generate_claim_pdf(array $claim, array $files, string $claimDir, array 
         if($pdf->GetY()>205)$pdf->AddPage();
         $pdf->Ln(3);$formSection('Declaration');
         $pdf->writeHTML('<p><b>[X] I confirm that my entire journey to and from this activity was by car, bus, or train, without using any flight.</b></p><p>I declare that the information provided in this claim is true and accurate and that the journey declared as green travel was undertaken using car, bus, or train for the entire journey, without any flights.</p><p>I understand that I may be required to provide tickets, booking confirmations, receipts or other supporting documents as evidence of the journey and means of transport used. I understand that an incorrect or false declaration may result in the corresponding green-travel reimbursement or other related travel support being refused or recovered.</p>',true,false,true,false,'');
+        if($pdf->GetY()>210)$pdf->AddPage();
         $pdf->Ln(2);$pdf->SetFont('dejavusans','',7);$pdf->Cell(180,5,'PARTICIPANT SIGNATURE',0,1);
         $y=$pdf->GetY();
         if($signatureReadable)$pdf->Image($signaturePath,17,$y,65,17,'JPEG');
         else $pdf->MultiCell(180,5,'Signature unavailable - manual review required.',0,'L',false,1);
-        $pdf->Line(17,$y+19,95,$y+19);$pdf->SetY($y+22);
+        $pdf->Line(17,$y+19,95,$y+19);$height=is_array($evidence)?partnership_evidence_stamp($pdf,$evidence,105,$y,90):18;$pdf->SetY($y+max(22,$height+4));
         $formRow([['Signed by',$p['name']],['Place / date (UTC)',implode(', ',array_filter([$p['signaturePlace']??'',substr($claim['createdAt'],0,10)]))]]);
         $pdf->declarationTitle=$title;
     }
@@ -440,10 +454,13 @@ function generate_organisation_declaration_pdf(array $data): string {
     if($pdf->GetY()+$pdf->getStringHeight(180,$declaration)+40>$pdf->getPageHeight()-18)$pdf->AddPage();
     declaration_section($pdf,'Declaration');
     $pdf->writeHTML('<p>'.h($declaration).'</p>',true,false,true,false,'');
+    $evidence=$data['signingEvidence']??null;
+    if($pdf->GetY()+(is_array($evidence)?100:25)>$pdf->getPageHeight()-18)$pdf->AddPage();
     $signaturePath=tempnam(sys_get_temp_dir(),'ijbk-org-signature-');
     try {
         $pdf->Cell(0,5,'Signature of the '.($submitterRole==='team-leader'?'team leader':'sending organisation member').' - '.$submitterName,0,1,'L');
         file_put_contents($signaturePath,base64_decode(substr($data['signature'],22),true));$y=$pdf->GetY();$pdf->Image($signaturePath,15,$y,58,16,'PNG');$pdf->SetY($y+19);
+        if(is_array($evidence)){$height=partnership_evidence_stamp($pdf,$evidence,105,$y,90);$pdf->SetY($y+max(19,$height+4));}
         return $pdf->Output('','S');
     } finally { if(is_file($signaturePath))@unlink($signaturePath); }
 }
@@ -465,13 +482,21 @@ function generate_partnership_agreement_pdf(array $d): string {
       'Article 9 - Suspension and termination'=>'9.1. The Coordinator may suspend a payment, activity or participant where reasonably necessary to protect participants, Project quality, grant compliance, evidence or funds. Where appropriate, the Partner shall be given a reasonable period to remedy the issue.<br>9.2. Either Party may terminate this Agreement for a material breach that is not remedied within a reasonable written deadline. The Coordinator may terminate immediately in cases of fraud, serious safeguarding failure, violence, deliberate misuse of funds, false declarations, loss of eligibility or conduct creating a serious risk to participants or the Project.<br>9.3. Termination does not affect existing repayment, reporting, audit, confidentiality, data-protection, liability or indemnification obligations. The Partner shall return unspent or unsupported funds and provide all outstanding Project documents.',
       'Article 10 - Force majeure, disputes and applicable law'=>'10.1. A Party is not in breach to the extent performance is prevented by an unforeseeable and unavoidable event beyond its reasonable control, provided it promptly informs the other Party and takes reasonable steps to reduce the impact. Financial eligibility remains subject to the Grant Agreement and the National Agency’s decision.<br>10.2. The Parties shall first attempt to resolve disputes through good-faith written consultation between their authorised representatives. If no solution is reached within fifteen business days, the matter shall be escalated to their legal representatives or governing bodies.<br>10.3. This Agreement is governed by German law to the extent permitted by mandatory law. Where legally permissible, the courts competent for the Coordinator’s registered office shall have jurisdiction.',
       'Article 11 - Final provisions'=>'11.1. Amendments must be made in writing and approved by authorised representatives of both Parties. If any provision is invalid or unenforceable, the remaining provisions remain effective and the Parties shall replace the affected provision with a lawful provision closest to its intended purpose.<br>11.2. Electronic signatures and counterparts are permitted where legally valid. The working language is English.'
-    ];foreach($sections as $title=>$body){if($title==='Article 10 - Force majeure, disputes and applicable law')$pdf->AddPage();declaration_section($pdf,$title);$pdf->writeHTML('<p>'.$body.'</p>',true,false,true,false,'');}
+    ];foreach($sections as $title=>$body){
+        $pdf->Ln(4);if($pdf->GetY()>215)$pdf->AddPage();declaration_section($pdf,$title);
+        $clauses=preg_split('/<br>(?=[0-9]+\.[0-9]+\.)/',$body)?:[$body];
+        foreach($clauses as $clause){
+            $plain=html_entity_decode(strip_tags(str_replace('<br>',"\n",$clause)),ENT_QUOTES|ENT_HTML5,'UTF-8');
+            $needed=$pdf->getStringHeight(180,$plain)*1.45+10;if($pdf->GetY()+$needed>270)$pdf->AddPage();
+            $pdf->writeHTML('<p style="line-height:1.28">'.$clause.'</p>',true,false,true,false,'');$pdf->Ln(1.5);
+        }
+    }
     $e=$d['signingEvidence']??null;if(is_array($e)&&$pdf->GetY()>145)$pdf->AddPage();
     declaration_section($pdf,'Signatures');declaration_pairs($pdf,[['For the Coordinator','IJBK e.V.'],['For the Partner',$d['partnerName']],['Name','Vidit Goyal'],['Name',$d['legalRepresentativeName']],['Position','Chairman'],['Position',$d['legalRepresentativePosition']],['Place and date','Kaiserslautern, Germany, 7 September 2026'],['Place and date',$d['signaturePlace'].', '.$d['signatureDate']]]);
     $signaturePath=tempnam(sys_get_temp_dir(),'ijbk-partner-signature-');try{
         file_put_contents($signaturePath,base64_decode(substr($d['signature'],22),true));$signatureY=$pdf->GetY();
-        $coordinatorSignature=__DIR__.'/assets/coordinator-signature.png';if(!is_file($coordinatorSignature))$coordinatorSignature=dirname(__DIR__).'/public/reimbursement/coordinator-signature.png';
-        if(is_file($coordinatorSignature))$pdf->Image($coordinatorSignature,25,$signatureY,68,27,'PNG');
+        $coordinatorSignature=storage_dir().'/coordinator-signature.png';
+        if(!is_file($coordinatorSignature))throw new RuntimeException('Coordinator signature unavailable. Contact the administrator.');$pdf->Image($coordinatorSignature,25,$signatureY,68,27,'PNG');
         $pdf->SetXY(105,$signatureY);$pdf->SetFont('dejavusans','',8);$pdf->Cell(0,5,'Signature for the Partner',0,1,'L');$pdf->Image($signaturePath,105,$pdf->GetY(),58,16,'PNG');
         $stampY=$signatureY+32;$bottom=$signatureY+29;
         $coordinatorEvidence=$d['coordinatorSignatureEvidence']??null;if(is_array($coordinatorEvidence))$bottom=max($bottom,$stampY+coordinator_signature_stamp($pdf,$coordinatorEvidence,15,$stampY));

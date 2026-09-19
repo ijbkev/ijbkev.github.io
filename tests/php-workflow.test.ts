@@ -11,6 +11,8 @@ import { hashPassword } from './helpers/auth';
 
 test('PHP saved applications, approval locks and expected team counts', { timeout: 60000 }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'ijbk-php-test-'));
+  // Use a synthetic signing fixture; tests must never require production signing material.
+  await writeFile(path.join(dir, 'coordinator-signature.png'), await readFile('tests/fixtures/signature.png'), { mode: 0o600 });
   const server = createServer(); await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
   const port = (server.address() as { port: number }).port; await new Promise<void>(r => server.close(() => r()));
   const base = `http://127.0.0.1:${port}`;
@@ -56,7 +58,7 @@ test('PHP saved applications, approval locks and expected team counts', { timeou
     assert.match(blank.number, /^IJBK-[0-9a-f]{48}$/);
     assert.deepEqual((await progress()).progress, { expected: 6, submitted: 0, approved: 0, pending: 0, missing: 6, ready: false });
     assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: blank.number })).status, 401);
-    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: 'wrong', email: participant.email }, participantCookie)).status, 404);
+    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: 'wrong', email: participant.email }, participantCookie)).status, 401);
     const partial = { ...claim, participant: { ...participant, bankAccount: '' }, signature: '', declaration: false };
     draftResponse = await save(blank.number, blank.revision, partial, true); assert.equal(draftResponse.status, 200); const partialSaved = await draftResponse.json();
     assert.equal((await save(blank.number, blank.revision)).status, 409, 'stale tabs cannot overwrite');
@@ -104,18 +106,21 @@ test('PHP saved applications, approval locks and expected team counts', { timeou
     assert.deepEqual((await progress()).progress, { expected: 6, submitted: 5, approved: 5, pending: 0, missing: 1, ready: false });
     const sixth = await (await req('/projects/oasis/submissions', 'POST', form({ ...claim, requestId: crypto.randomUUID(), participant: { ...participant, email: 'sixth@example.test' } }), participantCookie)).json();
     assert.equal((await progress()).progress.ready, false);
-    // Pre-draft applications recover by their displayed reference plus email.
-    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference }, participantCookie)).status, 422);
-    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'wrong@example.test' }, participantCookie)).status, 404);
-    const legacy = await (await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'SIXTH@example.test' }, participantCookie)).json();
+    // References/email alone must not disclose bank details or mint bearer tokens.
+    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'sixth@example.test' }, participantCookie)).status, 401);
+    const recoveryCookie = `${participantCookie}; ${admin}`;
+    // Administrators can assist a verified participant with legacy recovery.
+    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference }, recoveryCookie)).status, 422);
+    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'wrong@example.test' }, recoveryCookie)).status, 404);
+    const legacy = await (await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'SIXTH@example.test' }, recoveryCookie)).json();
     assert.match(legacy.number, /^IJBK-[0-9a-f]{48}$/); assert.equal(legacy.submitted, true); assert.equal(legacy.data.participant.email, 'sixth@example.test'); assert.equal(legacy.data.signature, claim.signature);
     const legacyDocument = await req('/projects/oasis/applications/document', 'POST', { number: legacy.number, key: 'ticket-0', revision: legacy.revision }, participantCookie);
     assert.deepEqual(Buffer.from(await legacyDocument.arrayBuffer()), ticket);
-    const byId = await (await req('/projects/oasis/applications/resume', 'POST', { number: sixth.id, email: 'sixth@example.test' }, participantCookie)).json();
+    const byId = await (await req('/projects/oasis/applications/resume', 'POST', { number: sixth.id, email: 'sixth@example.test' }, recoveryCookie)).json();
     assert.equal(byId.number, legacy.number, 'reference and ID recover the same application');
     assert.equal((await progress()).progress.submitted, 6, 'loading does not withdraw or resubmit a claim');
     assert.equal((await req(`/admin/submissions/${sixth.id}/finalize`, 'PUT', {}, admin)).status, 200);
-    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'sixth@example.test' }, participantCookie)).status, 403, 'finalized legacy reference is locked');
+    assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: sixth.reference, email: 'sixth@example.test' }, recoveryCookie)).status, 403, 'finalized legacy reference is locked');
     assert.equal((await req('/projects/oasis/applications/resume', 'POST', { number: legacy.number }, participantCookie)).status, 403);
     assert.equal((await progress()).progress.ready, true);
     const duplicate = await req('/projects/oasis/submissions', 'POST', form({ ...claim, requestId: crypto.randomUUID(), participant: { ...participant, email: 'SIXTH@example.test' } }), participantCookie);

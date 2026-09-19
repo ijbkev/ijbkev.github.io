@@ -349,3 +349,110 @@ Organisation reimbursement declarations include an optional OID, retained in the
 saved declaration and printed in its PDF. Bank and submitter details come before
 the final declaration statement and signature. The printed statement and signature
 stay together when the document continues onto another page.
+
+### Secret Friend HQ / Project Materials
+
+A standalone PHP 8+ Secret Friend game is available under `public/secret-friend/`,
+linked from Project Materials. It supports reusable rooms,
+hashed DOB PINs, directed manual locks, country-optimized matching, and a timed
+secret-agent reveal. See [installation, security boundaries and tests](docs/secret-friend.md).
+The game itself requires no Node.js, npm or database server.
+
+
+## Security review and deployment requirements
+
+See [the security review](docs/security-review.md) for verified findings, remediation,
+and remaining hosting/data-protection actions. The reviewed build requires a modern
+Node runtime (Node 22.13+ recommended). Never upload the repository, `.local`,
+`output`, private data, or backup folders to the public document root.
+
+Legacy reference-and-email recovery now requires both administrator and project
+sessions. Verify the participant separately before assisting them; private
+`IJBK-` submission-number recovery continues to work without administrator access.
+The coordinator signature is kept in ignored `.local/signing/coordinator-signature.png`
+on this computer and in private reimbursement storage on the server; it is excluded
+from public builds and source control. Deploy the updated root and API `.htaccess` files together, remove the old
+public signature image, and verify the live URLs listed in the review return 403/404.
+If nginx serves static files directly, its configuration must enforce these denials too.
+
+Set `IJBK_STORAGE_DIR` to an absolute directory outside the document root. Only set
+`IJBK_TRUST_PROXY=1` when the origin is restricted to trusted proxies that overwrite
+forwarded headers; otherwise use PHP's native HTTPS indication. The development
+server now binds only to `127.0.0.1` and blocks private data directories.
+
+
+### Private signing material
+
+The live signature has been installed at
+`/srv/www/www-ijbk-ev/data/reimbursement/coordinator-signature.png` (0600),
+outside the web root. `npm run build` never bundles it. A new host needs this file
+installed separately, via the same authenticated hosting account, into its private
+`IJBK_STORAGE_DIR`. On a fresh local checkout, restore the image into
+`.local/signing/coordinator-signature.png` before previewing or testing agreement
+PDFs. Never put it back into `public`, `dist`, or a tracked source directory.
+Agreement generation fails if the signing image is unavailable.
+
+See [live security follow-up](docs/security-follow-up.md) for deployment status,
+verified authentication controls and encrypted-backup recovery instructions.
+
+
+### Deadline & Priority Planner
+
+Project Materials links to `/project-materials/deadline-planner`. The planner uses
+exactly the main admin console’s `/api/admin/login` password and session; every
+planner API operation requires an administrator session. Tasks and the urgency
+window are stored in the existing private SQLite database, shared by website
+administrators, with no task data stored in browser local storage.
+
+Add a task name, deadline, importance, optional notes, and automatic or manual
+urgency. Automatic urgency defaults to deadlines within two calendar days
+(including overdue tasks), adjustable from 0 to 30 days. The four quadrants are
+Do first, Schedule, Delegate, and Reconsider. Tasks can be edited, completed,
+reopened, or deleted. Delegation is a planning category, not a message to anyone.
+
+Validation: `node --import tsx --test tests/deadline-planner.test.ts`.
+
+
+### Administrator passkeys (Touch ID)
+
+The main admin console, deadline planner, and Secret Friend admin panel offer
+**Sign in with passkey**.
+To enroll, open the main admin dashboard, sign in with the existing admin password,
+then open **Manage admin passkeys**,
+name the passkey, confirm the password, and select **Register passkey**. Complete
+macOS’s prompt using Touch ID or the device’s screen lock. The admin password
+remains a fallback. Removing a registered passkey also requires the admin password.
+
+Passkeys are tied to the current website hostname: use the same HTTPS hostname
+for enrollment and sign-in. Local passkey development uses `http://localhost`,
+not `http://127.0.0.1`. The server uses `lbuchs/webauthn` (Composer-locked and
+included in the build) to verify signatures, relying party, user presence and
+user verification. It additionally enforces exact origins, browser-bound
+single-use challenges expiring after five minutes, and admin-session binding
+for registration. Public keys and challenge state live in private SQLite storage;
+biometric data is never sent to the website. Changing the configured admin
+password hash invalidates existing passkeys; register them again afterward.
+
+Checks: `node --import tsx --test tests/admin-passkeys.test.ts tests/deadline-planner.test.ts tests/php-security.test.ts`.
+Tests use a synthetic authenticator with real P-256 signatures and isolated storage;
+they do not invoke Touch ID or access a real user's passkeys.
+
+
+Project Materials is a React page at `/project-materials/`, using the same
+`Layout`, navigation, and footer as the main website. Its artwork styles are
+scoped in `src/pages/ProjectMaterials.css`; Secret Friend retains its standalone
+themed interface. Apache routes the previous materials index URL to the shared
+app as well, including deployments where the old static directory remains.
+
+Passkey registration and removal controls are shown only in the main admin dashboard,
+not in the deadline planner or Secret Friend. All three admin entry points support passkey sign-in.
+
+
+Admin password/passkey sign-in now also issues an HttpOnly, SameSite=Strict
+`ijbk_site_admin` cookie at `/`, backed by the existing server-side admin session.
+Secret Friend verifies that session’s role and expiry on each admin request;
+signing out of either integrated admin area revokes the shared session everywhere.
+Participant project codes and Secret Friend participant identities remain separate.
+Standalone Secret Friend installations retain their local password sign-in.
+The game’s passkey client is generated from the same TypeScript client as the main
+website by `scripts/build-passkey-client.mjs` during development startup and build.

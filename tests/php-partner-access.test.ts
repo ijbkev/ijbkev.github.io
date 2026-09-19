@@ -11,6 +11,8 @@ import { hashPassword } from './helpers/auth';
 
 test('Partner sessions isolate country data, submissions, PDFs and code rotation', { timeout: 60000 }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'ijbk-php-test-'));
+  // Use a synthetic signing fixture; tests must never require production signing material.
+  await writeFile(path.join(dir, 'coordinator-signature.png'), await readFile('tests/fixtures/signature.png'), { mode: 0o600 });
   const server = createServer(); await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
   const port = (server.address() as { port: number }).port; await new Promise<void>(r => server.close(() => r()));
   const base = `http://127.0.0.1:${port}`;
@@ -52,6 +54,15 @@ test('Partner sessions isolate country data, submissions, PDFs and code rotation
     const publicSettings=await (await req('/projects/oasis')).json();assert.equal(publicSettings.partnerAccessCodes,undefined);assert.equal(publicSettings.accessCode,undefined);
     const germany=await unlock('Germany',settings.partnerAccessCodes.Germany);
     const estonia=await unlock('Estonia',settings.partnerAccessCodes.Estonia);
+    assert.equal((await req('/projects/oasis/partner-profile','GET',undefined,participantCookie)).status,401);
+    assert.equal((await req('/projects/oasis/partner-profile','PUT',{name:'German partner',oid:'E12345678',country:'Germany'},germany)).status,200);
+    assert.deepEqual(await (await req('/projects/oasis/partner-profile','GET',undefined,germany)).json(),{name:'German partner',oid:'E12345678',country:'Germany'});
+    assert.deepEqual(await (await req('/projects/oasis/partner-profile','GET',undefined,estonia)).json(),{name:'',oid:'',country:'Estonia'});
+    assert.equal((await req('/projects/oasis/partner-profile','PUT',{name:'Wrong team',oid:'E1',country:'Estonia'},germany)).status,403);
+    assert.equal((await req('/projects/oasis/partner-profile','PUT',{name:'x'.repeat(201),oid:''},germany)).status,422);
+    const resumedGermany=await unlock('Germany',settings.partnerAccessCodes.Germany);
+    assert.equal((await (await req('/projects/oasis/partner-profile','GET',undefined,resumedGermany)).json()).name,'German partner');
+
     assert.equal((await req('/projects/oasis/organisation-unlock','POST',{country:'Germany',code:settings.partnerAccessCodes.Estonia})).status,401);
     assert.equal((await req('/projects/oasis/organisation-unlock','POST',{code:settings.partnerAccessCodes.Germany})).status,200);
     const scoped=await (await req('/projects/oasis/organisation-session','GET',undefined,germany)).json();
@@ -70,7 +81,14 @@ test('Partner sessions isolate country data, submissions, PDFs and code rotation
       assert.equal((await req('/projects/oasis/partnership-agreements','POST',{...agreement,partnerCountry:country==='Germany'?'Estonia':'Germany'},cookie)).status,403);
       r=await req('/projects/oasis/partnership-agreements','POST',agreement,cookie);assert.equal(r.status,201,await r.clone().text());docIds[country]={declaration,agreement:(await r.json()).id};
       const own=await (await req('/projects/oasis/partner-documents','GET',undefined,cookie)).json();assert.equal(own.country,country);assert.equal(own.declarations.length,1);assert.equal(own.agreements.length,1);assert.equal(own.declarations[0].id,declaration);
-      assert.equal((await req(`/projects/oasis/organisation-declarations/${declaration}/pdf`,'GET',undefined,cookie)).status,200);
+      const signedPdf=await req(`/projects/oasis/organisation-declarations/${declaration}/pdf`,'GET',undefined,cookie);
+      assert.equal(signedPdf.status,200);
+      const pdfPath=path.join(dir,`team-${country}.pdf`);await writeFile(pdfPath,Buffer.from(await signedPdf.arrayBuffer()));
+      const text=execFileSync('pdftotext',[pdfPath,'-'],{encoding:'utf8'});
+      assert.match(text,/SERVER-RECORDED SIGNING EVIDENCE/);assert.match(text,/Test Leader/);assert.match(text,/leader@example.test/);assert.match(text,/DOCUMENT ID/);assert.doesNotMatch(text,/Vidit|COORDINATOR SIGNATURE/);
+      const saved=JSON.parse(execFileSync('php',['-r',"$d=new PDO('sqlite:'.$argv[1]);$q=$d->prepare('SELECT data FROM organisation_declarations WHERE id=?');$q->execute([$argv[2]]);echo $q->fetchColumn();",path.join(dir,'reimbursement.sqlite3'),declaration],{encoding:'utf8'}));
+      assert.equal(saved.signingEvidence.signerName,input.submitterName);assert.equal(saved.signingEvidence.signerEmail,input.submitterEmail);assert.equal(saved.signingEvidence.signerRole,'Team leader');assert.match(saved.signingEvidence.documentId,/^TR-/);assert.match(saved.signingEvidence.sha256,/^[a-f0-9]{64}$/);assert.equal(saved.coordinatorSignatureEvidence,undefined);
+      if(process.env.IJBK_PDF_QA_DIR)await writeFile(path.join(process.env.IJBK_PDF_QA_DIR,`team-${country}.pdf`),await readFile(pdfPath));
       assert.equal((await req(`/projects/oasis/partnership-agreements/${docIds[country].agreement}/pdf`,'GET',undefined,cookie)).status,200);
     }
     for(const kind of ['declaration','agreement'] as const) {

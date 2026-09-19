@@ -17,7 +17,7 @@ function drive_connected(): bool { $c=drive_credentials();return !in_array('',ar
 function drive_folder(string $project): string { if(getenv('IJBK_DEMO')==='1')return '';  $s=db()->prepare('SELECT countries_folder_id FROM drive_projects WHERE project_id=?');$s->execute([$project]);return $s->fetchColumn()?:((json_decode((string)file_get_contents(__DIR__.'/drive-defaults.json'),true))[$project]??''); }
 class ProjectDrive {
     const FOLDER='application/vnd.google-apps.folder';
-    const FIELDS='id,name,mimeType,parents,ownedByMe,driveId,inheritedPermissionsDisabled,writersCanShare,trashed';
+    const FIELDS='id,name,mimeType,parents,ownedByMe,driveId,inheritedPermissionsDisabled,writersCanShare,trashed,owners(displayName,emailAddress)';
     private string $token;
     function __construct() {
         if(!drive_connected())drive_error('Google Drive is not connected on this server. Configure the organizer’s Google connection first.');
@@ -50,7 +50,16 @@ class ProjectDrive {
     function permissions(string $id): array {
         $items=[];$token='';do{$q=['fields'=>'nextPageToken,permissions(id,type,emailAddress,role,view,permissionDetails(inherited))','pageSize'=>'100'];if($token)$q['pageToken']=$token;$page=$this->api('files/'.$id.'/permissions','GET',$q);$items=array_merge($items,$page['permissions']??[]);$token=$page['nextPageToken']??'';}while($token);return $items;
     }
-    function owned(array $f): void { if(empty($f['ownedByMe'])||!empty($f['driveId'])||!empty($f['trashed']))drive_error('The connected organizer must own “'.$f['name'].'” in My Drive. No ownership changes will be made.'); }
+    function owned(array $f): void {
+        if(!empty($f['trashed']))drive_error('“'.$f['name'].'” is in the trash. Restore it and refresh the list.');
+        if(!empty($f['driveId']))drive_error('“'.$f['name'].'” is in a shared drive. This privacy setup currently requires organizer-owned items in My Drive.');
+        if(empty($f['ownedByMe'])){
+            $kind=($f['mimeType']??'')===self::FOLDER?'folder':'file';
+            $owners=array_filter(array_map(fn($owner)=>$owner['emailAddress']??$owner['displayName']??'', $f['owners']??[]));
+            $detail=$owners?' Google reports its owner as '.implode(', ',$owners).'.':'';
+            drive_error('The connected organizer must own “'.$f['name'].'” to verify private access. This '.$kind.' is owned by another Google account.'.$detail.' Owning the parent folder does not give ownership of files or folders uploaded by an editor. Ask this item’s owner to transfer ownership to the connected organizer. If you already own this exact item, check that the app is connected to your Google account.');
+        }
+    }
     function create(string $name,string $parent): array {
         // Stage privately before applying privacy settings and moving into a shared parent.
         $root=$this->file('root');
@@ -77,9 +86,9 @@ class ProjectDrive {
 
     function tree(array $root): array { $out=[];$queue=[$root];$seen=[];while($queue){$f=array_shift($queue);if(isset($seen[$f['id']]))drive_error('Unexpected repeated folder.');$seen[$f['id']]=true;$this->owned($f);if($f['mimeType']==='application/vnd.google-apps.shortcut')drive_error('Remove the shortcut “'.$f['name'].'” before applying privacy; its target may be outside this project.');$out[]=$f;if($f['mimeType']===self::FOLDER)$queue=array_merge($queue,$this->children($f['id']));if(count($out)>500)drive_error('This participant has more than 500 items. Split the privacy update into a smaller folder.');}return $out; }
     function grant(string $id,string $email,string $role,bool $notifyParticipant=false,string $emailMessage=''): void {
-        $match=null;foreach($this->permissions($id) as $p)if($p['type']==='user'&&drive_equal($p['emailAddress']??'',$email)&&empty($p['view'])){$match=$p;break;}
+        $match=null;foreach($this->permissions($id) as $p)if($p['type']==='user'&&drive_equal($p['emailAddress']??'',$email)&&in_array($p['view']??'',['','metadata'],true)){$match=$p;break;}
         if(($match['role']??'')==='owner')return;
-        if($match){if($match['role']!==$role)$this->api('files/'.$id.'/permissions/'.$match['id'],'PATCH',['fields'=>'id'],['role'=>$role]);}
+        if($match){if($match['role']!==$role||($match['view']??'')==='metadata')$this->api('files/'.$id.'/permissions/'.$match['id'],'PATCH',['fields'=>'id'],['role'=>$role]);}
         else $this->api('files/'.$id.'/permissions','POST',array_merge(['fields'=>'id','sendNotificationEmail'=>$notifyParticipant?'true':'false'],$notifyParticipant&&$emailMessage!==''?['emailMessage'=>$emailMessage]:[]),['type'=>'user','role'=>$role,'emailAddress'=>$email]);
     }
     function privacySettings(array $file): void {
@@ -109,7 +118,7 @@ function drive_folders(array $files): array { return array_values(array_filter($
 function drive_dashboard(string $project): array {
     $id=drive_folder($project);$base=['configured'=>(bool)$id,'connected'=>drive_connected(),'countriesFolderId'=>$id,'participants'=>[],'countries'=>[]];if(!$id||!$base['connected'])return $base;
     $d=new ProjectDrive();$root=$d->file($id);$d->owned($root);$base['countriesFolderName']=$root['name'];$parent=drive_project_folder($d,$root);if($parent)$base['projectFolder']=['id'=>$parent['id'],'name'=>$parent['name']];$countries=drive_folders($d->children($id));$s=db()->prepare('SELECT * FROM drive_participants WHERE project_id=?');$s->execute([$project]);$saved=[];foreach($s->fetchAll() as $r)$saved[$r['folder_id']]=$r;
-    foreach($countries as $country){$base['countries'][]=['id'=>$country['id'],'name'=>$country['name']];foreach(drive_folders($d->children($country['id'])) as $f){$row=$saved[$f['id']]??[];$emails=[];foreach($d->permissions($f['id']) as $p)if($p['type']==='user'&&$p['role']!=='owner'&&empty($p['view'])&&!drive_inherited($p)&&!empty($p['emailAddress']))$emails[]=$p['emailAddress'];$base['participants'][]=['folderId'=>$f['id'],'countryId'=>$country['id'],'country'=>$country['name'],'name'=>$f['name'],'email'=>$row['email']??'','status'=>$row['status']??'Needs privacy setup','existingEmails'=>$emails];}}
+    foreach($countries as $country){$base['countries'][]=['id'=>$country['id'],'name'=>$country['name']];foreach(drive_folders($d->children($country['id'])) as $f){$row=$saved[$f['id']]??[];$emails=[];foreach($d->permissions($f['id']) as $p)if($p['type']==='user'&&$p['role']!=='owner'&&empty($p['view'])&&!drive_inherited($p)&&!empty($p['emailAddress']))$emails[]=$p['emailAddress'];$base['participants'][]=['folderId'=>$f['id'],'countryId'=>$country['id'],'country'=>$country['name'],'name'=>$f['name'],'email'=>$row['email']??'','status'=>empty($f['ownedByMe'])?'Ownership required':($row['status']??'Needs privacy setup'),'privacyError'=>empty($f['ownedByMe'])?'The connected organizer does not own this folder. Its owner must apply private access in Google Drive or transfer ownership to the organizer.':($row['privacy_error']??''),'existingEmails'=>$emails];}}
     usort($base['participants'],fn($a,$b)=>strcmp($a['country'],$b['country'])?:strcmp($a['name'],$b['name']));return $base;
 }
 function drive_configure(string $project,string $link,string $folderType='auto'): array {
@@ -128,10 +137,22 @@ function drive_save_person(string $project,array $input): array {
     $rootId=drive_folder($project);if(!$rootId)drive_error('Configure the project Countries folder first.');$d=new ProjectDrive();$d->owned($d->file($rootId));$countries=drive_folders($d->children($rootId));$country=null;$folder=null;
     if($folderId){$folder=$d->file($folderId);foreach($countries as $c)if(in_array($c['id'],$folder['parents']??[],true))$country=$c;if(!$country||$folder['mimeType']!==ProjectDrive::FOLDER||!drive_equal($country['name'],$countryName)||!drive_equal($folder['name'],$name))drive_error('That folder is not the selected participant in this project. Refresh the list.');}
     else {if(!$email)drive_error('Enter an email for a new participant.');$country=drive_single($countries,$countryName);if(!$country)$country=$d->create($countryName,$rootId);$d->owned($country);$s=db()->prepare('SELECT folder_id FROM drive_participants WHERE project_id=? AND country_id=? AND email=?');$s->execute([$project,$country['id'],$email]);$identity=$s->fetchColumn();$children=drive_folders($d->children($country['id']));if($identity)foreach($children as $f)if($f['id']===$identity)$folder=$f;if(!$folder&&drive_single($children,$name))drive_error('This name already exists. Assign the email using its existing folder row; it will not be overwritten.');if(!$folder)$folder=$d->create($name,$country['id']);}
-    $d->owned($country);$d->owned($folder);if($email){$s=db()->prepare('SELECT folder_id FROM drive_participants WHERE project_id=? AND country_id=? AND email=? AND folder_id<>?');$s->execute([$project,$country['id'],$email,$folder['id']]);if($s->fetch())drive_error('This email already has a folder in this country. Update that row instead.');}
-    db()->prepare("INSERT INTO drive_participants(folder_id,project_id,country_id,country,name,email,status) VALUES(?,?,?,?,?,?,'Needs privacy setup') ON CONFLICT(folder_id) DO UPDATE SET email=excluded.email,status=excluded.status,country=excluded.country,name=excluded.name")->execute([$folder['id'],$project,$country['id'],$country['name'],$folder['name'],$email]);
+    if($email){
+        $s=db()->prepare('SELECT folder_id FROM drive_participants WHERE project_id=? AND country_id=? AND email=? AND folder_id<>?');$s->execute([$project,$country['id'],$email,$folder['id']]);$previous=$s->fetchColumn();
+        if($previous){
+            // Drive deletions/re-uploads leave saved assignments pointing at old IDs.
+            // Only release the assignment after a successful, complete country listing.
+            $currentIds=array_column(drive_folders($d->children($country['id'])),'id');
+            if(in_array($previous,$currentIds,true))drive_error('This email already has a folder in this country. Update that row instead.');
+            if(!in_array($folder['id'],$currentIds,true))drive_error('That folder is not the selected participant in this project. Refresh the list.');
+            db()->prepare('DELETE FROM drive_participants WHERE folder_id=? AND project_id=? AND country_id=? AND email=?')->execute([$previous,$project,$country['id'],$email]);
+        }
+    }
+    db()->prepare("INSERT INTO drive_participants(folder_id,project_id,country_id,country,name,email,status) VALUES(?,?,?,?,?,?,'Needs privacy setup') ON CONFLICT(folder_id) DO UPDATE SET email=excluded.email,status=excluded.status,privacy_error='',country=excluded.country,name=excluded.name")->execute([$folder['id'],$project,$country['id'],$country['name'],$folder['name'],$email]);
     $invitation=($input['notifyParticipant']??false)?drive_invitation_message($folder['name'],project($project)['title']):'';
-    $d->restrict($folder,$email,$input['notifyParticipant']??false,$invitation);db()->prepare('UPDATE drive_participants SET status=? WHERE folder_id=?')->execute([$email?'Private access applied':'Owner only',$folder['id']]);return ['ok'=>true,'folderId'=>$folder['id']];
+    try{$d->owned($country);$d->owned($folder);$d->restrict($folder,$email,$input['notifyParticipant']??false,$invitation);}
+    catch(RuntimeException $e){db()->prepare('UPDATE drive_participants SET status=?,privacy_error=? WHERE folder_id=?')->execute(['Privacy setup failed',$e->getMessage(),$folder['id']]);throw $e;}
+    db()->prepare("UPDATE drive_participants SET status=?,privacy_error='' WHERE folder_id=?")->execute([$email?'Private access applied':'Owner only',$folder['id']]);return ['ok'=>true,'folderId'=>$folder['id']];
 }
 function drive_browsing(string $project): array {
     $rootId=drive_folder($project);if(!$rootId)drive_error('Configure Countries first.');$d=new ProjectDrive();$root=$d->file($rootId);$d->owned($root);$countries=$d->children($rootId);if(count(drive_folders($countries))!==count($countries))drive_error('Move loose files out of Countries before enabling browsing.');

@@ -793,3 +793,53 @@
   .map-page-accent img { right: -220px; opacity: 0.17; }
   .map-page-accent-subtle img { opacity: 0.1; }
 }
+
+.participant-sheet thead th > div > span {
+  display: -webkit-box;
+  max-height: 2.5rem;
+  overflow: hidden;
+  line-height: 1.25rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.participant-sheet .overflow-y-scroll {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
+}
+.participant-sheet thead th:first-child,
+.participant-sheet tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  background: hsl(var(--background));
+}
+.participant-sheet thead th:nth-child(2),
+.participant-sheet tbody td:nth-child(2) {
+  position: sticky;
+  left: 3rem;
+  z-index: 11;
+  background: hsl(var(--background));
+}
+.participant-sheet thead th:first-child,
+.participant-sheet thead th:nth-child(2) {
+  background: hsl(var(--muted));
+}
+.participant-sheet .overflow-y-scroll {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.55) hsl(var(--muted));
+  scrollbar-width: auto;
+}
+.participant-sheet .overflow-y-scroll::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.participant-sheet .overflow-y-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+.participant-sheet .overflow-y-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid hsl(var(--muted));
+  border-radius: 999px;
+  background: hsl(var(--muted-foreground) / 0.55);
+}

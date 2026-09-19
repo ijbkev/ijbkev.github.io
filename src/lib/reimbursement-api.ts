@@ -14,10 +14,16 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 export async function downloadClaim(id: string, prepared?: FormData) {
   let response = await fetch(`/api/admin/submissions/${id}/pdf`, { credentials: 'same-origin', ...(prepared ? { method: 'POST', body: prepared } : {}) });
   if (prepared && response.status === 413) response = await fetch(`/api/admin/submissions/${id}/pdf`, { credentials: 'same-origin' });
-  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new ApiError(data.error ?? 'Unable to download the PDF.', response.status); }
+  if (!response.ok) { const data = await response.json().catch(() => null); throw new ApiError(data?.error ?? 'Unable to download the PDF.', response.status); }
   const url = URL.createObjectURL(await response.blob());
   const link = document.createElement('a'); link.href = url; const encodedName = response.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
-  link.download = encodedName ? decodeURIComponent(encodedName) : 'Reimbursement Declaration.pdf'; link.click();
+  link.download = 'Reimbursement Declaration.pdf';
+  if (encodedName) { try { link.download = decodeURIComponent(encodedName); } catch { /* Keep the fallback filename when metadata is malformed. */ } }
+  link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  try { return JSON.parse(decodeURIComponent(response.headers.get('X-Document-Warnings') || '%5B%5D')) as DocumentWarning[]; } catch { return []; }
+  try {
+    const warnings: unknown = JSON.parse(decodeURIComponent(response.headers.get('X-Document-Warnings') || '%5B%5D'));
+    return Array.isArray(warnings) ? warnings.filter((warning): warning is DocumentWarning =>
+      warning !== null && typeof warning === 'object' && typeof warning.key === 'string' && typeof warning.filename === 'string' && typeof warning.message === 'string') : [];
+  } catch { return []; }
 }

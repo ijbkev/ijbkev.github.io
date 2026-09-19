@@ -8,3 +8,16 @@ dist
 .local/
 .wrangler/
 tmp/
+
+# Private Secret Friend state must never be committed.
+secret-friend-private/
+
+# Credentials and private databases/backups must stay out of source control.
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+*.key

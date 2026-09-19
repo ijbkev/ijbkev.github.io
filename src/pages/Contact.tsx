@@ -1,6 +1,6 @@
 import MapHeroAccent from "@/components/MapHeroAccent";
 import { useMemo } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import {
   Clock,
   Sparkles,
   Send,
-  FileText,
 } from "lucide-react";
 
 const countries = [
@@ -233,51 +232,24 @@ const Contact = () => {
       <section className="map-page-hero relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white scroll-fade section-chrome">
         <MapHeroAccent subtle />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,58,138,0.25),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.2),transparent_32%)]" />
-        <div className="page-shell relative py-16 md:py-20 grid gap-8 xl:grid-cols-[1.05fr_0.95fr] items-center">
-          <div className="space-y-6 text-center xl:text-left">
-            <Badge className="mx-auto xl:mx-0 bg-white/15 text-white border-white/20 w-fit">
+        <div className="page-shell relative grid items-start gap-5 py-8 sm:gap-6 sm:py-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-8 lg:py-14 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="space-y-4 text-center lg:sticky lg:top-28 lg:text-left">
+            <Badge className="mx-auto w-fit border-white/20 bg-white/15 text-white lg:mx-0">
               <Sparkles className="w-4 h-4 mr-2 inline" />
               Contact IJBK e.V.
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-semibold max-w-3xl mx-auto xl:mx-0">
+            <h1 className="mx-auto max-w-3xl text-3xl font-semibold leading-tight sm:text-4xl lg:mx-0 xl:text-5xl">
               Let's talk from one place.
             </h1>
-            <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto xl:mx-0">
+            <p className="mx-auto max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg lg:mx-0 xl:text-xl">
               Send a project request, team application, or general message. We review every submission and reply
               by email.
             </p>
 
-            <div className="max-w-2xl mx-auto xl:mx-0">
-              <a
-                href="https://docs.google.com/document/d/1Cv544_mi0AVQsFhjGvPIrFd1nGeRkaHs/edit?usp=sharing&ouid=111431115553739998032&rtpof=true&sd=true"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block rounded-3xl border border-cyan-300/40 bg-white/12 p-4 md:p-5 text-left shadow-2xl shadow-cyan-950/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-200/60 hover:bg-white/16 hover:shadow-cyan-950/30"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-2xl bg-white text-slate-950 shadow-lg shadow-cyan-950/20 transition-transform duration-300 group-hover:scale-105">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-cyan-300/20 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.24em] text-cyan-100">
-                        PIF
-                      </span>
-                      <span className="text-sm md:text-base font-semibold uppercase tracking-[0.18em] text-white/75">
-                        Partner Identification Form
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-white/90 text-slate-950 transition-transform duration-300 group-hover:translate-x-0.5">
-                    <ArrowRight className="h-4 w-4" />
-                  </div>
-                </div>
-              </a>
-            </div>
           </div>
 
-          <Card className="panel-strong holo-card border-white/20 shadow-2xl bg-white/95 text-slate-900">
-            <CardContent className="p-6 md:p-8 space-y-5">
+          <Card className="panel-strong holo-card border-white/20 bg-white/95 text-slate-900 shadow-2xl">
+            <CardContent className="space-y-4 p-4 sm:p-6 md:p-8">
               {success && (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -300,7 +272,7 @@ const Contact = () => {
                 </div>
               </div>
 
-              <form action="https://formsubmit.co/office@ijbk-de.org" method="POST" className="space-y-5">
+              <form action="https://formsubmit.co/office@ijbk-de.org" method="POST" className="space-y-4 sm:space-y-5">
                 <input type="hidden" name="_captcha" value="false" />
                 <input type="hidden" name="_template" value="table" />
                 <input type="hidden" name="_subject" value="New contact submission from ijbk-de.org" />
@@ -367,7 +339,7 @@ const Contact = () => {
                   <Textarea
                     name="message"
                     required
-                    className="min-h-[180px]"
+                    className="min-h-[120px] sm:min-h-[150px] xl:min-h-[180px]"
                     placeholder="Tell us what you want to organise, who should be involved, and any important details we should know."
                   />
                 </label>

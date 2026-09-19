@@ -30,6 +30,18 @@ try {
     }
     if ($method==='GET' && preg_match('#^/projects/([^/]+)/session$#',$path,$m)) { $id=rawurldecode($m[1]); require_session($id); $data=public_settings(enabled_settings($id)); $folderId=drive_folder($id); if($folderId)$data['reimbursementDriveUrl']='https://drive.google.com/drive/folders/'.$folderId; respond($data); }
     if ($method==='GET' && preg_match('#^/projects/([^/]+)/organisation-session$#',$path,$m)) { $id=rawurldecode($m[1]);$country=partner_country($id);respond(scoped_partner_settings(public_settings(enabled_settings($id)),$country)); }
+    if(in_array($method,['GET','PUT'],true)&&preg_match('#^/projects/([^/]+)/partner-profile$#',$path,$m)) {
+        $id=rawurldecode($m[1]);$country=partner_country($id);
+        if($method==='PUT'){
+            $input=request_json();
+            if(isset($input['country'])&&$input['country']!==$country)fail('Country does not match partner access.',403);
+            foreach(['name'=>200,'oid'=>40] as $key=>$limit)if(!isset($input[$key])||!is_string($input[$key])||mb_strlen($input[$key])>$limit)fail('Invalid organisation details.',422);
+            db()->prepare('INSERT INTO partner_profiles(project_id,country,name,oid) VALUES(?,?,?,?) ON CONFLICT(project_id,country) DO UPDATE SET name=excluded.name,oid=excluded.oid')->execute([$id,$country,trim($input['name']),trim($input['oid'])]);
+        }
+        $q=db()->prepare('SELECT name,oid FROM partner_profiles WHERE project_id=? AND country=?');$q->execute([$id,$country]);$profile=$q->fetch();
+        if(!$profile){$q=db()->prepare('SELECT data FROM partnership_agreements WHERE project_id=? AND partner_country=?');$q->execute([$id,$country]);$agreement=json_decode($q->fetchColumn()?:'{}',true);$profile=['name'=>$agreement['partnerName']??'','oid'=>$agreement['partnerOid']??''];}
+        respond(array_merge($profile,['country'=>$country]));
+    }
     if ($method==='GET' && preg_match('#^/projects/([^/]+)/organisation-form$#',$path,$m)) { $id=rawurldecode($m[1]);$country=partner_country($id,(string)($_GET['country']??''));respond(scoped_partner_settings(organisation_form_data($id,$country),$country)); }
     if($method==='POST'&&preg_match('#^/projects/([^/]+)/organisation-logout$#',$path,$m)){$id=rawurldecode($m[1]);$hash=require_session($id,'organisation');db()->prepare('DELETE FROM sessions WHERE token_hash=?')->execute([$hash]);setcookie(cookie_name($id,'organisation'),'',time()-3600,'/api');respond(['ok'=>true]);}
     if($method==='GET'&&preg_match('#^/projects/([^/]+)/partner-documents$#',$path,$m)){
@@ -43,7 +55,10 @@ try {
     if ($method==='POST' && preg_match('#^/projects/([^/]+)/organisation-declarations$#',$path,$m)) {
         $id=rawurldecode($m[1]);require_session($id,'organisation');rate_limit("organisation-submit:$id",10);db()->exec('BEGIN IMMEDIATE');$row=enabled_settings($id);$input=parse_organisation_declaration(request_json(),json_decode($row['countries'],true));$country=partner_country($id,$input['country']);$source=scoped_partner_settings(organisation_form_data($id,$country),$country);
         if(!$source['progress']['ready'])fail('Team reimbursement is blocked: all expected participants must submit and receive administrator approval.',422);
-        $declarationId=uuid4();$createdAt=gmdate('Y-m-d\TH:i:s\Z');$saved=array_merge($source,$input,['id'=>$declarationId,'projectId'=>$id,'createdAt'=>$createdAt]);
+        $declarationId=uuid4();$createdAt=gmdate('Y-m-d\TH:i:s\Z');
+        $evidence=['signerName'=>$input['submitterName'],'signerRole'=>$input['submitterRole']==='team-leader'?'Team leader':'Sending organisation member - '.$input['submitterPosition'],'signerEmail'=>$input['submitterEmail'],'signedAt'=>$createdAt,'maskedIp'=>masked_client_ip(),'userAgent'=>browser_device_label(),'documentId'=>'TR-'.substr(partnership_document_id($row['project_code'],$country,$declarationId,$createdAt),3),'confirmation'=>'I confirm that I personally completed and signed this form.'];
+        $saved=array_merge($source,$input,['id'=>$declarationId,'projectId'=>$id,'createdAt'=>$createdAt]);
+        $evidence['sha256']=hash('sha256',json_encode(['declaration'=>$saved,'signingEvidence'=>$evidence],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));$saved['signingEvidence']=$evidence;
         try{db()->prepare('INSERT INTO organisation_declarations(id,project_id,country,organisation_name,legal_representative_name,total_cents,data,created_at)VALUES(?,?,?,?,?,?,?,?)')->execute([$declarationId,$id,$input['country'],$input['organisationName'],$input['legalRepresentativeName'],$source['totalCents'],json_encode($saved,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$createdAt]);}
         catch(PDOException $e){if($e->getCode()==='23000')fail('An organisation declaration has already been submitted for this country.',409);throw $e;}
         db()->exec('COMMIT');respond(['id'=>$declarationId,'country'=>$input['country'],'totalCents'=>$source['totalCents'],'createdAt'=>$createdAt],201);
@@ -118,6 +133,9 @@ try {
             foreach($files as $i=>&$file){$ext=['application/pdf'=>'pdf','image/png'=>'png','image/jpeg'=>'jpg'][$file['type']]??'image';$target=$claimDir.'/'.$file['key'].'.'.$ext;if(!move_uploaded_file($file['tmp'],$target))throw new RuntimeException('Unable to save uploaded ticket');chmod($target,0600);$file['path']=$target;$stored[]=$target;}unset($file);
             $createdAt=gmdate('Y-m-d\TH:i:s\Z');$total=array_sum(array_column($input['tickets'],'euroCents'));
             $claim=['declarationText'=>declaration_text(),'reference'=>submission_reference($details,$input['participant'],$createdAt),'projectShortName'=>$details['shortName'],'activityStartDate'=>$details['activityStartDate'],'activityEndDate'=>$details['activityEndDate'],'destinationCity'=>$details['destinationCity'],'countryLimitCents'=>$details['countryLimits'][$input['participant']['team']],'extraCents'=>0,'id'=>$claimId,'projectId'=>$id,'projectName'=>$project['title'],'projectCode'=>$row['project_code'],'participant'=>$input['participant'],'tickets'=>$input['tickets'],'totalCents'=>$total,'signature'=>$input['signature'],'signatureBytes'=>$input['signatureBytes'],'createdAt'=>$createdAt,'declaration'=>true];
+            $evidence=['signerName'=>$input['participant']['name'],'signerRole'=>'Participant','signerEmail'=>$input['participant']['email'],'signedAt'=>$createdAt,'maskedIp'=>masked_client_ip(),'userAgent'=>browser_device_label(),'documentId'=>'RE-'.$claimId,'confirmation'=>'I confirm that I personally completed and signed this form.'];
+            $signedRecord=$claim;unset($signedRecord['signatureBytes']);
+            $evidence['sha256']=hash('sha256',json_encode(['claim'=>$signedRecord,'signingEvidence'=>$evidence],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));$claim['signingEvidence']=$evidence;
             $pdfPath="$claimDir/complete.pdf"; $data=$claim;unset($data['signatureBytes']);
             db()->prepare('INSERT INTO submissions(id,project_id,request_id,session_hash,name,team,email,total_cents,data,pdf_path,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')->execute([$claimId,$id,$input['requestId'],$sessionHash,$input['participant']['name'],$input['participant']['team'],$input['participant']['email'],$total,json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$pdfPath,$createdAt]);
             // Joining tickets is an administrator download concern. Keeping it
@@ -127,12 +145,14 @@ try {
         }catch(Throwable $e){db()->prepare('DELETE FROM submissions WHERE id=?')->execute([$claimId]);foreach(glob($claimDir.'/*')?:[] as $f)@unlink($f);@rmdir($claimDir);error_log('Reimbursement PDF/storage failure: '.get_class($e));fail('The submission could not be saved. Please retry; document editing or PDF versions do not prevent submission.',422);}
     }
 
-    if($method==='POST'&&$path==='/admin/login'){rate_limit('admin-login',8);$body=request_json();$pw=$body['password']??'';if(!is_string($pw)||!verify_secret($pw,IJBK_ADMIN_PASSWORD_HASH))fail('Incorrect administrator password.',401);new_session('admin');respond(['ok'=>true]);}
+    if($method==='POST'&&$path==='/admin/login'){rate_limit('admin-login',8);$body=request_json();$pw=$body['password']??'';if(!is_string($pw)||strlen($pw)>128||!verify_secret($pw,IJBK_ADMIN_PASSWORD_HASH))fail('Incorrect administrator password.',401);new_session('admin');respond(['ok'=>true]);}
+    if($path==='/admin/passkeys'||str_starts_with($path,'/admin/passkeys/'))handle_passkey_routes($method,$path);
     if(str_starts_with($path,'/admin/'))$adminHash=require_session();
-    if(preg_match('#^/admin/projects/([^/]+)/drive(?:/(participants|browsing|rename))?$#',$path,$m)) {
+    if(preg_match('#^/admin/projects/([^/]+)/drive(?:/(participants|browsing|rename|connection))?$#',$path,$m)) {
         $id=rawurldecode($m[1]);project($id);$action=$m[2]??'';if(getenv('IJBK_DEMO')==='1'&&$method!=='GET')fail('Google Drive changes are disabled in the local demo.',403);
         try {
             if($method==='GET'&&$action==='')respond(drive_dashboard($id));
+            if($method==='GET'&&$action==='connection'){$folderId=drive_folder($id);respond(['configured'=>(bool)$folderId,'connected'=>drive_connected(),'countriesFolderId'=>$folderId]);}
             if($method==='PUT'&&$action===''){$body=request_json();respond(drive_locked(fn()=>drive_configure($id,trim((string)($body['url']??'')),(string)($body['folderType']??'auto'))));}
             if($method==='POST'&&$action==='participants'){$body=request_json();respond(drive_locked(fn()=>drive_save_person($id,$body)));}
             if($method==='POST'&&$action==='rename'){$body=request_json();respond(drive_locked(fn()=>drive_rename($id,$body)));}
@@ -140,8 +160,44 @@ try {
         } catch(RuntimeException $e) { fail($e->getMessage(),409); }
     }
     if($method==='GET'&&preg_match('#^/admin/projects/([^/]+)/access-codes$#',$path,$m)){ $id=rawurldecode($m[1]);project($id);respond(reveal_access_codes($id)); }
+    if(preg_match('#^/admin/projects/([^/]+)/participant-sheet$#',$path,$m)){
+        $projectId=rawurldecode($m[1]);project($projectId);
+        if($method==='GET'){$q=db()->prepare('SELECT columns_json,rows_json,updated_at FROM project_participant_sheets WHERE project_id=?');$q->execute([$projectId]);$sheet=$q->fetch();respond($sheet?['columns'=>json_decode($sheet['columns_json'],true),'rows'=>json_decode($sheet['rows_json'],true),'updatedAt'=>$sheet['updated_at']]:['columns'=>[],'rows'=>[],'updatedAt'=>null]);}
+        if($method==='PUT'){
+            $body=request_json();$columns=$body['columns']??null;$rows=$body['rows']??null;
+            if(!is_array($columns)||!array_is_list($columns)||count($columns)>200)fail('The sheet can contain up to 200 columns.',422);
+            $cleanColumns=[];foreach($columns as $column){if(!is_string($column))fail('Every column needs a text name.',422);$name=trim($column);if($name==='')fail('Every column needs a name.',422);$cleanColumns[]=$name;}
+            if(count(array_unique($cleanColumns))!==count($cleanColumns))fail('Column names must be unique.',422);
+            if(!is_array($rows)||!array_is_list($rows)||count($rows)>5000)fail('The sheet can contain up to 5,000 rows.',422);
+            $cleanRows=[];foreach($rows as $row){if(!is_array($row)||!array_is_list($row))fail('Invalid spreadsheet row.',422);$clean=[];foreach(array_slice($row,0,count($cleanColumns)) as $cell){if(!is_scalar($cell)&&$cell!==null)fail('Spreadsheet cells must contain text or numbers.',422);$value=trim((string)($cell??''));if(mb_strlen($value)>5000)fail('A spreadsheet cell is too long.',422);$clean[]=$value;}while(count($clean)<count($cleanColumns))$clean[]='';$cleanRows[]=$clean;}
+            $updatedAt=gmdate('Y-m-d\TH:i:s\Z');db()->prepare('INSERT INTO project_participant_sheets(project_id,columns_json,rows_json,updated_at)VALUES(?,?,?,?) ON CONFLICT(project_id)DO UPDATE SET columns_json=excluded.columns_json,rows_json=excluded.rows_json,updated_at=excluded.updated_at')->execute([$projectId,json_encode($cleanColumns,JSON_UNESCAPED_UNICODE),json_encode($cleanRows,JSON_UNESCAPED_UNICODE),$updatedAt]);respond(['columns'=>$cleanColumns,'rows'=>$cleanRows,'updatedAt'=>$updatedAt]);
+        }
+    }
+    // All planner operations inherit the administrator guard above.
+    if($method==='GET'&&$path==='/admin/planner') {
+        $days=db()->query('SELECT urgency_days FROM planner_settings WHERE id=1')->fetchColumn();
+        respond(['tasks'=>array_map(fn($row)=>json_decode($row['data'],true),db()->query('SELECT data FROM planner_tasks ORDER BY id')->fetchAll()),'urgencyDays'=>$days===false?2:(int)$days]);
+    }
+    if($method==='PUT'&&$path==='/admin/planner/settings') {
+        $body=request_json();$days=$body['urgencyDays']??null;
+        if(!is_int($days)||$days<0||$days>30)fail('Choose an urgency window between 0 and 30 days.',422);
+        db()->prepare('INSERT INTO planner_settings(id,urgency_days)VALUES(1,?) ON CONFLICT(id)DO UPDATE SET urgency_days=excluded.urgency_days')->execute([$days]);respond(['ok'=>true]);
+    }
+    if(preg_match('#^/admin/planner/tasks/([a-f0-9-]{36})$#',$path,$m)&&in_array($method,['PUT','DELETE'],true)) {
+        if($method==='DELETE'){db()->prepare('DELETE FROM planner_tasks WHERE id=?')->execute([$m[1]]);respond(['ok'=>true]);}
+        $body=request_json();$title=text_value($body['title']??null,'task name',200);
+        $deadline=$body['deadline']??null;
+        if(!is_string($deadline)||!preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/',$deadline))fail('Enter a valid deadline.',422);
+        $date=DateTimeImmutable::createFromFormat('!Y-m-d',$deadline);
+        if(!$date||$date->format('Y-m-d')!==$deadline||substr($deadline,0,4)==='0000')fail('Enter a valid deadline.',422);
+        $important=$body['important']??null;$completed=$body['completed']??null;$urgency=$body['urgency']??null;$notes=$body['notes']??'';
+        if(!is_bool($important)||!is_bool($completed)||!in_array($urgency,['auto','urgent','not-urgent'],true)||!is_string($notes)||mb_strlen($notes)>5000)fail('Check the task details. Notes may contain up to 5,000 characters.',422);
+        $task=['id'=>$m[1],'title'=>$title,'deadline'=>$deadline,'important'=>$important,'completed'=>$completed,'urgency'=>$urgency,'notes'=>trim($notes)];
+        db()->prepare('INSERT INTO planner_tasks(id,data)VALUES(?,?) ON CONFLICT(id)DO UPDATE SET data=excluded.data')->execute([$m[1],json_encode($task,JSON_UNESCAPED_UNICODE)]);respond($task);
+    }
+
     if($method==='GET'&&$path==='/admin/session')respond(['ok'=>true]);
-    if($method==='POST'&&$path==='/admin/logout'){db()->prepare('DELETE FROM sessions WHERE token_hash=?')->execute([$adminHash]);setcookie(cookie_name(),'',time()-3600,'/api');respond(['ok'=>true]);}
+    if($method==='POST'&&$path==='/admin/logout'){site_admin_logout();respond(['ok'=>true]);}
     if($method==='GET'&&$path==='/admin/projects'){$rows=db()->query('SELECT * FROM project_settings')->fetchAll();$map=[];foreach($rows as $r)$map[$r['project_id']]=$r;$out=[];foreach(projects() as $p)$out[]=array_merge($p,['category'=>'Erasmus+ Youth Exchange','status'=>'Upcoming','statusTone'=>'warning','date'=>'','location'=>'','description'=>'','highlights'=>[],'coverImage'=>'','coverAlt'=>'','settings'=>array_merge(public_settings($map[$p['id']]??null),['partnerAccessConfigured'=>partner_access_flags($p['id'])])]);respond($out);}
     if($method==='PUT'&&preg_match('#^/admin/projects/([^/]+)$#',$path,$m)){$id=rawurldecode($m[1]);$old=settings($id);$body=request_json();$projectCode=text_value($body['projectCode']??null,'project code',120);$countries=$body['countries']??null;if(!is_array($countries)||count($countries)<1||count($countries)>40)fail('Add participating countries.',422);$countries=array_map(fn($c)=>text_value($c,'country',80),$countries);if(count(array_unique(array_map('mb_strtolower',$countries)))!==count($countries))fail('Remove duplicate countries.',422);$details=parse_project_details($body,$countries);$access=$body['accessCode']??null;$hash=$old['access_hash']??null;if(is_string($access)&&$access!==''){if(strlen($access)>128)fail('Use an access code of up to 128 characters.',422);$hash=password_hash($access,PASSWORD_ARGON2ID);}if(!$hash)fail('Set a participant access code for this project.',422);$enabled=($body['enabled']??false)===true?1:0;db()->beginTransaction();if(is_string($access)&&$access!=='')save_access_code($id,'',$access);update_partner_codes($id,$countries,$body['partnerAccessCodes']??[],$hash,$old['organisation_access_hash']??null);db()->prepare('INSERT INTO project_settings(project_id,project_code,countries,access_hash,organisation_access_hash,enabled)VALUES(?,?,?,?,?,?) ON CONFLICT(project_id)DO UPDATE SET project_code=excluded.project_code,countries=excluded.countries,access_hash=excluded.access_hash,organisation_access_hash=excluded.organisation_access_hash,enabled=excluded.enabled')->execute([$id,$projectCode,json_encode($countries,JSON_UNESCAPED_UNICODE),$hash,null,$enabled]);db()->prepare('INSERT INTO project_details(project_id,data)VALUES(?,?) ON CONFLICT(project_id)DO UPDATE SET data=excluded.data')->execute([$id,json_encode($details,JSON_UNESCAPED_UNICODE)]);if(($access??'')!==''||!$enabled)db()->prepare('DELETE FROM sessions WHERE project_id=?')->execute([$id]);db()->commit();respond(public_settings(settings($id)));}
     if($method==='GET'&&preg_match('#^/admin/projects/([^/]+)/submissions$#',$path,$m)){$id=rawurldecode($m[1]);project($id);$stmt=db()->prepare("SELECT id,name,team,email,total_cents AS totalCents,created_at AS createdAt,data FROM submissions WHERE project_id=? AND status='complete' ORDER BY created_at DESC");$stmt->execute([$id]);$rows=$stmt->fetchAll();foreach($rows as &$summary){$claim=json_decode($summary['data'],true);unset($summary['data']);$summary['approvedAt']=$claim['approvedAt']??null;$summary['reference']=claim_reference($claim);$summary['finalCents']=reimbursement_totals($claim)['finalCents'];}unset($summary);respond($rows);}

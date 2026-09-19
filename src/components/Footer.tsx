@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Instagram, ArrowUpRight } from "lucide-react";
+import { Mail, Phone, MapPin, Instagram, ArrowUpRight, FolderOpen, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 
 const Footer = () => {
@@ -86,6 +86,17 @@ const Footer = () => {
                 <span className="font-medium">instagram.com/ijbk.ev</span>
                 <ArrowUpRight size={16} className="opacity-70" />
               </a>
+              <nav aria-label="Project tools" className="flex flex-col items-start gap-2 border-t border-white/10 pt-3">
+                <Link to="/project-materials/" className="inline-flex min-h-11 items-center gap-3 text-slate-200 transition-colors hover:text-white">
+                  <FolderOpen size={18} aria-hidden="true" />
+                  <span>Project Materials</span>
+                  <ArrowUpRight size={16} className="opacity-70" aria-hidden="true" />
+                </Link>
+                <Link to="/admin/reimbursements" className="inline-flex min-h-11 items-center gap-3 text-slate-200 transition-colors hover:text-white">
+                  <ShieldCheck size={18} aria-hidden="true" />
+                  <span>Admin</span>
+                </Link>
+              </nav>
             </div>
           </div>
 

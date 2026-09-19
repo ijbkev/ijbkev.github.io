@@ -63,6 +63,20 @@ try {
     mkdirSync(claimDirectory, { recursive: true, mode: 0o700 });
     insert.run(id, id, name, team, email, totalCents, JSON.stringify(claim), path.join(claimDirectory, 'complete.pdf'), createdAt);
   }
+  const directoryColumns = ['First name', 'Last name', 'Email address', 'Country', 'Role', 'Phone', 'Sending organisation', 'Dietary requirements', 'Accessibility requirements', 'Arrival information', 'Departure information', 'Notes'];
+  const firstNames = ['Anna', 'Lukas', 'Mia', 'Noah', 'Katrin', 'Martin', 'Liis', 'Rasmus', 'Sofia', 'Daniel', 'Elena', 'Jonas'];
+  const lastNames = ['Keller', 'Weber', 'Hoffmann', 'Fischer', 'Tamm', 'Saar', 'Kask', 'Põder', 'Novak', 'Schmidt', 'Rossi', 'Müller'];
+  const countries = ['Germany', 'Estonia', 'Italy', 'Spain'];
+  const directoryRows = Array.from({ length: 36 }, (_, index) => {
+    const firstName = firstNames[index % firstNames.length];
+    const lastName = lastNames[(index * 5) % lastNames.length];
+    const country = countries[index % countries.length];
+    return [firstName, lastName, `${firstName}.${lastName}.${index + 1}@demo.ijbk.local`.toLowerCase(), country, index % 9 === 0 ? 'Team Leader' : 'Participant', `+49 30 555 ${String(1000 + index).slice(-4)}`, `${country} Youth and Community Learning Network`, index % 7 === 0 ? 'Vegetarian; allergic to peanuts. Please ensure clearly labelled alternatives are available at every meal.' : index % 5 === 0 ? 'Vegan' : '', index % 11 === 0 ? 'Requires step-free access and extra time when changing between transport connections.' : '', `Train arriving ${23 + (index % 5)} September at ${10 + (index % 8)}:30; central station meeting point.`, `Departure ${28 + (index % 2)} September at ${8 + (index % 9)}:15 from the main station.`, index % 6 === 0 ? 'Demo entry with deliberately longer text so row wrapping, automatic height, sticky columns, and large-table navigation can be reviewed locally without uploading a file.' : 'Demo participant'];
+  });
+  db.prepare(`INSERT INTO project_participant_sheets(project_id, columns_json, rows_json, updated_at)
+    VALUES('oasis', ?, ?, ?)
+    ON CONFLICT(project_id) DO UPDATE SET columns_json=excluded.columns_json, rows_json=excluded.rows_json, updated_at=excluded.updated_at`)
+    .run(JSON.stringify(directoryColumns), JSON.stringify(directoryRows), createdAt);
   db.exec('COMMIT');
 } catch (error) {
   db.exec('ROLLBACK');

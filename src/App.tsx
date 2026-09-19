@@ -7,13 +7,16 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import Homepage from "./pages/Homepage";
 import About from "./pages/About";
-import Blog from "./pages/Blog";
+import Blog, { BlogActivity } from "./pages/Blog";
 import Projects from "./pages/Projects";
 import Team from "./pages/Team";
 import Contact from "./pages/Contact";
+import Pif from "./pages/Pif";
 import ErasmusPlus from "./pages/ErasmusPlus";
 import NotFound from "./pages/NotFound";
 import WhatsAppWidget from "./components/WhatsAppWidget";
+const ProjectMaterials = lazy(() => import("./pages/ProjectMaterials"));
+const DeadlinePlanner = lazy(() => import("./pages/DeadlinePlanner"));
 const PartnerDashboard = lazy(() => import("./pages/PartnerDashboard"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Reimbursement = lazy(() => import("./pages/Reimbursement"));
@@ -52,15 +55,20 @@ const App = () => (
                 <Route path="/" element={<Homepage />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:activityId" element={<BlogActivity />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
                 <Route path="/projects/:projectId/partner-dashboard" element={<PartnerDashboard />} />
                 <Route path="/projects/:projectId/reimbursement" element={<Reimbursement />} />
                 <Route path="/projects/:projectId/organisation-reimbursement" element={<OrganisationReimbursement />} />
                 <Route path="/projects/:projectId/partnership-agreement" element={<PartnershipAgreement />} />
+                <Route path="/project-materials" element={<ProjectMaterials />} />
+                <Route path="/project-materials/index.html" element={<ProjectMaterials />} />
+                <Route path="/project-materials/deadline-planner" element={<DeadlinePlanner />} />
                 <Route path="/admin/reimbursements" element={<ReimbursementAdmin />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/pif" element={<Pif />} />
                 <Route path="/erasmus-plus" element={<ErasmusPlus />} />
               </Route>
               <Route path="*" element={<NotFound />} />

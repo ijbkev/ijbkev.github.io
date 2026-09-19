@@ -11,6 +11,8 @@ import { hashPassword } from './helpers/auth';
 
 test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeout: 60000 }, async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'ijbk-php-test-'));
+  // Use a synthetic signing fixture; tests must never require production signing material.
+  await writeFile(path.join(dir, 'coordinator-signature.png'), await readFile('tests/fixtures/signature.png'), { mode: 0o600 });
   const server = createServer(); await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
   const port = (server.address() as { port: number }).port; await new Promise<void>(r => server.close(() => r()));
   const base = `http://127.0.0.1:${port}`;
@@ -77,6 +79,12 @@ test('Apache/PHP country caps, approvals, snapshots, PDF and deletion', { timeou
     response = await req(`/admin/submissions/${id}/extra`, 'PUT', { extraCents: -1 }, admin); assert.equal(response.status, 422);
     response = await req(`/admin/submissions/${id}/extra`, 'PUT', { extraCents: 4000, note: 'Approved additional support' }, admin); assert.equal(response.status, 200, await response.text());
     const saved = await (await req(`/admin/submissions/${id}`, 'GET', undefined, admin)).json(); assert.equal(saved.extraCents, 4000); assert.equal(saved.destinationCity, 'Vienna');
+    assert.equal(saved.signingEvidence.signerName, 'Tugay Özkan');
+    assert.equal(saved.signingEvidence.signerEmail, participant.email);
+    assert.equal(saved.signingEvidence.signerRole, 'Participant');
+    assert.equal(saved.signingEvidence.maskedIp, '127.0.0.xxx');
+    assert.match(saved.signingEvidence.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(saved.coordinatorSignatureEvidence, undefined);
     const list = await (await req('/admin/projects/oasis/submissions', 'GET', undefined, admin)).json(); assert.equal(list[0].finalCents, 34900);
     assert.equal((await req('/projects/oasis/organisation-form?country=Germany', 'GET', undefined, participantCookie)).status, 401);
     response = await req('/projects/oasis/organisation-unlock', 'POST', { country: 'Germany', code: settings.partnerAccessCodes.Germany }); const organisationCookie = response.headers.get('set-cookie')!.split(';')[0];
